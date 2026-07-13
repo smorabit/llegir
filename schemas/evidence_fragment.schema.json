@@ -49,7 +49,11 @@
         "params": { "type": "object" },
         "input_hashes": { "type": "object" },
         "pkg_versions": { "type": "object" },
-        "timestamp": { "type": "string" }
+        "timestamp": { "type": "string" },
+        "source": {
+          "enum": ["computed", "user_supplied"],
+          "description": "'computed' for tool-produced fragments (default), 'user_supplied' for import_fragment()"
+        }
       }
     }
   }

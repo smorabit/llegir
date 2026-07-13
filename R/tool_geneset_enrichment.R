@@ -1,38 +1,63 @@
-## geneset_enrichment: Enrichr GO/pathway enrichment over hub genes.
-## NETWORK-DEPENDENT: calls the public Enrichr API (maayanlab.cloud); this is the
-## one tool in the core set that isn't offline/deterministic (docs/CLAUDE.md ground
-## rules flag this explicitly). A network failure degrades to a low-evidence
-## fragment (compact_summary notes why) instead of aborting the orchestrator run.
+## geneset_enrichment: offline GO/pathway enrichment over hub genes via
+## GeneOverlap, against local GMT gene-set libraries (fgsea::gmtPathways()).
+## No runtime network -- recycled from SERPENTINE's run_geneoverlap.R, adapted
+## to a single module's hub genes vs. a background of all genes in the
+## ModuleSet. Deterministic and CI-clean by construction.
 
-suppressPackageStartupMessages(library(enrichR))
+suppressPackageStartupMessages({
+    library(GeneOverlap)
+    library(fgsea)
+})
+
+# one db's pathways flattened against `hub_genes`; mirrors the go.nested.list
+# loop from run_geneoverlap.R (outer = input_list, inner = pathways), here
+# specialized to a single input set so only the inner loop is needed
+.geneoverlap_flatten <- function(gmt_file, db_name, hub_genes, genome_size){
+    pathways <- fgsea::gmtPathways(gmt_file)
+    gom <- GeneOverlap::newGOM(pathways, list(module = hub_genes), genome.size = genome_size)
+
+    do.call(rbind, lapply(seq_along(gom@go.nested.list[[1]]), function(j){
+        cur <- gom@go.nested.list[[1]][[j]]
+        data.frame(
+            term = names(pathways)[j],
+            overlap = paste0(length(cur@intersection), '|', length(cur@listA)),
+            genes = paste(cur@intersection, collapse = ','),
+            pval = cur@pval,
+            odds_ratio = cur@odds.ratio,
+            jaccard = cur@Jaccard,
+            ngenes = length(cur@intersection),
+            db = db_name
+        )
+    }))
+}
 
 geneset_enrichment_tool <- function(ctx){
     n_hubs <- ctx$params$n_hubs %||% 25
-    databases <- ctx$params$databases %||% c('GO_Biological_Process_2023')
+    db_files <- ctx$params$db_files %||% c(GO_BP = 'data/GO_Biological_Process_2026.txt')
 
     gm <- gene_membership(ctx$ms, ctx$module_id)
-    genes <- head(gm$gene_name, n_hubs)
-
-    enrich_result <- tryCatch({
-        setEnrichrSite('Enrichr')
-        do.call(rbind, enrichr(genes, databases = databases))
-    }, error = function(e) e)
+    hub_genes <- head(gm$gene_name, n_hubs)
+    genome_size <- nrow(expression(ctx$ms))
 
     provenance <- make_provenance(
-        tool_version = '0.1',
-        params = list(n_hubs = n_hubs, databases = databases, network_required = TRUE),
+        tool_version = '0.2',
+        params = list(n_hubs = n_hubs, db_files = unname(db_files), network_required = FALSE),
         pkg_versions = pkg_versions(ctx$ms)
     )
 
-    if (inherits(enrich_result, 'error') || is.null(enrich_result) || nrow(enrich_result) == 0) {
-        note <- if (inherits(enrich_result, 'error')) conditionMessage(enrich_result) else 'no terms returned'
+    overlap_df <- do.call(rbind, lapply(names(db_files), function(db_name){
+        .geneoverlap_flatten(db_files[[db_name]], db_name, hub_genes, genome_size)
+    }))
+    overlap_df <- subset(overlap_df, ngenes > 0)
+
+    if (nrow(overlap_df) == 0) {
         return(evidence_fragment(
             fragment_id = 'geneset_enrichment',
             tool_id = 'geneset_enrichment',
             module_id = ctx$module_id,
             type = 'geneset_enrichment',
             result = data.frame(),
-            compact_summary = paste0('enrichment unavailable: ', note),
+            compact_summary = 'no gene-set overlap found among hub genes',
             top_findings = list(),
             effect_strength = 0,
             direction = 'na',
@@ -40,17 +65,19 @@ geneset_enrichment_tool <- function(ctx){
         ))
     }
 
-    enrich_result <- enrich_result[order(enrich_result$Adjusted.P.value), ]
-    top <- head(enrich_result, 20)
+    overlap_df$fdr <- p.adjust(overlap_df$pval, method = 'fdr')
+    overlap_df <- overlap_df[order(overlap_df$fdr, -overlap_df$odds_ratio), ]
+    rownames(overlap_df) <- NULL
+    top <- head(overlap_df, 20)
 
     top_findings <- lapply(seq_len(min(5, nrow(top))), function(i){
-        list(term = top$Term[i], adj_p = top$Adjusted.P.value[i], odds_ratio = top$Odds.Ratio[i])
+        list(term = top$term[i], fdr = top$fdr[i], odds_ratio = top$odds_ratio[i])
     })
 
-    compact_summary <- paste0('top enriched terms: ', paste(head(top$Term, 5), collapse = '; '))
+    compact_summary <- paste0('top enriched terms: ', paste(head(top$term, 5), collapse = '; '))
 
     # floor to avoid -log10(0) = Inf, which jsonlite can't round-trip
-    min_p <- max(min(top$Adjusted.P.value), 1e-300)
+    min_fdr <- max(min(top$fdr), 1e-300)
 
     evidence_fragment(
         fragment_id = 'geneset_enrichment',
@@ -60,9 +87,9 @@ geneset_enrichment_tool <- function(ctx){
         result = top,
         compact_summary = compact_summary,
         top_findings = top_findings,
-        effect_strength = -log10(min_p),
-        significance = min(top$Adjusted.P.value),
-        direction = 'na',
+        effect_strength = -log10(min_fdr),
+        significance = min(top$fdr),
+        direction = 'up',
         provenance = provenance
     )
 }

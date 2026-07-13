@@ -76,6 +76,22 @@ test_that('build_evidence_packet() rejects an invalid fragment', {
     expect_error(build_evidence_packet('MM1', list(bad)))
 })
 
+test_that('write_fragment_tables() writes one TSV per fragment, keyed by fragment_id', {
+    frag_a <- make_valid_fragment()
+    frag_b <- make_valid_fragment()
+    frag_b$fragment_id <- 'metadata::diagnosis'
+    packet <- build_evidence_packet('MM1', list(frag_a, frag_b), input_hash = 'abc')
+
+    tmp_dir <- tempfile()
+    on.exit(unlink(tmp_dir, recursive = TRUE))
+    write_fragment_tables(packet, tmp_dir)
+
+    expect_true(file.exists(file.path(tmp_dir, 'MM1', 'dummy.tsv')))
+    expect_true(file.exists(file.path(tmp_dir, 'MM1', 'metadata__diagnosis.tsv')))
+    written <- read.delim(file.path(tmp_dir, 'MM1', 'dummy.tsv'))
+    expect_equal(written, frag_a$result)
+})
+
 test_that('packet JSON round-trip preserves the hash and fragment count', {
     packet <- build_evidence_packet('MM1', list(make_valid_fragment()), input_hash = 'abc')
     tmp <- tempfile(fileext = '.json')

@@ -2,22 +2,68 @@
 ## (diagnosis, sample) -> group means + Kruskal/one-vs-rest Wilcoxon, shared
 ## with cluster_dme; continuous -> Pearson/Spearman correlation, kept generic
 ## for future datasets even though CSF only exercises the categorical branch.
+##
+## pseudoreplication fix (milestone 1.5): a variable that is constant within
+## sample (e.g. diagnosis) is tested at the SAMPLE level, not the cell level
+## -- cells within a sample are correlated, so a cell-level test on a
+## sample-level variable inflates significance. `sample_col` (default
+## 'sample') is the aggregation unit; `level` (default 'auto') picks cell vs.
+## sample by checking whether `column` is constant within every sample, and
+## can be forced to 'cell' or 'sample' to compare the two directly.
+## `column == sample_col` is a special case: it's the aggregation unit
+## itself, so it gets a descriptive per-sample summary, not a group test.
 
 module_by_metadata_tool <- function(ctx){
     column <- ctx$params$column
     if (is.null(column)) stop('module_by_metadata requires params$column')
     column_type <- ctx$params$column_type %||% 'categorical'
+    sample_col <- ctx$params$sample_col %||% 'sample'
+    level_param <- ctx$params$level %||% 'auto'
 
     scores <- module_scores(ctx$ms, module = ctx$module_id)
-    meta_col <- metadata(ctx$ms)[[column]]
+    meta <- metadata(ctx$ms)
+    meta_col <- meta[[column]]
     if (is.null(meta_col)) stop('metadata column not found: ', column)
 
     keep <- !is.na(meta_col)
     scores <- scores[keep]
     meta_col <- meta_col[keep]
+    sample_id <- meta[[sample_col]][keep]
 
-    if (column_type == 'categorical') {
-        test <- categorical_group_test(scores, meta_col)
+    if (column == sample_col) {
+        if (is.null(sample_id)) stop('sample_col not found: ', sample_col)
+        result <- aggregate_by_sample(scores, sample_id)
+        result <- result[order(-result$mean_score), ]
+        rownames(result) <- NULL
+        top <- result[1, ]
+
+        top_findings <- lapply(seq_len(min(5, nrow(result))), function(i){
+            list(sample = result$sample[i], mean_score = result$mean_score[i])
+        })
+        compact_summary <- paste0(
+            column, ': per-sample mean ME across ', nrow(result), ' samples; ',
+            'highest in ', top$sample, ' (mean=', round(top$mean_score, 2), ')'
+        )
+        effect_strength <- stats::sd(result$mean_score)
+        significance <- NA_real_
+        direction <- 'na'
+        type <- 'categorical_association'
+        level <- 'sample'
+        n_units <- nrow(result)
+    } else if (column_type == 'categorical') {
+        if (is.null(sample_id)) stop('sample_col not found: ', sample_col)
+        level <- level_param
+        if (level == 'auto') level <- if (is_sample_constant(meta_col, sample_id)) 'sample' else 'cell'
+
+        if (level == 'sample') {
+            agg <- aggregate_by_sample(scores, sample_id, group_col = meta_col)
+            test <- categorical_group_test(agg$mean_score, agg$group)
+            n_units <- nrow(agg)
+        } else {
+            test <- categorical_group_test(scores, meta_col)
+            n_units <- length(scores)
+        }
+
         result <- test$table
         top <- result[1, ]
 
@@ -28,7 +74,7 @@ module_by_metadata_tool <- function(ctx){
             )
         })
         compact_summary <- paste0(
-            column, ': strongest group ', top$group,
+            column, ' (', level, '-level): strongest group ', top$group,
             ' (r=', round(top$rank_biserial, 2), ', FDR=', signif(top$fdr, 2),
             '); omnibus Kruskal p=', signif(test$omnibus_p, 2)
         )
@@ -50,6 +96,8 @@ module_by_metadata_tool <- function(ctx){
         significance <- result$pearson_p
         direction <- if (result$pearson_r > 0) 'up' else 'down'
         type <- 'continuous_correlation'
+        level <- 'cell'
+        n_units <- length(scores)
     } else {
         stop('unknown column_type: ', column_type)
     }
@@ -66,8 +114,11 @@ module_by_metadata_tool <- function(ctx){
         significance = significance,
         direction = direction,
         provenance = make_provenance(
-            tool_version = '0.1',
-            params = list(column = column, column_type = column_type),
+            tool_version = '0.2',
+            params = list(
+                column = column, column_type = column_type, sample_col = sample_col,
+                level = level, n_units = n_units
+            ),
             pkg_versions = pkg_versions(ctx$ms)
         )
     )

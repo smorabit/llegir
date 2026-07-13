@@ -49,6 +49,28 @@ categorical_group_test <- function(scores, groups){
     list(table = per_group, omnibus_p = unname(kw$p.value))
 }
 
+# TRUE if `x` takes at most one distinct non-NA value within every level of
+# `sample_id` (e.g. diagnosis is constant per sample, a QC metric is not);
+# used by module_by_metadata to auto-select cell- vs. sample-level testing so
+# sample-level variables don't get pseudoreplicated across correlated cells
+is_sample_constant <- function(x, sample_id){
+    per_sample <- tapply(x, sample_id, function(v) length(unique(v[!is.na(v)])))
+    all(per_sample <= 1)
+}
+
+# mean module score per sample (the pseudoreplication fix: test at the
+# sample level, not the cell level), plus one label per sample for
+# `group_col` when supplied (assumes group_col is constant within sample)
+aggregate_by_sample <- function(scores, sample_id, group_col = NULL){
+    agg_scores <- tapply(scores, sample_id, mean)
+    out <- data.frame(sample = names(agg_scores), mean_score = as.numeric(agg_scores))
+    if (!is.null(group_col)) {
+        agg_group <- tapply(group_col, sample_id, function(v) as.character(v[!is.na(v)][1]))
+        out$group <- unname(agg_group[out$sample])
+    }
+    out
+}
+
 # Pearson + Spearman correlation of `scores` against a continuous variable;
 # used by the continuous branch of module_by_metadata (not exercised by the
 # CSF dataset, but part of the generic contract for future datasets)

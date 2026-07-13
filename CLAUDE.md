@@ -45,7 +45,7 @@ output/             # evidence_packets/ (gitignored)
 
 ## Dependencies
 
-R (≥ 4.2), provided by the `hdWGCNA` env. Packages: `hdWGCNA`, `Seurat`, `WGCNA` (adapter only); `jsonlite`, `digest`, `dplyr`/`tidyr`, `testthat`. Milestone 2 adds `ellmer` for model-agnostic synthesis (needs an API key, e.g. `ANTHROPIC_API_KEY`) — not required for M1.
+R (≥ 4.2), provided by the `hdWGCNA` env. Packages: `hdWGCNA`, `Seurat`, `WGCNA` (adapter only); `jsonlite`, `digest`, `dplyr`/`tidyr`, `testthat`. Milestone 2 adds `ellmer` for model-agnostic synthesis — provider/model are config-selected. **Prototyping uses Google Gemini** — `chat_google_gemini(model = 'gemini-3.5-flash')`, free tier (the CSF data is public so free-tier data use is fine). The `GEMINI_API_KEY` is already configured in the R environment; do not set it up or prompt for it. A local `chat_ollama()` option is a much-later consideration. Live synthesis is not required for M1/M1.5; tests always run on the offline mock backend.
 
 ## Running
 

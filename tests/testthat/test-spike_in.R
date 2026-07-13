@@ -8,8 +8,7 @@
 ## negative control: a random gene set of matched size should show up weakly
 ## relative to the positive control, with no significant enrichment.
 
-positive_ms <- synthetic_ModuleSet(ms_test, list(pdc_module = pdc_genes))
-negative_ms <- synthetic_ModuleSet(ms_test, list(random_module = random_control_genes(so_test)))
+## positive_ms/negative_ms are shared fixtures, built once in setup.R.
 
 test_that('positive control: cluster_dme picks the pDC cluster', {
     ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(group_by = 'lv2_annot'))
@@ -31,14 +30,12 @@ test_that('positive control: hub genes are drawn from the pDC marker set', {
 })
 
 test_that('positive control: enrichment recovers a plasmacytoid/dendritic-related term', {
-    ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(n_hubs = length(pdc_genes)))
+    ctx <- list(ms = positive_ms, module_id = 'pdc_module',
+                params = list(n_hubs = length(pdc_genes), db_files = test_db_files))
     frag <- geneset_enrichment_tool(ctx)
-    skip_if(
-        grepl('^enrichment unavailable', frag$compact_summary),
-        'Enrichr unreachable (network-dependent tool, see docs/CLAUDE.md ground rules)'
-    )
     expect_true(validate_evidence_fragment(frag))
     expect_true(frag$significance < 0.05)
+    expect_true(any(grepl('dendritic|interferon', frag$result$term, ignore.case = TRUE)))
 })
 
 test_that('negative control: cluster_dme shows weak, non-specific association', {
@@ -53,17 +50,15 @@ test_that('negative control: cluster_dme shows weak, non-specific association', 
 })
 
 test_that('negative control: enrichment is far weaker than the positive control', {
-    pos_ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(n_hubs = length(pdc_genes)))
-    neg_ctx <- list(ms = negative_ms, module_id = 'random_module', params = list(n_hubs = length(pdc_genes)))
+    pos_ctx <- list(ms = positive_ms, module_id = 'pdc_module',
+                     params = list(n_hubs = length(pdc_genes), db_files = test_db_files))
+    neg_ctx <- list(ms = negative_ms, module_id = 'random_module',
+                     params = list(n_hubs = length(pdc_genes), db_files = test_db_files))
     pos_frag <- geneset_enrichment_tool(pos_ctx)
     neg_frag <- geneset_enrichment_tool(neg_ctx)
-    skip_if(
-        grepl('^enrichment unavailable', pos_frag$compact_summary) || grepl('^enrichment unavailable', neg_frag$compact_summary),
-        'Enrichr unreachable (network-dependent tool, see docs/CLAUDE.md ground rules)'
-    )
     expect_true(validate_evidence_fragment(neg_frag))
     # a handful of random genes can still land a spurious single-gene hit on a
-    # narrow GO term (Enrichr's Fisher test on tiny term backgrounds), so the
-    # bar is "much weaker than real signal", not "exactly zero"
+    # narrow GO term (Fisher test on tiny term backgrounds), so the bar is
+    # "much weaker than real signal", not "exactly zero"
     expect_true(neg_frag$effect_strength < pos_frag$effect_strength)
 })

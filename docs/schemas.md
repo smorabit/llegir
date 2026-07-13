@@ -41,7 +41,9 @@ One fragment = one tool's result for one module.
 
 ### `provenance` object
 
-`{ tool_version, params (named list), input_hashes (named list), pkg_versions (named list), timestamp }`
+`{ tool_version, params (named list), input_hashes (named list), pkg_versions (named list), timestamp, source }`
+
+`source` is `"computed"` (default, tool-produced) or `"user_supplied"` (via `import_fragment()`); the synthesis layer treats both identically, but faithfulness/reproducibility checks can distinguish them.
 
 ### R constructor (sketch)
 

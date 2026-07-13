@@ -179,14 +179,36 @@ read_evidence_packet <- function(path){
     )
 }
 
+# writes every fragment's full result table to
+# <tables_dir>/<module_id>/<fragment_id>.tsv, alongside the JSON packet, so a
+# human can audit any DME table / enrichment table / overlap directly
+# (docs/milestone_1_5.md task 4). Keyed by fragment_id rather than tool_id,
+# since one tool can produce several fragments per module (e.g.
+# module_by_metadata run once for 'diagnosis' and once for 'sample') and
+# tool_id alone would collide; "::" in a fragment_id isn't safe in filenames
+# everywhere, so it's swapped for "__".
+write_fragment_tables <- function(packet, tables_dir){
+    module_dir <- file.path(tables_dir, packet$module_id)
+    dir.create(module_dir, recursive = TRUE, showWarnings = FALSE)
+    for (frag in packet$fragments) {
+        file_stub <- gsub(':', '_', frag$fragment_id)
+        path <- file.path(module_dir, paste0(file_stub, '.tsv'))
+        utils::write.table(frag$result, path, sep = '\t', row.names = FALSE, quote = FALSE)
+    }
+    invisible(tables_dir)
+}
+
 # `pkg_versions` is supplied by the caller (via the adapter's pkg_versions()),
-# not looked up here, so this file stays backend-agnostic
-make_provenance <- function(tool_version, params = list(), input_hashes = list(), pkg_versions = list()){
+# not looked up here, so this file stays backend-agnostic. `source` defaults
+# to 'computed' for tool-produced fragments; import_fragment() overrides it
+# to 'user_supplied' so faithfulness/reproducibility checks can tell them apart.
+make_provenance <- function(tool_version, params = list(), input_hashes = list(), pkg_versions = list(), source = 'computed'){
     list(
         tool_version = tool_version,
         params = params,
         input_hashes = input_hashes,
         pkg_versions = pkg_versions,
+        source = source,
         timestamp = format(Sys.time(), '%Y-%m-%dT%H:%M:%S%z')
     )
 }

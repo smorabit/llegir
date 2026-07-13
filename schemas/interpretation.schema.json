@@ -1,34 +1,45 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "interpretation.schema.json",
-  "title": "interpretation_object",
+  "title": "interpretation",
   "schema_version": "0.1",
-  "description": "Produced by the synthesis layer (Milestone 2+). Not built in Milestone 1; schema recorded now so evidence fragments are built against a stable downstream contract.",
+  "description": "Produced by the synthesis layer (Milestone 2). Finalized from the M1 draft: confidence now separates the model's raw score from the fused final score, and provenance is required (attached by the synthesis orchestrator, never filled by the model).",
   "type": "object",
   "required": [
     "module_id", "proposed_label", "one_line_summary", "dominant_biology",
-    "supporting_claims", "confidence"
+    "supporting_claims", "confidence", "provenance"
   ],
   "properties": {
     "module_id": { "type": "string" },
-    "proposed_label": { "type": "string" },
+    "proposed_label": {
+      "type": "string",
+      "description": "short program name, e.g. 'Interferon response'"
+    },
     "one_line_summary": { "type": "string" },
-    "dominant_biology": { "type": "string" },
+    "dominant_biology": { "type": "string", "description": "the main program" },
     "supporting_claims": {
       "type": "array",
+      "description": "every fragment_id cited here must exist in the module's packet and its direction must match (faithfulness invariant); may be empty only when flags includes insufficient_evidence",
       "items": {
         "type": "object",
-        "required": ["claim", "fragment_ids", "direction", "strength"],
+        "required": ["claim", "fragment_ids", "direction"],
         "properties": {
           "claim": { "type": "string" },
-          "fragment_ids": { "type": "array", "items": { "type": "string" } },
+          "fragment_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "minItems": 1
+          },
           "direction": { "enum": ["up", "down", "mixed", "na"] },
-          "strength": { "type": "number" }
+          "strength": { "type": ["number", "null"] }
         }
       }
     },
-    "cell_state": { "type": "string" },
-    "condition_dynamics": { "type": "string" },
+    "cell_state": {
+      "type": ["string", "null"],
+      "description": "where expressed, from cluster_dme"
+    },
+    "condition_dynamics": { "type": ["string", "null"] },
     "metadata_associations": {
       "type": "array",
       "items": {
@@ -43,6 +54,7 @@
     },
     "literature": {
       "type": "array",
+      "description": "empty/unused in M2 (deferred to M3)",
       "items": {
         "type": "object",
         "required": ["statement", "pmids"],
@@ -54,9 +66,16 @@
     },
     "confidence": {
       "type": "object",
-      "required": ["score", "rationale"],
+      "required": ["score", "model_score", "rationale"],
       "properties": {
-        "score": { "type": "number", "minimum": 0, "maximum": 1 },
+        "score": {
+          "type": "number", "minimum": 0, "maximum": 1,
+          "description": "final fused confidence (docs/milestone_2.md task 4); equal to model_score until fusion runs"
+        },
+        "model_score": {
+          "type": "number", "minimum": 0, "maximum": 1,
+          "description": "the model's raw self-reported confidence, preserved for audit"
+        },
         "rationale": { "type": "string" }
       }
     },
@@ -68,6 +87,25 @@
           "tool_conflict", "label_low_specificity"
         ]
       }
-    }
+    },
+    "provenance": {
+      "type": "object",
+      "description": "attached by the synthesis orchestrator, never filled by the model",
+      "required": [
+        "model", "model_version", "prompt_template_version", "temperature",
+        "input_packet_hash", "timestamp"
+      ],
+      "properties": {
+        "model": { "type": "string" },
+        "model_version": { "type": ["string", "null"] },
+        "prompt_template_version": { "type": "string" },
+        "temperature": { "type": "number" },
+        "seed": { "type": ["number", "null"] },
+        "input_packet_hash": { "type": "string" },
+        "ellmer_call": { "type": "object" },
+        "timestamp": { "type": "string" }
+      }
+    },
+    "schema_version": { "type": "string" }
   }
 }
