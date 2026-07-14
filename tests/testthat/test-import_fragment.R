@@ -56,6 +56,7 @@ test_that('import_fragment() errors on a missing required column', {
 })
 
 test_that('import_fragment_tool() flows through the orchestrator unchanged', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     user_table <- data.frame(
         term = c('Interferon Response', 'Cell Cycle'),
         odds_ratio = c(9, 1),

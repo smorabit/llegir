@@ -2,9 +2,30 @@
 ## this module. Touches only the ModuleSet adapter (module_scores, metadata,
 ## pkg_versions) plus the shared categorical_group_test() helper.
 
+#' Evidence tool: which cell states express this module
+#'
+#' A core evidence tool. Touches only the `ModuleSet` adapter contract
+#' ([module_scores()], [metadata()], [pkg_versions()]) plus the shared
+#' [categorical_group_test()] helper, so it works against any backend.
+#'
+#' @param ctx A tool context list: `list(ms, module_id, params)`, as built by
+#'   [run_module()]. `ctx$params$group_by` (required) is the metadata column
+#'   naming the cell-state grouping (e.g. `'lv2_annot'`).
+#' @return An `evidence_fragment` of type `'state_expression'`, or `NULL` if
+#'   `ctx$ms` lacks the `clusters` or `module_scores` capability (see
+#'   [capabilities()]) -- a graceful skip, not an error.
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' cluster_dme_tool(list(ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type')))
+#' @export
 cluster_dme_tool <- function(ctx){
     group_by <- ctx$params$group_by
     if (is.null(group_by)) stop('cluster_dme requires params$group_by')
+
+    if (!has_capability(ctx$ms, 'clusters') || !has_capability(ctx$ms, 'module_scores')) {
+        message('cluster_dme: skipped, module set lacks the clusters/module_scores capability')
+        return(NULL)
+    }
 
     scores <- module_scores(ctx$ms, module = ctx$module_id)
     groups <- metadata(ctx$ms)[[group_by]]

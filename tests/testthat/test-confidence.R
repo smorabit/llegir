@@ -61,6 +61,7 @@ test_that('compute_evidence_signals() requires both significance and effect size
 })
 
 test_that('fuse_confidence() separates the pDC positive control from the random negative control', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     positive_packet <- build_spike_in_packet(positive_ms, 'pdc_module', length(pdc_genes))
     negative_packet <- build_spike_in_packet(negative_ms, 'random_module', length(pdc_genes))
 
@@ -83,6 +84,7 @@ test_that('fuse_confidence() separates the pDC positive control from the random 
 })
 
 test_that('fuse_confidence() does not flag insufficient_evidence when the model is well-calibrated to strong evidence', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     positive_packet <- build_spike_in_packet(positive_ms, 'pdc_module', length(pdc_genes))
     interp <- make_confident_interpretation('pdc_module', positive_packet$packet_hash, model_score = 0.7)
     fused <- fuse_confidence(interp, positive_packet)
@@ -146,6 +148,7 @@ test_that('fuse_confidence() flags possible_artifact when hub genes are dominate
 })
 
 test_that('fuse_confidence() preserves prior flags (e.g. from enforce_faithfulness())', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     positive_packet <- build_spike_in_packet(positive_ms, 'pdc_module', length(pdc_genes))
     interp <- make_confident_interpretation('pdc_module', positive_packet$packet_hash, model_score = 0.7)
     interp$flags <- list('label_low_specificity')

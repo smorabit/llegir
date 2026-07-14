@@ -2,6 +2,7 @@
 ## and carries the right `type`, run against a real module from the CSF object.
 
 test_that('hub_genes_tool() returns a valid ranked_genes fragment', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 10))
     frag <- hub_genes_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
@@ -11,6 +12,7 @@ test_that('hub_genes_tool() returns a valid ranked_genes fragment', {
 })
 
 test_that('cluster_dme_tool() returns a valid state_expression fragment', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(group_by = 'lv2_annot'))
     frag <- cluster_dme_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
@@ -20,11 +22,13 @@ test_that('cluster_dme_tool() returns a valid state_expression fragment', {
 })
 
 test_that('cluster_dme_tool() errors without group_by', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list())
     expect_error(cluster_dme_tool(ctx), 'group_by')
 })
 
 test_that('module_by_metadata_tool() returns a valid categorical_association fragment', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test,
                 params = list(column = 'diagnosis', column_type = 'categorical'))
     frag <- module_by_metadata_tool(ctx)
@@ -34,11 +38,13 @@ test_that('module_by_metadata_tool() returns a valid categorical_association fra
 })
 
 test_that('module_by_metadata_tool() errors on an unknown column', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(column = 'not_a_column'))
     expect_error(module_by_metadata_tool(ctx), 'not found')
 })
 
 test_that('module_by_metadata_tool() auto-selects sample-level testing for a sample-constant variable', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     # diagnosis is constant within every sample in the CSF object (verified against
     # the raw meta.data), so 'auto' should pick 'sample', not the pseudoreplicated 'cell'
     ctx <- list(ms = ms_test, module_id = mod_test,
@@ -49,6 +55,7 @@ test_that('module_by_metadata_tool() auto-selects sample-level testing for a sam
 })
 
 test_that('module_by_metadata_tool() sample-level test is more conservative than cell-level on the same variable', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     cell_ctx <- list(ms = ms_test, module_id = mod_test,
                       params = list(column = 'diagnosis', column_type = 'categorical', level = 'cell'))
     sample_ctx <- list(ms = ms_test, module_id = mod_test,
@@ -63,6 +70,7 @@ test_that('module_by_metadata_tool() sample-level test is more conservative than
 })
 
 test_that('module_by_metadata_tool() treats sample_col itself as descriptive, not a group test', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test,
                 params = list(column = 'sample', column_type = 'categorical'))
     frag <- module_by_metadata_tool(ctx)
@@ -74,6 +82,7 @@ test_that('module_by_metadata_tool() treats sample_col itself as descriptive, no
 })
 
 test_that('geneset_enrichment_tool() returns a valid geneset_enrichment fragment', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 25, db_files = test_db_files))
     frag <- geneset_enrichment_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
@@ -82,6 +91,7 @@ test_that('geneset_enrichment_tool() returns a valid geneset_enrichment fragment
 })
 
 test_that('geneset_enrichment_tool() is deterministic across repeated runs', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 25, db_files = test_db_files))
     frag_a <- geneset_enrichment_tool(ctx)
     frag_b <- geneset_enrichment_tool(ctx)

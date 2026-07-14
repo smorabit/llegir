@@ -2,7 +2,7 @@
 ## (docs/milestone_2.md task 2). No network / no API key anywhere in this file.
 
 test_that('model_output_schema_json() strips orchestrator-only fields', {
-    schema_json <- model_output_schema_json('../../schemas/interpretation.schema.json')
+    schema_json <- model_output_schema_json(test_schema_path)
     schema <- jsonlite::fromJSON(schema_json, simplifyVector = FALSE)
     expect_false('provenance' %in% names(schema$properties))
     expect_false('schema_version' %in% names(schema$properties))
@@ -13,12 +13,13 @@ test_that('model_output_schema_json() strips orchestrator-only fields', {
 
 test_that('model_output_schema_json() is loadable by ellmer::type_from_schema()', {
     skip_if_not_installed('ellmer')
-    schema_json <- model_output_schema_json('../../schemas/interpretation.schema.json')
+    schema_json <- model_output_schema_json(test_schema_path)
     type_spec <- ellmer::type_from_schema(text = schema_json)
     expect_true(inherits(type_spec, 'ellmer::TypeJsonSchema'))
 })
 
 test_that('synthesize_interpretation() hard-errors without a valid dataset_description', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
     bad_desc <- csf_dataset_description()
     bad_desc$species <- NA_character_
@@ -29,6 +30,7 @@ test_that('synthesize_interpretation() hard-errors without a valid dataset_descr
 })
 
 test_that('synthesize_interpretation() with mock_backend() returns a valid interpretation, module_id forced from the packet', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
     interp <- synthesize_interpretation(packet, csf_dataset_description(), backend = mock_backend(), schema_path = test_schema_path)
     expect_true(validate_interpretation(interp))
@@ -43,7 +45,7 @@ test_that('synthesize_interpretation() with mock_backend() returns a valid inter
 })
 
 test_that('.to_openai_strict_schema() satisfies GitHub Models strict structured-output rules', {
-    schema_json <- model_output_schema_json('../../schemas/interpretation.schema.json')
+    schema_json <- model_output_schema_json(test_schema_path)
     schema <- jsonlite::fromJSON(schema_json, simplifyVector = FALSE)
     strict <- .to_openai_strict_schema(schema)
 
@@ -97,6 +99,7 @@ test_that('cached_backend() skips the inner backend on a cache hit and honors fo
 })
 
 test_that('synthesize_interpretation() with mock_backend() runs end-to-end over every module', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     all_modules <- modules(ms_test)
     desc <- csf_dataset_description()
     interps <- lapply(all_modules, function(mod){

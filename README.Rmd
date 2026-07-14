@@ -1,0 +1,52 @@
+---
+output: github_document
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = '#>',
+  fig.path = 'man/figures/README-'
+)
+```
+
+# sentit
+
+<!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
+
+**sentit** is a Module Interpretation Engine: it loads a gene co-expression
+module object (starting with hdWGCNA), systematically gathers a standardized
+bundle of evidence for each module, and produces a short, evidence-backed
+interpretation paragraph -- with confidence-gated human review and a full
+reproducibility log. The deterministic evidence core is in R; the synthesis
+layer is model-agnostic.
+
+*Status: experimental. The public API is not yet stable -- the `ModuleSet`
+adapter contract and custom-tool registry are expected to evolve before a
+1.0 release.*
+
+*Originated as an offshoot of the SERPENTINE project; now a standalone,
+general tool.*
+
+## Installation
+
+```r
+# install.packages('remotes')
+remotes::install_github('smorabit/Module_Interpretation')
+```
+
+## Design docs
+
+- [Concept](docs/overview.md)
+- [Architecture](docs/implementation_guide.md)
+- [Data contracts (schemas)](docs/schemas.md)
+- [R code style](STYLE.md)
+
+## Getting started
+
+See `vignette('getting-started', package = 'sentit')` for a full walkthrough
+on a small synthetic `ModuleSet`, from evidence tools through to a rendered
+interpretation paragraph -- runs fully offline via the mock synthesis
+backend.

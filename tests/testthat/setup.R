@@ -1,36 +1,29 @@
 ## run once for the whole test_dir() session (testthat 3e convention).
 ## wd here is tests/testthat/, hence the ../../ paths.
-
-source('../../R/utils.R')
-source('../../R/moduleset.R')
-source('../../R/moduleset_hdwgcna.R')
-source('../../R/fragment.R')
-source('../../R/stats_utils.R')
-source('../../R/tool_hub_genes.R')
-source('../../R/tool_cluster_dme.R')
-source('../../R/tool_module_by_metadata.R')
-source('../../R/tool_geneset_enrichment.R')
-source('../../R/import_fragment.R')
-source('../../R/orchestrator.R')
-source('../../R/interpretation.R')
-source('../../R/dataset_description.R')
-source('../../R/prompt.R')
-source('../../R/synthesis.R')
-source('../../R/faithfulness.R')
-source('../../R/confidence.R')
-source('../../R/render.R')
+##
+## package code itself is loaded by the testthat harness (devtools::load_all()
+## in dev, the installed package under R CMD check) -- this file only sources
+## the test-only synthetic_moduleset.R helper and builds shared fixtures.
 
 # not named helper-*.R on purpose: testthat's automatic helper loader sources
-# helpers into a private environment that tool functions (bound to .GlobalEnv
-# by the source() calls above) can't see for S3 dispatch, so it's sourced
-# explicitly here instead, same as everything else in this file
+# helpers into a private environment that can't see package S3 methods for
+# dispatch the way this explicit source() into .GlobalEnv can
 source('synthetic_moduleset.R')
+source('synthetic_extensibility.R')
 
-# loaded once and shared read-only across test files; readRDS + adapter
-# construction is the slow part of this suite, no need to repeat it per file
-so_test <- readRDS('../../data/CSF_Myeloid_hdWGCNA.rds')
-ms_test <- hdWGCNA_ModuleSet(so_test)
-mod_test <- modules(ms_test)[1]
+# data/CSF_Myeloid_hdWGCNA.rds is a large, gitignored dev-only file, excluded
+# from the built package tarball via .Rbuildignore -- it won't exist under
+# R CMD check / CI, so every test that depends on it is skipped there and
+# only runs for regression coverage on a dev machine that has the file
+csf_data_available <- file.exists('../../data/CSF_Myeloid_hdWGCNA.rds')
+
+if (csf_data_available) {
+    # loaded once and shared read-only across test files; readRDS + adapter
+    # construction is the slow part of this suite, no need to repeat it per file
+    so_test <- readRDS('../../data/CSF_Myeloid_hdWGCNA.rds')
+    ms_test <- hdWGCNA_ModuleSet(so_test)
+    mod_test <- modules(ms_test)[1]
+}
 
 # geneset_enrichment_tool()'s default db_files path is relative to the repo
 # root (matches scripts/run_csf.R); testthat runs with cwd tests/testthat/,
@@ -54,10 +47,9 @@ csf_dataset_description <- function(){
     )
 }
 
-# interpretation.schema.json's default path (synthesize_interpretation()'s
-# schema_path arg) is relative to the repo root; tests run with cwd
-# tests/testthat/, same reasoning as test_db_files above
-test_schema_path <- '../../schemas/interpretation.schema.json'
+# interpretation.schema.json now ships at inst/schemas/ and is resolved via
+# system.file(); works under devtools::load_all() and once installed alike
+test_schema_path <- system.file('schemas', 'interpretation.schema.json', package = 'sentit')
 
 # a real evidence packet for mod_test, built with the same tool_config as
 # scripts/run_csf.R, for prompt/synthesis tests that need a real packet
@@ -72,9 +64,12 @@ csf_tool_config <- list(
 
 ## spike-in fixtures (docs/milestone_1.md task 5): shared across
 ## test-spike_in.R, test-confidence.R and test-faithfulness.R, so they're
-## built once here rather than duplicated per file.
-positive_ms <- synthetic_ModuleSet(ms_test, list(pdc_module = pdc_genes))
-negative_ms <- synthetic_ModuleSet(ms_test, list(random_module = random_control_genes(so_test)))
+## built once here rather than duplicated per file. Depend on the CSF dev
+## object, so guarded the same way as so_test/ms_test above.
+if (csf_data_available) {
+    positive_ms <- synthetic_ModuleSet(ms_test, list(pdc_module = pdc_genes))
+    negative_ms <- synthetic_ModuleSet(ms_test, list(random_module = random_control_genes(so_test)))
+}
 
 # a full evidence packet (hub_genes, cluster_dme, module_by_metadata::diagnosis,
 # geneset_enrichment) for a spike-in module -- confidence/faithfulness tests

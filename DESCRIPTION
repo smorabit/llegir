@@ -1,0 +1,42 @@
+Package: sentit
+Title: Deterministic Evidence and Model-Assisted Interpretation of Gene Co-Expression Modules
+Version: 0.0.0.9000
+Authors@R: person('Sam', 'Morabito', email = 'smorabit82@gmail.com', role = c('aut', 'cre'))
+Description: Loads a gene co-expression module object (hdWGCNA first), gathers a
+    standardized bundle of evidence per module via a toolbox of deterministic R
+    functions, and drafts an evidence-backed interpretation paragraph via a
+    model-agnostic synthesis layer with faithfulness checking, confidence fusion,
+    and confidence-gated human review. The deterministic evidence core has no
+    model dependency; synthesis backends are pluggable (an offline mock backend,
+    and live structured-output backends via 'ellmer'). Experimental: the public
+    API is not yet stable.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
+Depends:
+    R (>= 4.2)
+Imports:
+    hdWGCNA,
+    Seurat,
+    WGCNA,
+    UCell,
+    decoupleR,
+    jsonlite,
+    digest,
+    dplyr,
+    tidyr,
+    GeneOverlap,
+    fgsea,
+    ellmer,
+    stats,
+    utils
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    pkgdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+URL: https://github.com/smorabit/Module_Interpretation
+BugReports: https://github.com/smorabit/Module_Interpretation/issues

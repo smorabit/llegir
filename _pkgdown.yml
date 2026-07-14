@@ -1,0 +1,138 @@
+url: https://smorabit.github.io/Module_Interpretation/
+
+# repo already has a docs/ directory for design notes (see navbar link below);
+# pkgdown's own default output dir would collide with it, so it's built to
+# pkgdown_site/ instead (both docs/ and pkgdown_site/ are .Rbuildignore'd)
+destination: pkgdown_site
+
+template:
+  bootstrap: 5
+
+home:
+  title: sentit
+  description: >
+    Deterministic evidence and model-assisted interpretation of gene
+    co-expression modules.
+
+navbar:
+  structure:
+    left: [intro, reference, articles, design]
+    right: [search, github]
+  components:
+    design:
+      text: Design docs
+      menu:
+      - text: Concept
+        href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/overview.md
+      - text: Architecture
+        href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/implementation_guide.md
+      - text: Data contracts (schemas)
+        href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/schemas.md
+
+reference:
+- title: ModuleSet adapter
+  desc: >
+    The backend-agnostic contract every core tool depends on, plus the
+    hdWGCNA/Seurat adapter and the self-contained synthetic fixture used in
+    examples and the vignette.
+  contents:
+  - modules
+  - gene_membership
+  - module_scores
+  - expression
+  - metadata
+  - pkg_versions
+  - hdWGCNA_ModuleSet
+  - synthetic_ModuleSet
+  - sentit_example_moduleset
+
+- title: Evidence tools
+  desc: Core deterministic evidence tools; each returns one evidence_fragment.
+  contents:
+  - hub_genes_tool
+  - cluster_dme_tool
+  - module_by_metadata_tool
+  - geneset_enrichment_tool
+  - import_fragment
+  - import_fragment_tool
+
+- title: Evidence fragments and packets
+  desc: The evidence_fragment / evidence packet data contract.
+  contents:
+  - evidence_fragment
+  - validate_evidence_fragment
+  - fragment_to_json
+  - fragment_from_json
+  - build_evidence_packet
+  - packet_to_json
+  - write_evidence_packet
+  - read_evidence_packet
+  - write_fragment_tables
+  - make_provenance
+
+- title: Orchestration
+  desc: Run tools/synthesis over a module set and write results to disk.
+  contents:
+  - run_module
+  - run_orchestrator
+  - synthesize_module
+  - run_synthesis_orchestrator
+
+- title: Dataset context and prompts
+  contents:
+  - dataset_description
+  - validate_dataset_description
+  - render_dataset_description
+  - PROMPT_TEMPLATE_VERSION
+  - render_packet_compact
+  - build_system_prompt
+  - build_user_prompt
+
+- title: Synthesis backends
+  desc: Model-agnostic packet -> interpretation synthesis.
+  contents:
+  - synthesize_interpretation
+  - mock_backend
+  - ellmer_backend
+  - resolve_backend
+  - cached_backend
+  - model_output_schema_json
+
+- title: Faithfulness and confidence
+  desc: Guardrails between the model's output and the deterministic evidence.
+  contents:
+  - check_faithfulness
+  - is_faithful
+  - assert_faithfulness
+  - enforce_faithfulness
+  - compute_evidence_signals
+  - fuse_confidence
+  - needs_review
+
+- title: Interpretation objects
+  contents:
+  - interpretation
+  - validate_interpretation
+  - interpretation_to_json
+  - interpretation_from_json
+  - interpretation_hash
+  - make_interpretation_provenance
+  - read_interpretation
+  - write_interpretation
+
+- title: Rendering and review
+  contents:
+  - RENDER_TEMPLATE_VERSION
+  - render_paragraph
+  - describe_flags
+  - build_review_queue
+  - write_review_queue
+  - build_synthesis_manifest
+  - write_synthesis_manifest
+
+- title: Statistical helpers
+  contents:
+  - categorical_group_test
+  - continuous_correlation_test
+  - aggregate_by_sample
+  - is_sample_constant

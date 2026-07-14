@@ -9,21 +9,62 @@
 ## `fn` is any function(ctx) -> evidence_fragment; core tools today, custom
 ## tools later (M2) just append to this list.
 
-# fragments for one module, in packet form; one bad tool call fails the whole
-# module (a partial packet would be worse than no packet)
+#' Run one module's evidence tools and build its evidence packet
+#'
+#' Runs every tool in `tool_config` against one module, in order, and bundles
+#' the resulting evidence fragments into a validated, hashed evidence packet
+#' via [build_evidence_packet()]. One bad tool call fails the whole module --
+#' a partial packet would be worse than no packet. A tool that gracefully
+#' skips itself (returns `NULL`, e.g. because `ms` lacks a capability it
+#' needs -- see [capabilities()]) is simply omitted from the packet rather
+#' than failing the module; the full tool-requirement declaration and
+#' skip-reason logging is a later milestone, this just tolerates it.
+#'
+#' @param ms A `ModuleSet`.
+#' @param module_id A single module id (as returned by [modules()]).
+#' @param tool_config A list of `list(fn, params)` specs, where `fn` is any
+#'   `function(ctx) -> evidence_fragment` (or `NULL`, to skip) and `params`
+#'   is passed through as `ctx$params`.
+#' @param input_hash Optional hash of the input `ModuleSet`, recorded on the
+#'   packet for provenance.
+#' @return An evidence packet; see [build_evidence_packet()].
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' @export
 run_module <- function(ms, module_id, tool_config, input_hash = NA_character_){
     fragments <- lapply(tool_config, function(spec){
         ctx <- list(ms = ms, module_id = module_id, params = spec$params)
         spec$fn(ctx)
     })
+    fragments <- Filter(Negate(is.null), fragments)
     build_evidence_packet(module_id, fragments, input_hash = input_hash)
 }
 
-# runs every module independently so one module's failure (e.g. a tool
-# erroring on a degenerate module) doesn't take down the whole batch; failures
-# are reported via `warning()` and recorded as NULL in the returned list.
-# `tables_dir`, when given, also persists every fragment's result table
-# (docs/milestone_1_5.md task 4) alongside the JSON packets in `output_dir`.
+#' Run a configured set of evidence tools over every module in a ModuleSet
+#'
+#' Runs [run_module()] independently for each module in `modules_use` (or
+#' every module in `ms` if not given) and writes each validated, hashed
+#' evidence packet to `output_dir` as JSON. One module's failure (e.g. a tool
+#' erroring on a degenerate module) doesn't take down the whole batch;
+#' failures are reported via `warning()` and recorded as `NULL` in the
+#' returned list. `tables_dir`, when given, also persists every fragment's
+#' result table (via [write_fragment_tables()]) alongside the JSON packets.
+#'
+#' @param ms A `ModuleSet`.
+#' @param tool_config A list of `list(fn, params)` specs; see [run_module()].
+#' @param output_dir Directory to write one evidence packet JSON file per module.
+#' @param tables_dir Optional directory to also persist every fragment's
+#'   result table.
+#' @param modules_use Optional subset of module ids to run; defaults to all
+#'   modules in `ms`.
+#' @param input_hash Optional hash of the input `ModuleSet`, recorded on each packet.
+#' @return Invisibly, a named list of evidence packets (one per module; `NULL`
+#'   for any module that failed).
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
+#' @export
 run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, modules_use = NULL, input_hash = NA_character_){
     if (is.null(modules_use)) modules_use <- modules(ms)
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
@@ -52,12 +93,36 @@ run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, mod
 ## stage. Kept in this file rather than a separate one since it's the same
 ## per-module-then-batch shape, just one stage further down the pipeline.
 
-# one packet -> one validated, faithfulness-enforced, confidence-fused
-# interpretation. The three steps always run together -- an interpretation
-# that skipped faithfulness or fusion isn't one this engine should emit.
+#' Synthesize one evidence packet into a validated interpretation
+#'
+#' Runs the full packet -> interpretation pipeline for one module: calls
+#' `backend` via [synthesize_interpretation()], enforces citation
+#' faithfulness via [enforce_faithfulness()], fuses model and deterministic
+#' confidence via [fuse_confidence()], and validates the result. These three
+#' steps always run together -- an interpretation that skipped faithfulness
+#' or fusion isn't one this engine should emit.
+#'
+#' @param packet An evidence packet, as built by [build_evidence_packet()] /
+#'   [run_module()].
+#' @param desc A `dataset_description`; see [dataset_description()].
+#' @param backend A synthesis backend function; see [mock_backend()],
+#'   [ellmer_backend()], [resolve_backend()].
+#' @param temperature Sampling temperature passed to the backend.
+#' @param seed Optional seed, recorded on the interpretation's provenance.
+#' @param prompt_template_version Prompt template version to record on the
+#'   interpretation's provenance.
+#' @param schema_path Path to the interpretation JSON schema; defaults to the
+#'   schema shipped with the package.
+#' @return A validated `interpretation` object.
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
+#' synthesize_module(packet, desc, mock_backend())
+#' @export
 synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                prompt_template_version = PROMPT_TEMPLATE_VERSION,
-                               schema_path = 'schemas/interpretation.schema.json'){
+                               schema_path = system.file('schemas', 'interpretation.schema.json', package = 'sentit')){
     interp <- synthesize_interpretation(
         packet, desc, backend, temperature = temperature, seed = seed,
         prompt_template_version = prompt_template_version, schema_path = schema_path
@@ -68,15 +133,39 @@ synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_
     interp
 }
 
-# runs synthesis over every packet independently, same failure isolation as
-# run_orchestrator(): one module's synthesis error is warned and recorded as
-# NULL rather than failing the batch. Writes per-module JSON + Markdown, plus
-# a run-level review_queue.tsv and manifest.json (docs/milestone_2.md tasks
-# 6-7). `packets` is a named list of evidence packets, e.g. the return value
-# of run_orchestrator().
+#' Run synthesis over a batch of evidence packets
+#'
+#' Runs [synthesize_module()] independently for each packet in `packets`,
+#' writing per-module interpretation JSON and rendered Markdown paragraphs
+#' (via [render_paragraph()]) to `output_dir`, plus a run-level
+#' `review_queue.tsv` ([write_review_queue()]) and `manifest.json`
+#' ([write_synthesis_manifest()]). One module's synthesis failure is warned
+#' and recorded as `NULL`, mirroring [run_orchestrator()]'s failure isolation.
+#'
+#' @param packets A named list of evidence packets, e.g. the return value of
+#'   [run_orchestrator()].
+#' @param desc A `dataset_description`; see [dataset_description()].
+#' @param backend A synthesis backend function; see [mock_backend()],
+#'   [ellmer_backend()], [resolve_backend()].
+#' @param output_dir Directory to write per-module interpretations,
+#'   paragraphs, `review_queue.tsv`, and `manifest.json`.
+#' @param temperature Sampling temperature passed to the backend.
+#' @param seed Optional seed, recorded on each interpretation's provenance.
+#' @param prompt_template_version Prompt template version to record on each
+#'   interpretation's provenance.
+#' @param schema_path Path to the interpretation JSON schema; defaults to the
+#'   schema shipped with the package.
+#' @return Invisibly, a named list of interpretation objects (one per module;
+#'   `NULL` for any module whose synthesis failed).
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' packets <- run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
+#' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
+#' run_synthesis_orchestrator(packets, desc, mock_backend(), output_dir = tempfile())
+#' @export
 run_synthesis_orchestrator <- function(packets, desc, backend, output_dir, temperature = 0, seed = NA_real_,
                                         prompt_template_version = PROMPT_TEMPLATE_VERSION,
-                                        schema_path = 'schemas/interpretation.schema.json'){
+                                        schema_path = system.file('schemas', 'interpretation.schema.json', package = 'sentit')){
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     mods <- names(packets)
 

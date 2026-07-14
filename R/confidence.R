@@ -35,6 +35,33 @@
 # only counts as significant with >= min_overlap_genes overlapping genes --
 # a single-gene overlap against a narrow GO term is a classic false positive
 # in a small hub-gene list (see docs/milestone_1.md spike-in notes).
+#' Compute deterministic evidence signals from a packet
+#'
+#' Signals independent of any model output: the maximum bounded effect
+#' strength across fragments, the number of significant enrichment terms,
+#' and cross-tool agreement on whether the module shows a real signal.
+#' Two guards against known false-positive patterns (not thresholds tuned to
+#' any one dataset): a fragment only counts as "has signal" if it clears both
+#' a significance AND an effect-size bar (large-N tests can hit p~0 on a
+#' practically negligible effect), and an enrichment term only counts as
+#' significant with at least `min_overlap_genes` overlapping genes (a
+#' single-gene overlap against a narrow term is a classic false positive in
+#' a small hub-gene list).
+#'
+#' @param packet An evidence packet, as built by [build_evidence_packet()].
+#' @param sig_threshold Significance (p/FDR) cutoff.
+#' @param effect_floor Minimum effect strength for a bounded fragment to
+#'   count as "has signal".
+#' @param min_overlap_genes Minimum overlap genes for an enrichment term to
+#'   count as significant.
+#' @return A list: `max_effect_strength`, `n_significant_enrichment_terms`,
+#'   `n_testable_tools`, `n_tools_with_signal`, `cross_tool_agreement` (one of
+#'   `'convergent_signal'`, `'convergent_null'`, `'conflicting'`, or `NA`).
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' compute_evidence_signals(packet)
+#' @export
 compute_evidence_signals <- function(packet, sig_threshold = 0.05, effect_floor = 0.5, min_overlap_genes = 2){
     fragments <- packet$fragments
 
@@ -120,11 +147,32 @@ compute_evidence_signals <- function(packet, sig_threshold = 0.05, effect_floor 
     mean(toupper(top_genes) %in% .ieg_artifact_genes) >= frac_threshold
 }
 
-# combines interp$confidence$model_score with the packet's deterministic
-# signals into a final confidence + flags (docs/milestone_2.md task 4).
-# Mutates and returns `interp`: confidence$score is overwritten (model_score
-# is preserved for audit), and flags are unioned with whatever the model or
-# faithfulness check (R/faithfulness.R) already set.
+#' Fuse model and deterministic confidence into a final score and flags
+#'
+#' The model's self-reported confidence (`interp$confidence$model_score`) is
+#' never trusted alone. It's blended with [compute_evidence_signals()], and
+#' the blend is what can trigger review flags -- so a fluent, confident label
+#' over weak evidence gets caught even if the model never flags itself.
+#' Mutates and returns `interp`: `confidence$score` is overwritten
+#' (`model_score` is preserved for audit), and `flags` are unioned with
+#' whatever the model or [enforce_faithfulness()] already set.
+#'
+#' @param interp An `interpretation` object, as returned by
+#'   [synthesize_interpretation()] (after [enforce_faithfulness()]).
+#' @param packet The evidence packet `interp` was synthesized from.
+#' @param low_threshold Evidence-score floor below which the fused score is
+#'   capped and `'insufficient_evidence'` is flagged.
+#' @param disagreement_threshold Minimum `|model_score - evidence_score|` gap
+#'   that flags `'needs_human_review'`.
+#' @return `interp`, with `confidence$score`, `confidence$rationale`, and
+#'   `flags` updated.
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
+#' interp <- synthesize_interpretation(packet, desc, mock_backend())
+#' fuse_confidence(interp, packet)
+#' @export
 fuse_confidence <- function(interp, packet, low_threshold = 0.35, disagreement_threshold = 0.35){
     signals <- compute_evidence_signals(packet)
     evidence <- .evidence_score(signals)
@@ -160,6 +208,13 @@ fuse_confidence <- function(interp, packet, low_threshold = 0.35, disagreement_t
     interp
 }
 
-# flagged interpretations are routed to the review queue (docs/milestone_2.md
-# task 7); exposed here so the output stage doesn't re-derive the rule
+#' Does an interpretation need human review?
+#'
+#' Flagged interpretations are routed to the review queue
+#' ([build_review_queue()]); exposed here so the output stage doesn't
+#' re-derive the rule.
+#'
+#' @param interp An `interpretation` object.
+#' @return A single logical: `TRUE` if `interp$flags` is non-empty.
+#' @export
 needs_review <- function(interp) length(unlist(interp$flags)) > 0

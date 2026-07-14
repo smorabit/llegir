@@ -1,19 +1,39 @@
 ## interpretation contract: constructor, validator, JSON (de)serialization.
-## docs/schemas.md, schemas/interpretation.schema.json
-
-library(jsonlite)
-library(digest)
+## docs/schemas.md, inst/schemas/interpretation.schema.json
 
 .interpretation_flags <- c(
     'insufficient_evidence', 'needs_human_review', 'possible_artifact',
     'tool_conflict', 'label_low_specificity'
 )
 
-# one module's filled schema, produced by the synthesis layer (R/synthesis.R)
-# from a fixed evidence packet. `confidence$score` starts out equal to
-# `confidence$model_score` and is overwritten in place by confidence fusion
-# (R/confidence.R); `provenance` is attached by the orchestrator, never by
-# the model itself.
+#' Construct an interpretation object
+#'
+#' One module's filled schema, produced by the synthesis layer
+#' ([synthesize_interpretation()]) from a fixed evidence packet.
+#' `confidence$score` starts out equal to `confidence$model_score` and is
+#' overwritten in place by confidence fusion ([fuse_confidence()]);
+#' `provenance` is attached by the orchestrator, never by the model itself.
+#'
+#' @param module_id The module this interpretation describes.
+#' @param proposed_label Short program name, e.g. `'Interferon response'`.
+#' @param one_line_summary A one-line summary of the module.
+#' @param dominant_biology Description of the main program.
+#' @param supporting_claims A list of claims, each
+#'   `list(claim, fragment_ids, direction, strength)`.
+#' @param confidence A confidence list: `list(score, model_score, rationale)`.
+#' @param provenance A provenance list, typically built with
+#'   [make_interpretation_provenance()].
+#' @param cell_state Where the module is expressed (from `cluster_dme`), if known.
+#' @param condition_dynamics Condition-dependent dynamics, if applicable.
+#' @param metadata_associations A list of `list(variable, summary, fragment_id)`.
+#' @param literature A list of `list(statement, pmids)`. Always empty in the
+#'   current synthesis layer.
+#' @param flags A subset of the flag vocabulary: `'insufficient_evidence'`,
+#'   `'needs_human_review'`, `'possible_artifact'`, `'tool_conflict'`,
+#'   `'label_low_specificity'`.
+#' @param schema_version Schema version tag. Default `'0.1'`.
+#' @return An `interpretation` object.
+#' @export
 interpretation <- function(module_id, proposed_label, one_line_summary, dominant_biology,
                             supporting_claims, confidence, provenance,
                             cell_state = NA_character_, condition_dynamics = NA_character_,
@@ -37,8 +57,17 @@ interpretation <- function(module_id, proposed_label, one_line_summary, dominant
     structure(interp, class = 'interpretation')
 }
 
-# `model`, `prompt_template_version`, `temperature`, `input_packet_hash` are
-# required; `model_version`/`seed`/`ellmer_call` are nullable audit extras.
+#' Build an interpretation's provenance record
+#'
+#' @param model Model identifier (e.g. `'mock'`, a provider model id).
+#' @param prompt_template_version Version of the system/user prompt template used.
+#' @param temperature Sampling temperature used for the model call.
+#' @param input_packet_hash The evidence packet's `packet_hash`.
+#' @param model_version Provider-reported model version, if available.
+#' @param seed Sampling seed, if available.
+#' @param ellmer_call Arbitrary named list of backend call bookkeeping (e.g. token counts).
+#' @return A provenance list suitable for [interpretation()]'s `provenance` argument.
+#' @export
 make_interpretation_provenance <- function(model, prompt_template_version, temperature,
                                             input_packet_hash, model_version = NA_character_,
                                             seed = NA_real_, ellmer_call = list()){
@@ -54,10 +83,16 @@ make_interpretation_provenance <- function(model, prompt_template_version, tempe
     )
 }
 
-# asserts required fields + basic shape (schemas/interpretation.schema.json);
-# throws on the first violation, returns TRUE invisibly on success. Faithfulness
-# (fragment_ids exist in the packet, direction matches) is a separate check
-# against the packet (R/faithfulness.R), not enforced here.
+#' Validate an interpretation object
+#'
+#' Asserts required fields and basic shape against
+#' `inst/schemas/interpretation.schema.json`. Faithfulness (fragment_ids exist
+#' in the packet, direction matches) is a separate check against the packet
+#' (see [check_faithfulness()]), not enforced here.
+#'
+#' @param interp An `interpretation` object.
+#' @return `TRUE`, invisibly, on success. Throws on the first violation.
+#' @export
 validate_interpretation <- function(interp){
     required <- c(
         'module_id', 'proposed_label', 'one_line_summary', 'dominant_biology',
@@ -132,6 +167,12 @@ validate_interpretation <- function(interp){
     unclass(interp)
 }
 
+#' Hash an interpretation
+#'
+#' @param interp An `interpretation` object.
+#' @return A sha256 hash string, stable across reruns (volatile fields like
+#'   timestamps are stripped before hashing).
+#' @export
 interpretation_hash <- function(interp){
     digest::digest(.interpretation_hashable(interp), algo = 'sha256')
 }
@@ -151,11 +192,23 @@ interpretation_hash <- function(interp){
     interp
 }
 
+#' Serialize an interpretation to JSON
+#'
+#' @param interp An `interpretation` object.
+#' @param pretty Pretty-print the JSON. Default `TRUE`.
+#' @return A JSON string (a `jsonlite::json` scalar).
+#' @export
 interpretation_to_json <- function(interp, pretty = TRUE){
     jsonlite::toJSON(unclass(.boxed_arrays(interp)), auto_unbox = TRUE, na = 'null', pretty = pretty)
 }
 
-# inverse of interpretation_to_json(); rebuilds the interpretation class
+#' Parse an interpretation from JSON
+#'
+#' Inverse of [interpretation_to_json()]; rebuilds the `interpretation` class.
+#'
+#' @param json_str A JSON string as produced by [interpretation_to_json()].
+#' @return An `interpretation` object.
+#' @export
 interpretation_from_json <- function(json_str){
     parsed <- jsonlite::fromJSON(json_str, simplifyDataFrame = FALSE, simplifyVector = FALSE)
     to_claim <- function(claim){
@@ -183,11 +236,22 @@ interpretation_from_json <- function(json_str){
     )
 }
 
+#' Write an interpretation to a JSON file
+#'
+#' @param interp An `interpretation` object.
+#' @param path Output file path.
+#' @return `path`, invisibly.
+#' @export
 write_interpretation <- function(interp, path){
     writeLines(interpretation_to_json(interp), path)
     invisible(path)
 }
 
+#' Read an interpretation from a JSON file
+#'
+#' @param path Path to an interpretation JSON file.
+#' @return An `interpretation` object.
+#' @export
 read_interpretation <- function(path){
     interpretation_from_json(paste(readLines(path, warn = FALSE), collapse = '\n'))
 }

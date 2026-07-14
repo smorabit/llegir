@@ -1,0 +1,223 @@
+---
+title: "Getting started with sentit"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with sentit}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = '#>'
+)
+```
+
+**sentit** ("to sense", Catalan) is a Module Interpretation Engine: it loads a
+gene co-expression module object (starting with hdWGCNA), gathers a
+standardized bundle of evidence per module through a toolbox of deterministic
+R functions, and drafts an evidence-backed interpretation paragraph via a
+model-agnostic synthesis layer with faithfulness checking and confidence
+fusion.
+
+This vignette walks the whole pipeline end to end on a small, self-contained
+synthetic dataset -- no Seurat/hdWGCNA object, no external data file, and no
+network access or API key required. It builds entirely offline via
+[`mock_backend()`], so it runs the same way in `R CMD check` as it does
+interactively.
+
+*sentit is experimental: the public API, especially the `ModuleSet` adapter
+contract and the custom-tool interface, is expected to evolve before a 1.0
+release.*
+
+## 1. A `ModuleSet`
+
+Every core tool depends only on the `ModuleSet` adapter contract --
+[`modules()`], [`gene_membership()`], [`module_scores()`], [`expression()`],
+[`metadata()`], [`pkg_versions()`] -- never on a specific backend package.
+[`hdWGCNA_ModuleSet()`] is the real-world adapter, built from a Seurat object
+that has been run through hdWGCNA. For this vignette we instead use
+[`sentit_example_moduleset()`], a small simulated dataset (two co-expressed
+gene modules plus background noise genes, 200 cells) that satisfies the same
+contract, so every tool below runs unmodified against it.
+
+```{r}
+library(sentit)
+
+ms <- sentit_example_moduleset()
+modules(ms)
+```
+
+```{r}
+head(gene_membership(ms, 'module_a'))
+```
+
+```{r}
+head(metadata(ms))
+```
+
+`module_a` is simulated to associate with the `diagnosis` column, and
+`module_b` with `cell_type` -- used below to show a real (not null) evidence
+signal.
+
+## 2. Evidence tools
+
+Each tool takes a `ctx <- list(ms, module_id, params)` and returns a single,
+validated `evidence_fragment` -- see [`evidence_fragment()`] and the shipped
+`evidence_fragment.schema.json` for the full contract.
+
+```{r}
+ctx <- list(ms = ms, module_id = 'module_a', params = list(n_hubs = 10))
+hub_frag <- hub_genes_tool(ctx)
+validate_evidence_fragment(hub_frag)
+hub_frag$compact_summary
+```
+
+```{r}
+meta_frag <- module_by_metadata_tool(list(
+    ms = ms, module_id = 'module_a',
+    params = list(column = 'diagnosis', column_type = 'categorical')
+))
+meta_frag$compact_summary
+```
+
+```{r}
+cluster_frag <- cluster_dme_tool(list(
+    ms = ms, module_id = 'module_b',
+    params = list(group_by = 'cell_type')
+))
+cluster_frag$compact_summary
+```
+
+A fourth core tool, [`geneset_enrichment_tool()`], runs offline GO/pathway
+enrichment against a local GMT file (`ctx$params$db_files`); it's omitted
+here since no gene-set library ships with the package, but it follows the
+same `ctx -> evidence_fragment` contract as the tools above.
+
+User-supplied result tables (e.g. a DME table computed outside sentit) can be
+folded into the same pipeline via [`import_fragment()`] /
+[`import_fragment_tool()`], tagged `provenance$source = 'user_supplied'`
+rather than `'computed'`.
+
+## 3. Evidence packets
+
+[`run_module()`] runs a configured list of tools against one module and
+bundles the fragments into a validated, hashed evidence packet --
+[`build_evidence_packet()`] under the hood. The `packet_hash` is a content
+hash of the fragments (timestamps excluded), so it's a reproducibility
+fingerprint: the same evidence always hashes the same way.
+
+```{r}
+tool_config <- list(
+    list(fn = hub_genes_tool, params = list(n_hubs = 10)),
+    list(fn = module_by_metadata_tool, params = list(column = 'diagnosis', column_type = 'categorical'))
+)
+packet <- run_module(ms, 'module_a', tool_config, input_hash = 'vignette-example')
+packet$packet_hash
+length(packet$fragments)
+```
+
+[`run_orchestrator()`] does this for every module in a `ModuleSet` at once,
+writing one packet JSON per module (plus, optionally, every fragment's full
+result table via `tables_dir`):
+
+```{r}
+out_dir <- tempfile('packets_')
+packets <- run_orchestrator(ms, tool_config, output_dir = out_dir)
+list.files(out_dir)
+```
+
+A single module failing (e.g. a degenerate module tripping up one tool)
+doesn't take down the whole batch -- it's warned and recorded as `NULL`,
+leaving every other module's packet intact.
+
+## 4. Dataset context
+
+Synthesis requires a [`dataset_description()`] -- the biological context
+prepended to every prompt, so the model interprets a module in the right
+frame (e.g. CSF myeloid vs. tumor tissue changes what a given program means).
+It's a hard requirement, not a default: [`validate_dataset_description()`]
+errors on a missing/empty required field.
+
+```{r}
+desc <- dataset_description(
+    species = 'human', tissue = 'simulated tissue', cell_compartment = 'simulated cells',
+    assay = 'simulated scRNA-seq', conditions = c('case', 'control')
+)
+cat(render_dataset_description(desc))
+```
+
+## 5. Synthesis
+
+[`synthesize_module()`] runs the full packet -> interpretation pipeline:
+calls a backend via [`synthesize_interpretation()`], enforces citation
+faithfulness ([`enforce_faithfulness()`] -- every claim's `fragment_ids` must
+actually exist in the packet, and its `direction` must match), and fuses
+model and deterministic confidence ([`fuse_confidence()`]).
+
+The model's role is bounded by design: it only ever sees the compact prompt
+built by [`build_system_prompt()`] / [`build_user_prompt()`] (fragment
+summaries and top findings, never raw result tables), and it never runs
+analysis code.
+
+Here, [`mock_backend()`] stands in for a live model -- a canned, fixed
+response that never touches the network, used by the whole test suite and by
+this vignette:
+
+```{r}
+interp <- synthesize_module(packet, desc, backend = mock_backend())
+interp$proposed_label
+interp$confidence$score
+```
+
+```{r}
+cat(render_paragraph(interp))
+```
+
+### Live backends
+
+sentit's synthesis backends are pluggable via [`resolve_backend()`]
+(`provider = 'github'` or `'gemini'`, both built on [`ellmer_backend()`]) or
+[`ellmer_backend()`] directly with any `ellmer::chat_*()` constructor. These
+need network access and a provider API key (picked up by `ellmer` itself from
+the provider's environment variable, e.g. `GITHUB_PAT` or `GEMINI_API_KEY`),
+so they aren't exercised in this vignette or in `R CMD check` -- only shown
+here for reference:
+
+```{r, eval = FALSE}
+backend <- resolve_backend(provider = 'gemini')
+interp <- synthesize_module(packet, desc, backend = backend)
+```
+
+[`cached_backend()`] wraps any backend with an on-disk cache keyed on the
+packet hash + provider + model + prompt template version, so re-running
+synthesis over an unchanged packet never re-spends an API call.
+
+## 6. Batch synthesis: review queue and manifest
+
+[`run_synthesis_orchestrator()`] runs [`synthesize_module()`] over a batch of
+packets (e.g. the output of [`run_orchestrator()`]), writing per-module
+interpretation JSON and rendered Markdown paragraphs, plus a run-level
+`review_queue.tsv` and `manifest.json`:
+
+```{r}
+synth_dir <- tempfile('synthesis_')
+interps <- run_synthesis_orchestrator(packets, desc, backend = mock_backend(), output_dir = synth_dir)
+list.files(synth_dir)
+```
+
+The review queue ([`build_review_queue()`]) lists only flagged
+interpretations ([`needs_review()`]) -- a triage queue for a human reviewer,
+not a summary of every module -- sorted lowest-confidence first:
+
+```{r}
+build_review_queue(interps)
+```
+
+The mock backend always returns the same fixed, generic content regardless
+of the actual evidence packet -- so its citations and confidence score are
+never truly grounded in this vignette's per-module evidence, and
+`needs_human_review` is expected here. A live model, synthesizing from the
+real packet contents, will typically agree with the deterministic evidence
+more often and flag fewer modules.

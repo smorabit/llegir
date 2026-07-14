@@ -13,12 +13,50 @@
 ## `column == sample_col` is a special case: it's the aggregation unit
 ## itself, so it gets a descriptive per-sample summary, not a group test.
 
+#' Evidence tool: module score vs. a declared metadata column
+#'
+#' A core evidence tool. Touches only the `ModuleSet` adapter contract
+#' ([module_scores()], [metadata()], [pkg_versions()]) plus the shared
+#' [categorical_group_test()] / [continuous_correlation_test()] helpers.
+#' Categorical columns (e.g. diagnosis, sample) get group means plus
+#' Kruskal/one-vs-rest Wilcoxon; continuous columns get Pearson/Spearman
+#' correlation.
+#'
+#' @param ctx A tool context list: `list(ms, module_id, params)`, as built by
+#'   [run_module()]. `ctx$params$column` (required) is the metadata column to
+#'   test. `ctx$params$column_type` is `'categorical'` (default) or
+#'   `'continuous'`. `ctx$params$sample_col` (default `'sample'`) is the
+#'   sample-id column used for the pseudoreplication fix. `ctx$params$level`
+#'   is `'auto'` (default), `'cell'`, or `'sample'`.
+#' @return An `evidence_fragment` of type `'categorical_association'` or
+#'   `'continuous_correlation'`, or `NULL` if `ctx$ms` lacks a capability this
+#'   call needs (`module_scores` always; `sample_ids` for categorical
+#'   testing, see [capabilities()]) -- a graceful skip, not an error.
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' module_by_metadata_tool(list(
+#'     ms = ms, module_id = modules(ms)[1],
+#'     params = list(column = 'diagnosis', column_type = 'categorical')
+#' ))
+#' @export
 module_by_metadata_tool <- function(ctx){
     column <- ctx$params$column
     if (is.null(column)) stop('module_by_metadata requires params$column')
     column_type <- ctx$params$column_type %||% 'categorical'
     sample_col <- ctx$params$sample_col %||% 'sample'
     level_param <- ctx$params$level %||% 'auto'
+
+    if (!has_capability(ctx$ms, 'module_scores')) {
+        message('module_by_metadata: skipped, module set lacks the module_scores capability')
+        return(NULL)
+    }
+    # continuous correlation works directly off scores + the raw column, no
+    # sample aggregation involved; every other branch aggregates by sample
+    # (the pseudoreplication fix) or is descriptive over samples themselves
+    if (column_type != 'continuous' && !has_capability(ctx$ms, 'sample_ids')) {
+        message('module_by_metadata: skipped, module set lacks the sample_ids capability required for ', column_type, ' testing')
+        return(NULL)
+    }
 
     scores <- module_scores(ctx$ms, module = ctx$module_id)
     meta <- metadata(ctx$ms)

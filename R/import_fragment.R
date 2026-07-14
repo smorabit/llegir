@@ -20,14 +20,14 @@
         }
 
         ordered <- result[order(result[[p_col]]), ]
-        top <- head(ordered, params$n_top %||% 20)
+        top <- utils::head(ordered, params$n_top %||% 20)
         top_findings <- lapply(seq_len(min(5, nrow(top))), function(i){
             list(term = top[[term_col]][i], significance = top[[p_col]][i], effect = top[[effect_col]][i])
         })
 
         list(
             result = top,
-            compact_summary = paste0('user-supplied enrichment: top terms: ', paste(head(top[[term_col]], 5), collapse = '; ')),
+            compact_summary = paste0('user-supplied enrichment: top terms: ', paste(utils::head(top[[term_col]], 5), collapse = '; ')),
             top_findings = top_findings,
             effect_strength = if (nrow(top) > 0) max(abs(top[[effect_col]]), na.rm = TRUE) else 0,
             significance = if (nrow(top) > 0) min(top[[p_col]], na.rm = TRUE) else NA_real_,
@@ -64,8 +64,27 @@
     }
 )
 
-# core constructor: takes a user's tidy data.frame directly, dispatches to the
-# `type`-specific normalizer above, and returns a validated evidence_fragment
+#' Import a user-supplied result table as an evidence fragment
+#'
+#' Lets a user inject an already-computed result table (DMEs, GO enrichment,
+#' etc.) as a validated [evidence_fragment()] instead of recomputing it via a
+#' core tool. `provenance$source` is set to `'user_supplied'` so
+#' faithfulness/reproducibility checks can distinguish these from
+#' tool-computed fragments; the synthesis layer treats both identically.
+#'
+#' @param module_id The module this fragment describes.
+#' @param type One of the supported fragment types: `'geneset_enrichment'`,
+#'   `'categorical_association'`.
+#' @param result A tidy data.frame with the user's result table.
+#' @param fragment_id Unique id within the packet. Defaults to
+#'   `paste0('imported::', type)`.
+#' @param tool_id Tool id recorded in provenance. Default `'import_fragment'`.
+#' @param params Named list of column-name overrides (e.g. `term_col`,
+#'   `significance_col`, `effect_col`) and other normalizer options (e.g.
+#'   `n_top`), since a user-supplied table won't share this package's exact
+#'   column names.
+#' @return An `evidence_fragment` object.
+#' @export
 import_fragment <- function(module_id, type, result, fragment_id = NULL,
                              tool_id = 'import_fragment', params = list()){
     if (!is.data.frame(result)) stop('import_fragment requires result to be a data.frame')
@@ -99,10 +118,16 @@ import_fragment <- function(module_id, type, result, fragment_id = NULL,
     )
 }
 
-# ctx-compatible wrapper so import_fragment slots into the orchestrator's
-# tool_config list exactly like any other tool (no orchestrator changes
-# needed): ctx$params$result (a data.frame) or ctx$params$result_path (a
-# delimited file) plus ctx$params$type.
+#' `ctx`-compatible tool wrapper around [import_fragment()]
+#'
+#' Slots [import_fragment()] into an orchestrator's `tool_config` list exactly
+#' like any other tool. Reads `ctx$params$result` (a data.frame) or
+#' `ctx$params$result_path` (a delimited file) plus `ctx$params$type`.
+#'
+#' @param ctx A tool context list: `list(ms, module_id, params)`, as built by
+#'   [run_module()].
+#' @return An `evidence_fragment` object.
+#' @export
 import_fragment_tool <- function(ctx){
     type <- ctx$params$type
     if (is.null(type)) stop('import_fragment_tool requires params$type')

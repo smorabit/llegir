@@ -1,8 +1,6 @@
 ## evidence_fragment contract: constructor, validator, JSON (de)serialization,
-## and evidence-packet assembly + hashing. docs/schemas.md
-
-library(jsonlite)
-library(digest)
+## and evidence-packet assembly + hashing. docs/schemas.md,
+## inst/schemas/evidence_fragment.schema.json
 
 # controlled vocab for evidence_fragment$type (docs/schemas.md); extend deliberately,
 # the (future) synthesis prompt is written against this list
@@ -14,7 +12,30 @@ library(digest)
 
 .direction_types <- c('up', 'down', 'mixed', 'na')
 
-# one tool's result for one module; every core/custom tool must return one of these
+#' Construct an evidence fragment
+#'
+#' One tool's result for one module; every core/custom tool must return one
+#' of these. See `vignette('getting-started', package = 'sentit')` and
+#' `inst/schemas/evidence_fragment.schema.json` for the full contract.
+#'
+#' @param fragment_id Unique id within a packet, e.g. `'cluster_dme'` or
+#'   `'metadata::diagnosis'`.
+#' @param tool_id Which tool produced this fragment.
+#' @param module_id The module this fragment describes.
+#' @param type One of the controlled vocabulary: `'ranked_genes'`,
+#'   `'categorical_association'`, `'continuous_correlation'`,
+#'   `'geneset_enrichment'`, `'signature_correlation'`,
+#'   `'cross_condition_delta'`, `'state_expression'`.
+#' @param result The full tidy result (a data.frame).
+#' @param compact_summary Short digest for the model (token-efficient, no raw tables).
+#' @param top_findings A list of the few most salient items (genes / terms / groups).
+#' @param effect_strength A comparable magnitude, e.g. `max(abs(r))`, top
+#'   `log2FC`, or top `-log10(FDR)`.
+#' @param significance p / FDR where applicable, else `NA_real_`.
+#' @param direction One of `'up'`, `'down'`, `'mixed'`, `'na'`.
+#' @param provenance A provenance list, typically built with [make_provenance()].
+#' @return An `evidence_fragment` object.
+#' @export
 evidence_fragment <- function(fragment_id, tool_id, module_id, type, result,
                                compact_summary, top_findings, effect_strength,
                                significance = NA_real_, direction = 'na',
@@ -37,8 +58,14 @@ evidence_fragment <- function(fragment_id, tool_id, module_id, type, result,
     structure(frag, class = 'evidence_fragment')
 }
 
-# asserts required fields + basic types (schemas/evidence_fragment.schema.json);
-# throws on the first violation, returns TRUE invisibly on success
+#' Validate an evidence fragment
+#'
+#' Asserts required fields and basic types against
+#' `inst/schemas/evidence_fragment.schema.json`.
+#'
+#' @param frag An `evidence_fragment` object.
+#' @return `TRUE`, invisibly, on success. Throws on the first violation.
+#' @export
 validate_evidence_fragment <- function(frag){
     required <- c(
         'fragment_id', 'tool_id', 'module_id', 'type', 'result',
@@ -79,14 +106,26 @@ validate_evidence_fragment <- function(frag){
     unclass(frag)
 }
 
-# `unclass()` drops the S3 tag so jsonlite serializes the fragment as a plain
-# object; `dataframe = 'rows'` keeps `result` as a row-oriented JSON array
+#' Serialize an evidence fragment to JSON
+#'
+#' @param frag An `evidence_fragment` object.
+#' @param pretty Pretty-print the JSON. Default `TRUE`.
+#' @return A JSON string (a `jsonlite::json` scalar).
+#' @export
 fragment_to_json <- function(frag, pretty = TRUE){
+    # `unclass()` drops the S3 tag so jsonlite serializes the fragment as a plain
+    # object; `dataframe = 'rows'` keeps `result` as a row-oriented JSON array
     jsonlite::toJSON(unclass(frag), dataframe = 'rows', auto_unbox = TRUE, na = 'null', pretty = pretty)
 }
 
-# inverse of fragment_to_json(); rebuilds the evidence_fragment class + defaults
-# for fields that may have been dropped by JSON's null handling
+#' Parse an evidence fragment from JSON
+#'
+#' Inverse of [fragment_to_json()]; rebuilds the `evidence_fragment` class and
+#' defaults for fields that may have been dropped by JSON's null handling.
+#'
+#' @param json_str A JSON string as produced by [fragment_to_json()].
+#' @return An `evidence_fragment` object.
+#' @export
 fragment_from_json <- function(json_str){
     parsed <- jsonlite::fromJSON(json_str, simplifyDataFrame = TRUE, simplifyVector = TRUE)
     do.call(evidence_fragment, list(
@@ -104,13 +143,20 @@ fragment_from_json <- function(json_str){
     ))
 }
 
-# one module's evidence packet: validates every fragment, then hashes the
-# content (fragments minus timestamps) so the hash is a reproducibility
-# fingerprint, not just a run-to-run-unique id. `input_hash` identifies the
-# source dataset (e.g. a content hash of the .rds); the per-fragment
-# provenance already carries each tool's own params/pkg_versions, so the
-# packet-level manifest just adds the assembly-time context (which tools ran,
-# against which input) rather than duplicating it
+#' Assemble and hash a module's evidence packet
+#'
+#' Validates every fragment, then hashes the content (fragments minus
+#' timestamps) so the hash is a reproducibility fingerprint, not just a
+#' run-to-run-unique id.
+#'
+#' @param module_id The module this packet describes.
+#' @param fragments A list of `evidence_fragment` objects.
+#' @param input_hash A content hash identifying the source dataset (e.g. of
+#'   the backing `.rds`), for provenance.
+#' @param schema_version Schema version tag. Default `'0.1'`.
+#' @return A list with `module_id`, `fragments`, `packet_hash`,
+#'   `schema_version`, and `provenance`.
+#' @export
 build_evidence_packet <- function(module_id, fragments, input_hash = NA_character_, schema_version = '0.1'){
     lapply(fragments, validate_evidence_fragment)
     packet_hash <- digest::digest(lapply(fragments, .fragment_hashable), algo = 'sha256')
@@ -127,6 +173,12 @@ build_evidence_packet <- function(module_id, fragments, input_hash = NA_characte
     )
 }
 
+#' Serialize an evidence packet to JSON
+#'
+#' @param packet An evidence packet, as returned by [build_evidence_packet()].
+#' @param pretty Pretty-print the JSON. Default `TRUE`.
+#' @return A JSON string (a `jsonlite::json` scalar).
+#' @export
 packet_to_json <- function(packet, pretty = TRUE){
     jsonlite::toJSON(
         list(
@@ -140,19 +192,33 @@ packet_to_json <- function(packet, pretty = TRUE){
     )
 }
 
+#' Write an evidence packet to a JSON file
+#'
+#' @param packet An evidence packet, as returned by [build_evidence_packet()].
+#' @param path Output file path.
+#' @return `path`, invisibly.
+#' @export
 write_evidence_packet <- function(packet, path){
     writeLines(packet_to_json(packet), path)
     invisible(path)
 }
 
-# reconstructs a packet (and each fragment's S3 class) from a JSON file written
-# by write_evidence_packet(); indexes fragments row-by-row since jsonlite
-# simplifies the fragments array into a data.frame. JSON *array* fields
-# (result, top_findings) become list-columns, so `[[1]]` unwraps the one
-# element for this row; the `provenance` field is a JSON *object*, so jsonlite
-# instead simplifies it into its own nested data.frame keyed by column, and a
-# one-row slice of that is already this fragment's record (as.list(), not `[[1]]`)
+#' Read an evidence packet from a JSON file
+#'
+#' Reconstructs a packet (and each fragment's S3 class) from a JSON file
+#' written by [write_evidence_packet()].
+#'
+#' @param path Path to a packet JSON file.
+#' @return An evidence packet, as returned by [build_evidence_packet()].
+#' @export
 read_evidence_packet <- function(path){
+    # jsonlite simplifies the fragments array into a data.frame, so fragments
+    # are indexed row-by-row. JSON *array* fields (result, top_findings)
+    # become list-columns, so `[[1]]` unwraps the one element for this row;
+    # the `provenance` field is a JSON *object*, so jsonlite instead
+    # simplifies it into its own nested data.frame keyed by column, and a
+    # one-row slice of that is already this fragment's record (as.list(),
+    # not `[[1]]`)
     parsed <- jsonlite::fromJSON(path, simplifyDataFrame = TRUE, simplifyVector = TRUE)
     fragments <- lapply(seq_len(nrow(parsed$fragments)), function(i) {
         f <- parsed$fragments[i, ]
@@ -179,15 +245,22 @@ read_evidence_packet <- function(path){
     )
 }
 
-# writes every fragment's full result table to
-# <tables_dir>/<module_id>/<fragment_id>.tsv, alongside the JSON packet, so a
-# human can audit any DME table / enrichment table / overlap directly
-# (docs/milestone_1_5.md task 4). Keyed by fragment_id rather than tool_id,
-# since one tool can produce several fragments per module (e.g.
-# module_by_metadata run once for 'diagnosis' and once for 'sample') and
-# tool_id alone would collide; "::" in a fragment_id isn't safe in filenames
-# everywhere, so it's swapped for "__".
+#' Write every fragment's full result table alongside a packet
+#'
+#' Writes each fragment's full result table to
+#' `<tables_dir>/<module_id>/<fragment_id>.tsv`, so a human can audit any DME
+#' table / enrichment table / overlap directly.
+#'
+#' @param packet An evidence packet, as returned by [build_evidence_packet()].
+#' @param tables_dir Output directory.
+#' @return `tables_dir`, invisibly.
+#' @export
 write_fragment_tables <- function(packet, tables_dir){
+    # keyed by fragment_id rather than tool_id, since one tool can produce
+    # several fragments per module (e.g. module_by_metadata run once for
+    # 'diagnosis' and once for 'sample') and tool_id alone would collide;
+    # "::" in a fragment_id isn't safe in filenames everywhere, so it's
+    # swapped for "__"
     module_dir <- file.path(tables_dir, packet$module_id)
     dir.create(module_dir, recursive = TRUE, showWarnings = FALSE)
     for (frag in packet$fragments) {
@@ -198,10 +271,17 @@ write_fragment_tables <- function(packet, tables_dir){
     invisible(tables_dir)
 }
 
-# `pkg_versions` is supplied by the caller (via the adapter's pkg_versions()),
-# not looked up here, so this file stays backend-agnostic. `source` defaults
-# to 'computed' for tool-produced fragments; import_fragment() overrides it
-# to 'user_supplied' so faithfulness/reproducibility checks can tell them apart.
+#' Build a fragment's provenance record
+#'
+#' @param tool_version Version string for the tool that produced the fragment.
+#' @param params Named list of the parameters the tool was called with.
+#' @param input_hashes Named list of content hashes of relevant inputs.
+#' @param pkg_versions Named list of backend package versions, typically from
+#'   the `ModuleSet`'s own [pkg_versions()].
+#' @param source `'computed'` (default, tool-produced) or `'user_supplied'`
+#'   (set automatically by [import_fragment()]).
+#' @return A provenance list suitable for [evidence_fragment()]'s `provenance` argument.
+#' @export
 make_provenance <- function(tool_version, params = list(), input_hashes = list(), pkg_versions = list(), source = 'computed'){
     list(
         tool_version = tool_version,

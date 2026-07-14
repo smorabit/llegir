@@ -2,8 +2,13 @@
 ## task 1). Compact rendering only (compact_summary + top_findings +
 ## effect_strength/significance) -- never the raw `result` tables.
 
-# bump whenever the system prompt or rendering shape changes; recorded in
-# interpretation$provenance$prompt_template_version for reproducibility
+#' Prompt template version
+#'
+#' Bumped whenever the system prompt or the compact packet rendering shape
+#' changes; recorded in `interpretation$provenance$prompt_template_version`
+#' for reproducibility.
+#'
+#' @export
 PROMPT_TEMPLATE_VERSION <- '0.2'
 
 # a fragment's compact block: one header line (id/type/direction/effect/sig),
@@ -21,6 +26,23 @@ PROMPT_TEMPLATE_VERSION <- '0.2'
     paste(header, frag$compact_summary, paste0('top_findings: ', findings_json), sep = '\n')
 }
 
+#' Render an evidence packet as a compact model-facing text block
+#'
+#' Renders only the compact, curated fields of each fragment
+#' (`compact_summary`, `top_findings`, `effect_strength`/`significance`) --
+#' never the raw `result` tables -- so the prompt stays small and the model
+#' only sees pre-summarized evidence.
+#'
+#' @param packet An evidence packet, as built by [build_evidence_packet()].
+#' @param max_findings Maximum number of `top_findings` entries rendered per
+#'   fragment; a token-efficiency backstop, since tools already curate
+#'   `top_findings` to a handful of entries.
+#' @return A single character string.
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' cat(render_packet_compact(packet))
+#' @export
 render_packet_compact <- function(packet, max_findings = 8){
     blocks <- vapply(packet$fragments, .render_fragment_compact, character(1), max_findings = max_findings)
     paste0(
@@ -29,6 +51,17 @@ render_packet_compact <- function(packet, max_findings = 8){
     )
 }
 
+#' Build the synthesis system prompt
+#'
+#' A fixed set of rules governing how a backend must fill the model-facing
+#' interpretation schema: evidence-only claims, citation requirements,
+#' direction consistency, controlled vocabularies, and the empty-literature
+#' constraint.
+#'
+#' @return A single character string.
+#' @examples
+#' cat(build_system_prompt())
+#' @export
 build_system_prompt <- function(){
     paste(
         'You are filling a structured interpretation of one gene co-expression module',
@@ -48,6 +81,20 @@ build_system_prompt <- function(){
     )
 }
 
+#' Build the synthesis user prompt for one module
+#'
+#' Concatenates the rendered [dataset_description()] with the compact
+#' evidence packet ([render_packet_compact()]).
+#'
+#' @param packet An evidence packet, as built by [build_evidence_packet()].
+#' @param desc A `dataset_description`; see [dataset_description()].
+#' @return A single character string.
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
+#' cat(build_user_prompt(packet, desc))
+#' @export
 build_user_prompt <- function(packet, desc){
     paste(
         render_dataset_description(desc),

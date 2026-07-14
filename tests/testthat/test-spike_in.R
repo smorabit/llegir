@@ -11,6 +11,7 @@
 ## positive_ms/negative_ms are shared fixtures, built once in setup.R.
 
 test_that('positive control: cluster_dme picks the pDC cluster', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(group_by = 'lv2_annot'))
     frag <- cluster_dme_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
@@ -23,6 +24,7 @@ test_that('positive control: cluster_dme picks the pDC cluster', {
 })
 
 test_that('positive control: hub genes are drawn from the pDC marker set', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(n_hubs = 10))
     frag <- hub_genes_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
@@ -30,6 +32,7 @@ test_that('positive control: hub genes are drawn from the pDC marker set', {
 })
 
 test_that('positive control: enrichment recovers a plasmacytoid/dendritic-related term', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = positive_ms, module_id = 'pdc_module',
                 params = list(n_hubs = length(pdc_genes), db_files = test_db_files))
     frag <- geneset_enrichment_tool(ctx)
@@ -39,6 +42,7 @@ test_that('positive control: enrichment recovers a plasmacytoid/dendritic-relate
 })
 
 test_that('negative control: cluster_dme shows weak, non-specific association', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     pos_ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(group_by = 'lv2_annot'))
     neg_ctx <- list(ms = negative_ms, module_id = 'random_module', params = list(group_by = 'lv2_annot'))
     pos_frag <- cluster_dme_tool(pos_ctx)
@@ -50,6 +54,7 @@ test_that('negative control: cluster_dme shows weak, non-specific association', 
 })
 
 test_that('negative control: enrichment is far weaker than the positive control', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     pos_ctx <- list(ms = positive_ms, module_id = 'pdc_module',
                      params = list(n_hubs = length(pdc_genes), db_files = test_db_files))
     neg_ctx <- list(ms = negative_ms, module_id = 'random_module',

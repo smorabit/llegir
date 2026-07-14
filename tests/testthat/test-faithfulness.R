@@ -18,6 +18,7 @@ make_faithful_interpretation <- function(packet){
 }
 
 test_that('check_faithfulness() finds no violations for correctly-cited claims', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
     interp <- make_faithful_interpretation(packet)
     expect_equal(check_faithfulness(interp, packet), list())
@@ -26,6 +27,7 @@ test_that('check_faithfulness() finds no violations for correctly-cited claims',
 })
 
 test_that('a fabricated fragment_id in supporting_claims is caught', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
     interp <- make_faithful_interpretation(packet)
     interp$supporting_claims[[1]]$fragment_ids <- 'not_a_real_fragment'
@@ -41,6 +43,7 @@ test_that('a fabricated fragment_id in supporting_claims is caught', {
 })
 
 test_that('a wrong claim direction is caught', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
     interp <- make_faithful_interpretation(packet)
     # geneset_enrichment is always direction 'up' (docs/milestone_1_5.md); claiming 'down' is a mismatch
@@ -57,6 +60,7 @@ test_that('a wrong claim direction is caught', {
 })
 
 test_that('a fabricated fragment_id in metadata_associations is caught', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
     interp <- make_faithful_interpretation(packet)
     interp$metadata_associations[[1]]$fragment_id <- 'metadata::not_a_real_column'
@@ -68,6 +72,7 @@ test_that('a fabricated fragment_id in metadata_associations is caught', {
 })
 
 test_that('enforce_faithfulness() leaves flags untouched when the interpretation is faithful', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
     interp <- make_faithful_interpretation(packet)
     flagged <- enforce_faithfulness(interp, packet)
@@ -75,6 +80,7 @@ test_that('enforce_faithfulness() leaves flags untouched when the interpretation
 })
 
 test_that('mock_backend() synthesis output passes the faithfulness check against a real packet', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
     packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
     interp <- synthesize_interpretation(packet, csf_dataset_description(), backend = mock_backend(), schema_path = test_schema_path)
     expect_true(is_faithful(interp, packet))

@@ -40,12 +40,22 @@
     node
 }
 
-# the interpretation schema minus fields the model shouldn't fill:
-# `provenance`/`schema_version` are orchestrator bookkeeping, and
-# `confidence$model_score` just duplicates `confidence$score` for audit --
-# asking the model to fill it twice invites drift. Derived from the one
-# canonical schema file rather than hand-duplicated, so the two never diverge.
-model_output_schema_json <- function(schema_path = 'schemas/interpretation.schema.json'){
+#' Model-facing interpretation schema, derived from the canonical schema
+#'
+#' The interpretation JSON schema minus fields the model shouldn't fill:
+#' `provenance`/`schema_version` are orchestrator bookkeeping, and
+#' `confidence$model_score` just duplicates `confidence$score` for audit --
+#' asking the model to fill it twice invites drift. Derived from the one
+#' canonical schema file (rather than hand-duplicated) so the two never
+#' diverge, and normalized to a schema dialect supported across providers.
+#'
+#' @param schema_path Path to the canonical `interpretation.schema.json`;
+#'   defaults to the schema shipped with the package.
+#' @return A JSON string (a `jsonlite::toJSON()` scalar) of the model-facing schema.
+#' @examples
+#' model_output_schema_json()
+#' @export
+model_output_schema_json <- function(schema_path = system.file('schemas', 'interpretation.schema.json', package = 'sentit')){
     schema <- jsonlite::fromJSON(schema_path, simplifyVector = FALSE)
     schema$`$schema` <- NULL
     schema$`$id` <- NULL
@@ -59,13 +69,23 @@ model_output_schema_json <- function(schema_path = 'schemas/interpretation.schem
     jsonlite::toJSON(schema, auto_unbox = TRUE, null = 'null')
 }
 
-# canned, fixed response -- first-class offline backend (docs/milestone_2.md
-# task 2), used by tests/CI and never touches the network. It cites
-# fragment_ids ('hub_genes', 'geneset_enrichment') and directions ('na', 'up')
-# that hold on every packet from the core tools (hub_genes is always
-# direction 'na', geneset_enrichment is always direction 'up'), so it passes
-# the faithfulness check against any real evidence packet without per-module
-# logic.
+#' Offline mock synthesis backend
+#'
+#' A canned, fixed-response backend: the first-class offline backend used by
+#' tests and CI, and never touches the network. It cites fragment_ids
+#' (`'hub_genes'`, `'geneset_enrichment'`) and directions (`'na'`, `'up'`)
+#' that hold on every packet produced by the core tools (`hub_genes` is
+#' always direction `'na'`, `geneset_enrichment` is always direction
+#' `'up'`), so it passes [check_faithfulness()] against any real evidence
+#' packet without per-module logic.
+#'
+#' @return A backend function with the signature
+#'   `function(system_prompt, user_prompt, schema_json, packet_hash) -> list(content, meta)`,
+#'   suitable for [synthesize_interpretation()].
+#' @examples
+#' backend <- mock_backend()
+#' backend('system prompt', 'user prompt', '{}')$content$proposed_label
+#' @export
 mock_backend <- function(){
     function(system_prompt, user_prompt, schema_json, packet_hash = NA_character_){
         list(
@@ -123,14 +143,31 @@ mock_backend <- function(){
     node
 }
 
-# live backend via ellmer structured output; not exercised by the offline
-# test suite (needs network + a provider API key). Provider/model are
-# config-selected via `chat_fn`/`model` (docs/milestone_2.md task 2) --
-# credentials are picked up by ellmer itself from the provider's env var
-# (e.g. GEMINI_API_KEY, GITHUB_PAT), already configured, never handled here.
-# `schema_transform` adapts the one canonical schema to a provider's
-# structured-output dialect (e.g. .require_no_additional_properties for
-# github) without forking the schema itself.
+#' Live synthesis backend via ellmer structured output
+#'
+#' Not exercised by the offline test suite (needs network + a provider API
+#' key). Provider and model are config-selected via `chat_fn`/`model`;
+#' credentials are picked up by `ellmer` itself from the provider's
+#' environment variable (e.g. `GEMINI_API_KEY`, `GITHUB_PAT`) and are never
+#' handled here. `schema_transform` adapts the one canonical schema to a
+#' provider's structured-output dialect (e.g. the internal
+#' `.to_openai_strict_schema()` used by [resolve_backend()] for GitHub
+#' Models) without forking the schema itself.
+#'
+#' @param chat_fn An `ellmer::chat_*()` constructor, e.g.
+#'   `ellmer::chat_google_gemini` or `ellmer::chat_github`.
+#' @param model Model id passed to `chat_fn`.
+#' @param temperature Sampling temperature.
+#' @param credentials Optional credentials passed to `chat_fn`; `NULL` uses
+#'   the provider's default environment-variable lookup.
+#' @param schema_transform A `function(schema_list) -> schema_list` applied
+#'   to the parsed canonical schema before it's sent to the provider.
+#' @return A backend function; see [mock_backend()] for the contract.
+#' @examples
+#' \dontrun{
+#' backend <- ellmer_backend(ellmer::chat_google_gemini, model = 'gemini-3.5-flash')
+#' }
+#' @export
 ellmer_backend <- function(chat_fn = ellmer::chat_google_gemini, model = 'gemini-3.5-flash',
                             temperature = 0, credentials = NULL, schema_transform = identity){
     function(system_prompt, user_prompt, schema_json, packet_hash = NA_character_){
@@ -152,13 +189,30 @@ ellmer_backend <- function(chat_fn = ellmer::chat_google_gemini, model = 'gemini
     }
 }
 
-# provider + model as a single config knob (docs/dev_economy.md task 1):
-# 'github' (gpt-4o-mini, the generous ~150/day tier) is the default dev
-# provider, 'gemini' is kept for occasional quality cross-checks, 'mock' is
-# the offline/CI backend. All three satisfy the same backend contract above,
-# so callers (scripts, tests) never branch on provider.
+# provider + model as a single config knob: 'github' (gpt-4o-mini, the
+# generous ~150/day tier) is the default dev provider, 'gemini' is kept for
+# occasional quality cross-checks, 'mock' is the offline/CI backend. All
+# three satisfy the same backend contract above, so callers (scripts, tests)
+# never branch on provider.
 .default_models <- list(github = 'gpt-4o-mini', gemini = 'gemini-3.5-flash')
 
+#' Resolve a synthesis backend from a provider name
+#'
+#' Provider + model as a single config knob. `'mock'` is the offline/CI
+#' backend ([mock_backend()]); `'github'` and `'gemini'` are both built on
+#' [ellmer_backend()] with the matching `ellmer::chat_*()` constructor and a
+#' default model id, so callers never branch on provider.
+#'
+#' @param provider One of `'github'` (default), `'gemini'`, `'mock'`.
+#' @param model Optional model id override; defaults to a per-provider default.
+#' @param temperature Sampling temperature (ignored by the mock backend).
+#' @return A backend function; see [mock_backend()] for the contract.
+#' @examples
+#' backend <- resolve_backend(provider = 'mock')
+#' \dontrun{
+#' backend <- resolve_backend(provider = 'gemini')
+#' }
+#' @export
 resolve_backend <- function(provider = 'github', model = NULL, temperature = 0){
     provider <- match.arg(provider, c('github', 'gemini', 'mock'))
     if (provider == 'mock') return(mock_backend())
@@ -168,13 +222,27 @@ resolve_backend <- function(provider = 'github', model = NULL, temperature = 0){
                     temperature = temperature, schema_transform = schema_transform)
 }
 
-# wraps any backend with a cache keyed on packet_hash + provider + model +
-# prompt_template_version (docs/dev_economy.md task 3): on a hit, the inner
-# backend (the live API call) is skipped entirely. Deliberately caches only
-# the raw model call, not the full synthesized interpretation -- faithfulness,
-# confidence fusion and rendering are cheap and deterministic, so they still
-# re-run every time on top of the cached content, which is the point: only
-# an actual packet/provider/model/prompt change should ever cost an API call.
+#' Cache a synthesis backend's raw model calls on disk
+#'
+#' Wraps any backend with a cache keyed on `packet_hash` + `provider` +
+#' `model` + `prompt_template_version`: on a hit, the inner backend (the live
+#' API call) is skipped entirely. Deliberately caches only the raw model
+#' call, not the full synthesized interpretation -- faithfulness, confidence
+#' fusion, and rendering are cheap and deterministic and still re-run every
+#' time on top of the cached content, so only an actual
+#' packet/provider/model/prompt change ever costs an API call.
+#'
+#' @param backend The backend function to wrap; see [mock_backend()] for the contract.
+#' @param provider Provider name, used only as a cache-key component.
+#' @param model Model id, used only as a cache-key component.
+#' @param prompt_template_version Prompt template version, used only as a cache-key component.
+#' @param cache_dir Directory to store cached `.rds` responses in.
+#' @param force_refresh If `TRUE`, bypass the cache and always call `backend`.
+#' @return A backend function; see [mock_backend()] for the contract.
+#' @examples
+#' backend <- cached_backend(mock_backend(), provider = 'mock', model = 'mock',
+#'     prompt_template_version = '0.2', cache_dir = tempfile())
+#' @export
 cached_backend <- function(backend, provider, model, prompt_template_version,
                             cache_dir = 'output/cache', force_refresh = FALSE){
     function(system_prompt, user_prompt, schema_json, packet_hash = NA_character_){
@@ -189,14 +257,37 @@ cached_backend <- function(backend, provider, model, prompt_template_version,
     }
 }
 
-# one packet -> one validated interpretation object. `dataset_description` is
-# required (hard error via validate_dataset_description() if missing/empty).
-# `module_id` is always taken from the packet, never trusted from the model's
-# output; `literature` is always forced empty (out of scope for M2 regardless
-# of what a backend returns).
+#' Synthesize one evidence packet into an interpretation via a backend
+#'
+#' The model's role is bounded: it fills the model-facing schema
+#' ([model_output_schema_json()]) from the compact prompt built by
+#' [build_system_prompt()] / [build_user_prompt()]; it never sees the raw
+#' evidence result tables and never runs analysis code. `module_id` is always
+#' taken from `packet`, never trusted from the model's output, and
+#' `literature` is always forced empty (out of scope for this milestone
+#' regardless of what a backend returns).
+#'
+#' @param packet An evidence packet, as built by [build_evidence_packet()].
+#' @param desc A `dataset_description`; see [dataset_description()]. Required
+#'   (hard error via [validate_dataset_description()] if missing/empty).
+#' @param backend A backend function; see [mock_backend()] for the contract.
+#' @param temperature Sampling temperature passed to the backend.
+#' @param seed Optional seed, recorded on the interpretation's provenance.
+#' @param prompt_template_version Prompt template version to record on the
+#'   interpretation's provenance.
+#' @param schema_path Path to the interpretation JSON schema; defaults to the
+#'   schema shipped with the package.
+#' @return An `interpretation` object (not yet faithfulness-checked or
+#'   confidence-fused; see [synthesize_module()] for the full pipeline).
+#' @examples
+#' ms <- sentit_example_moduleset()
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
+#' synthesize_interpretation(packet, desc, mock_backend())
+#' @export
 synthesize_interpretation <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                        prompt_template_version = PROMPT_TEMPLATE_VERSION,
-                                       schema_path = 'schemas/interpretation.schema.json'){
+                                       schema_path = system.file('schemas', 'interpretation.schema.json', package = 'sentit')){
     validate_dataset_description(desc)
 
     system_prompt <- build_system_prompt()
