@@ -125,6 +125,22 @@ if (go_data_available) {
     )
     go_gene_list_ms_nocap <- gene_list_ModuleSet(go_gene_sets, go_fixture$expr, go_fixture$meta, method = 'UCell')
 
+    # tiny synthetic signature library for signature_correlation_tool tests
+    # (docs/milestone_extensibility.md Part 2a): module_a's own gene set as
+    # one signature -- expect near-perfect co-variation with module_a's own
+    # score, a spike-in-style sanity check -- plus module_b's gene set and a
+    # decoy pathway as true negatives for module_a
+    go_signature_library_path <- tempfile(fileext = '.rds')
+    saveRDS(
+        list(
+            sig_match_a = go_gene_sets$module_a,
+            sig_match_b = go_gene_sets$module_b,
+            sig_decoy = .go_pathways[[go_decoys[1]]]
+        ),
+        go_signature_library_path
+    )
+    go_test_signature_files <- c(custom = go_signature_library_path)
+
     # shared tool_config for full-pipeline tests, mirroring csf_tool_config in setup.R
     go_tool_config <- function(db_files = go_test_db_files){
         list(

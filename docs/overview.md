@@ -46,7 +46,7 @@ hdWGCNA object ──▶ [evidence tools] ──▶ evidence packet (per module)
 
 - **Immediate:** run the deterministic core on the CSF myeloid hdWGCNA object (see [project home](../README.md)), producing standardized evidence packets per module.
 - **Then:** add the synthesis layer, confidence/review, and evaluation.
-- **Longer term:** a general, open-source tool; generalize beyond hdWGCNA to arbitrary modules/programs/factors and data structures (deferred until the hdWGCNA path works).
+- **Longer term:** a general, open-source tool; generalize beyond hdWGCNA to arbitrary modules/programs/factors and data structures (deferred until the hdWGCNA path works). Target: **fully technology-agnostic within transcriptomics** — e.g. bulk RNA-seq + standard WGCNA, 10x scRNA-seq + hdWGCNA, and spatial (Xenium / Visium HD) + NMF should all be interpretable through the same pipeline. The `ModuleSet` adapter + `capabilities()` system is how this is realized (e.g. a bulk dataset simply has no `clusters` capability, so cluster-level tools skip gracefully).
 
 ## Relation to prior work (SERPENTINE project)
 
@@ -58,7 +58,7 @@ hdWGCNA object ──▶ [evidence tools] ──▶ evidence packet (per module)
 
 - R package vs. lighter scripts + config (leaning package for the open-source goal — see [CLAUDE.md](../CLAUDE.md)).
 - Whether synthesis gets a bounded live PubMed call or literature is pre-retrieved deterministically.
-- Tool name.
+- **Name:** currently `sentit`. Considering something prism-themed (`prismatic` is the intuition, but `prism`/`prismatic` are taken CRAN packages) — candidates like `modprism` / `geneprism` / `moduleprism`. Undecided; not blocking.
 
 ---
 

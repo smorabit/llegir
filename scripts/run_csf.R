@@ -5,6 +5,7 @@
 
 source('R/utils.R')
 source('R/moduleset.R')
+source('R/moduleset_components.R')
 source('R/moduleset_hdwgcna.R')
 source('R/fragment.R')
 source('R/stats_utils.R')
@@ -12,6 +13,8 @@ source('R/tool_hub_genes.R')
 source('R/tool_cluster_dme.R')
 source('R/tool_module_by_metadata.R')
 source('R/tool_geneset_enrichment.R')
+source('R/moduleset_gene_list.R')  # .score_gene_sets(), reused by tool_signature_correlation.R below
+source('R/tool_signature_correlation.R')
 source('R/import_fragment.R')
 source('R/orchestrator.R')
 
@@ -19,16 +22,27 @@ data_path <- 'data/CSF_Myeloid_hdWGCNA.rds'
 output_dir <- 'output/evidence_packets'
 tables_dir <- 'output/tables'
 
+# focused MSigDB collections for enrichment/correlation, not the full Human
+# MSigDB (which buries the signal, docs/milestone_extensibility.md Part 2a):
+# all 50 Hallmark gene sets, small enough to use in full. C8 (cell-type) /
+# C7 (immunologic) aren't downloaded locally yet -- add them here alongside
+# Hallmark once they are.
+hallmark_gmt <- c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt')
+
 # core tools for the CSF dataset (docs/milestone_1.md): hub genes, which cell
 # state expresses the module (lv2_annot), association with diagnosis and
-# sample, and offline GO enrichment (GeneOverlap against a local GMT) over
-# hub genes.
+# sample, offline GO enrichment (GeneOverlap against local GMTs) over hub
+# genes, and Hallmark signature co-variation over the module's own activity.
 tool_config <- list(
     list(fn = hub_genes_tool, params = list(n_hubs = 25)),
     list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
     list(fn = module_by_metadata_tool, params = list(column = 'diagnosis', column_type = 'categorical')),
     list(fn = module_by_metadata_tool, params = list(column = 'sample', column_type = 'categorical')),
-    list(fn = geneset_enrichment_tool, params = list(n_hubs = 25))
+    list(fn = geneset_enrichment_tool, params = list(
+        n_hubs = 25,
+        db_files = c(GO_BP = 'data/GO_Biological_Process_2026.txt', hallmark_gmt)
+    )),
+    list(fn = signature_correlation_tool, params = list(library_files = hallmark_gmt))
 )
 
 seurat_obj <- readRDS(data_path)

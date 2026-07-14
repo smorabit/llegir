@@ -8,7 +8,8 @@ build_evidence_packet(
   module_id,
   fragments,
   input_hash = NA_character_,
-  schema_version = "0.1"
+  schema_version = "0.1",
+  skipped = list()
 )
 }
 \arguments{
@@ -20,6 +21,11 @@ build_evidence_packet(
 the backing \code{.rds}), for provenance.}
 
 \item{schema_version}{Schema version tag. Default \code{'0.1'}.}
+
+\item{skipped}{A list of \code{list(tool_id, reason)} entries for tools that
+were skipped because a required \code{ModuleSet} \code{\link[=capabilities]{capabilities()}} was unmet
+(see \code{\link[=run_module]{run_module()}}), recorded on \code{provenance$skipped} for an audit
+trail of what didn't run and why. Default \code{list()}.}
 }
 \value{
 A list with \code{module_id}, \code{fragments}, \code{packet_hash},

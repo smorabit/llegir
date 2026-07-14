@@ -14,31 +14,53 @@
 #' Runs every tool in `tool_config` against one module, in order, and bundles
 #' the resulting evidence fragments into a validated, hashed evidence packet
 #' via [build_evidence_packet()]. One bad tool call fails the whole module --
-#' a partial packet would be worse than no packet. A tool that gracefully
-#' skips itself (returns `NULL`, e.g. because `ms` lacks a capability it
-#' needs -- see [capabilities()]) is simply omitted from the packet rather
-#' than failing the module; the full tool-requirement declaration and
-#' skip-reason logging is a later milestone, this just tolerates it.
+#' a partial packet would be worse than no packet; a malformed fragment fails
+#' loudly the same way, via [validate_evidence_fragment()].
 #'
 #' @param ms A `ModuleSet`.
 #' @param module_id A single module id (as returned by [modules()]).
-#' @param tool_config A list of `list(fn, params)` specs, where `fn` is any
-#'   `function(ctx) -> evidence_fragment` (or `NULL`, to skip) and `params`
-#'   is passed through as `ctx$params`.
+#' @param tool_config A list of tool specs, each one of:
+#'   * `list(fn, params)` -- a direct call to any `function(ctx) ->
+#'     evidence_fragment` (or `NULL`, to skip); the tool is responsible for
+#'     its own graceful capability-based skip, e.g. [cluster_dme_tool()].
+#'   * `list(id, params)` -- `id` is looked up in the tool registry (see
+#'     [register_tool()]), and `run_module()` itself checks the tool's
+#'     declared required [capabilities()] before calling it. If unmet, the
+#'     tool is skipped and the reason is recorded on the packet's
+#'     `provenance$skipped` instead of the tool having to self-skip --
+#'     core and custom tools registered via [register_tool()] are run
+#'     identically this way.
+#'
+#'   Either form's `params` is passed through as `ctx$params`.
 #' @param input_hash Optional hash of the input `ModuleSet`, recorded on the
 #'   packet for provenance.
 #' @return An evidence packet; see [build_evidence_packet()].
 #' @examples
 #' ms <- sentit_example_moduleset()
 #' run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' run_module(ms, modules(ms)[1], list(list(id = 'hub_genes', params = list())))
 #' @export
 run_module <- function(ms, module_id, tool_config, input_hash = NA_character_){
-    fragments <- lapply(tool_config, function(spec){
+    results <- lapply(tool_config, function(spec){
+        if (!is.null(spec$id)) {
+            tool <- get_tool(spec$id)
+            required <- .tool_spec_requires(tool, spec$params)
+            missing_caps <- required[!vapply(required, function(cap) has_capability(ms, cap), logical(1))]
+            if (length(missing_caps) > 0) {
+                reason <- paste0('missing capabilities: ', paste(missing_caps, collapse = ', '))
+                message(spec$id, ': skipped, ', reason)
+                return(list(fragment = NULL, skip = list(tool_id = spec$id, reason = reason)))
+            }
+            fn <- tool$fn
+        } else {
+            fn <- spec$fn
+        }
         ctx <- list(ms = ms, module_id = module_id, params = spec$params)
-        spec$fn(ctx)
+        list(fragment = fn(ctx), skip = NULL)
     })
-    fragments <- Filter(Negate(is.null), fragments)
-    build_evidence_packet(module_id, fragments, input_hash = input_hash)
+    fragments <- Filter(Negate(is.null), lapply(results, `[[`, 'fragment'))
+    skipped <- Filter(Negate(is.null), lapply(results, `[[`, 'skip'))
+    build_evidence_packet(module_id, fragments, input_hash = input_hash, skipped = skipped)
 }
 
 #' Run a configured set of evidence tools over every module in a ModuleSet

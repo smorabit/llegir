@@ -112,21 +112,29 @@ Honest claim: *the evidence is fully reproducible; the paragraph is a versioned 
 
 ## 8. Roadmap
 
-1. Nail the two contracts + the `ModuleSet` interface. → [schemas.md](schemas.md)
-2. Core tools on hdWGCNA (port the dossier) → serialized evidence packets, tested on the CSF object. → [milestone_1.md](milestone_1.md)
-3. Custom-tool registry.
-4. Synthesis layer via `ellmer` (structured output) → interpretation objects → paragraph renderer.
-5. Confidence fusion + review queue.
-6. Spike-in eval harness + faithfulness checks.
-7. *(Later)* global cross-module reconciliation; additional `ModuleSet` adapters.
+**Done:** contracts + `ModuleSet` ([schemas.md](schemas.md)); core tools on hdWGCNA → evidence packets ([milestone_1.md](milestone_1.md)); rigor/offline hardening ([milestone_1_5.md](milestone_1_5.md)); synthesis + confidence + faithfulness + review queue ([milestone_2.md](milestone_2.md)); dev-economy (multi-provider, subsetting, caching — [dev_economy.md](dev_economy.md)); experimental R package + pkgdown ([milestone_packaging.md](milestone_packaging.md)); extensibility Part 1 — general `ModuleSet` adapters + `capabilities()`.
+
+**In progress:** extensibility Parts 2–3 — `signature_correlation` core tool + custom-tool registry, then evidence ingestion ([milestone_extensibility.md](milestone_extensibility.md)).
+
+**Backlog & future** *(captured from dev notes 2026-07-13):*
+
+- **Shared scoring wrapper.** UCell + decoupleR scoring should be **one reusable utility** used by both the gene-list adapter (scoring modules with no precomputed scores) and `signature_correlation` (cell-level signature scores) — not duplicated. Expose sensible defaults + a pass-through options arg.
+- **HTML summary report.** A standard EDA + per-tool-plot report *summarizing across all modules* (e.g. module × cluster dot plot; DME volcano; overlap heatmap; hdWGCNA hub-gene networks), with customization (plot on/off, custom plots). Design tension: these are **cross-module** views, whereas the orchestrator runs per-module — so decide which summaries are computed dataset-wide vs. aggregated from per-module fragments.
+- **Cross-dataset evidence reconciliation.** Run the pipeline on two datasets for the *same* programs (e.g. SERPENTINE single-cell + TCGA bulk), then interpret the combined packets together. Niche but high-value for the maintainer; generalization of global cross-module reconciliation.
+- **Local-model backend** (`chat_ollama()`) once the maintainer has GPU access — the durable answer to the API-budget constraint.
+- Literature grounding (PubMed, with guardrails); calibration/consistency eval harness; additional `ModuleSet` adapters (NMF/cNMF, spatial).
 
 ---
 
-## 9. Open decisions
+## 9. Design considerations & open decisions
 
-- **Packaging:** R package vs. lighter scripts + config (lean package for open-source).
-- **Literature access:** bounded live PubMed call in synthesis vs. pre-retrieved deterministic literature.
-- **Tool name.**
+- **Output-table hygiene:** tables live under `output/tables/<module>/<tool>.tsv`; include the module name in the filename (or otherwise) so tables are self-describing when browsed.
+- **Pseudobulk approach:** for sample-level tests/aggregation, consider the SERPENTINE `SummarizedExperiment`/`MultiAssayExperiment` pattern. Caveat: **CSF is a poor pseudobulk test case** (low sample count, many conditions) — validate the approach on a better-powered dataset.
+- **Bulk RNA-seq:** should work by config — a bulk dataset simply lacks the `clusters` capability, so cluster-level tools skip gracefully (the `capabilities()` system already handles this).
+- **User-supplied inputs:** which inputs to *disallow*, and what format enforcement / compatibility-check helpers to provide (Part 3 — evidence ingestion).
+- **Packaging:** experimental R package chosen (done).
+- **Literature access:** bounded live PubMed call vs. pre-retrieved deterministic literature.
+- **Name:** `sentit` for now; considering `modprism`/`geneprism`/`moduleprism` (`prism`/`prismatic` are taken). Undecided, not blocking.
 
 ---
 

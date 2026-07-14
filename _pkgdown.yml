@@ -28,13 +28,15 @@ navbar:
         href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/implementation_guide.md
       - text: Data contracts (schemas)
         href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/schemas.md
+      - text: Custom tools
+        href: https://github.com/smorabit/Module_Interpretation/blob/main/docs/custom_tools.md
 
 reference:
 - title: ModuleSet adapter
   desc: >
-    The backend-agnostic contract every core tool depends on, plus the
-    hdWGCNA/Seurat adapter and the self-contained synthetic fixture used in
-    examples and the vignette.
+    The backend-agnostic contract every core tool depends on -- capabilities()
+    plus hdWGCNA/Seurat, tidy-components, and gene-list adapters -- and the
+    self-contained synthetic fixture used in examples and the vignette.
   contents:
   - modules
   - gene_membership
@@ -42,7 +44,11 @@ reference:
   - expression
   - metadata
   - pkg_versions
+  - capabilities
+  - has_capability
   - hdWGCNA_ModuleSet
+  - components_ModuleSet
+  - gene_list_ModuleSet
   - synthetic_ModuleSet
   - sentit_example_moduleset
 
@@ -53,8 +59,18 @@ reference:
   - cluster_dme_tool
   - module_by_metadata_tool
   - geneset_enrichment_tool
+  - signature_correlation_tool
   - import_fragment
   - import_fragment_tool
+
+- title: Tool registry
+  desc: >
+    register_tool() makes tool registration a uniform, documented public API
+    for core and custom tools alike; see docs/custom_tools.md.
+  contents:
+  - register_tool
+  - get_tool
+  - list_tools
 
 - title: Evidence fragments and packets
   desc: The evidence_fragment / evidence packet data contract.

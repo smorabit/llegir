@@ -154,10 +154,14 @@ fragment_from_json <- function(json_str){
 #' @param input_hash A content hash identifying the source dataset (e.g. of
 #'   the backing `.rds`), for provenance.
 #' @param schema_version Schema version tag. Default `'0.1'`.
+#' @param skipped A list of `list(tool_id, reason)` entries for tools that
+#'   were skipped because a required `ModuleSet` [capabilities()] was unmet
+#'   (see [run_module()]), recorded on `provenance$skipped` for an audit
+#'   trail of what didn't run and why. Default `list()`.
 #' @return A list with `module_id`, `fragments`, `packet_hash`,
 #'   `schema_version`, and `provenance`.
 #' @export
-build_evidence_packet <- function(module_id, fragments, input_hash = NA_character_, schema_version = '0.1'){
+build_evidence_packet <- function(module_id, fragments, input_hash = NA_character_, schema_version = '0.1', skipped = list()){
     lapply(fragments, validate_evidence_fragment)
     packet_hash <- digest::digest(lapply(fragments, .fragment_hashable), algo = 'sha256')
     list(
@@ -168,7 +172,8 @@ build_evidence_packet <- function(module_id, fragments, input_hash = NA_characte
         provenance = list(
             created_at = format(Sys.time(), '%Y-%m-%dT%H:%M:%S%z'),
             input_hash = input_hash,
-            tool_ids = vapply(fragments, function(f) f$tool_id, character(1))
+            tool_ids = vapply(fragments, function(f) f$tool_id, character(1)),
+            skipped = skipped
         )
     )
 }

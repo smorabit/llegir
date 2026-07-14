@@ -43,6 +43,8 @@ output/             # evidence_packets/ (gitignored)
 
 **All R runs in the conda env `hdWGCNA`** — `conda activate hdWGCNA` before anything. Everything required is already installed there; **do not install packages**. If something appears missing, stop and flag it rather than installing.
 
+**API budget — be extremely sparing with live model calls.** The maintainer is on free tiers only: Anthropic = 0/day, Google Gemini = ~20/day, **GitHub Models (`chat_github(model = "gpt-4o-mini")`) = ~150/day and is the default dev provider**. Never run live synthesis over all modules while iterating — **use ONE module for testing**, lean on the response cache and the offline mock backend, and spend a live call only when the packet/provider/model/prompt actually changed. When in doubt, don't send the request. (Long term the maintainer will move to a local model.)
+
 ## Dependencies
 
 R (≥ 4.2), provided by the `hdWGCNA` env. Packages: `hdWGCNA`, `Seurat`, `WGCNA` (adapter only); `jsonlite`, `digest`, `dplyr`/`tidyr`, `testthat`. Milestone 2 adds `ellmer` for model-agnostic synthesis — provider/model are config-selected. **Prototyping uses Google Gemini** — `chat_google_gemini(model = 'gemini-3.5-flash')`, free tier (the CSF data is public so free-tier data use is fine). The `GEMINI_API_KEY` is already configured in the R environment; do not set it up or prompt for it. A local `chat_ollama()` option is a much-later consideration. Live synthesis is not required for M1/M1.5; tests always run on the offline mock backend.

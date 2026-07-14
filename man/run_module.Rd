@@ -11,9 +11,20 @@ run_module(ms, module_id, tool_config, input_hash = NA_character_)
 
 \item{module_id}{A single module id (as returned by \code{\link[=modules]{modules()}}).}
 
-\item{tool_config}{A list of \code{list(fn, params)} specs, where \code{fn} is any
-\verb{function(ctx) -> evidence_fragment} (or \code{NULL}, to skip) and \code{params}
-is passed through as \code{ctx$params}.}
+\item{tool_config}{A list of tool specs, each one of:
+\itemize{
+\item \code{list(fn, params)} -- a direct call to any \verb{function(ctx) -> evidence_fragment} (or \code{NULL}, to skip); the tool is responsible for
+its own graceful capability-based skip, e.g. \code{\link[=cluster_dme_tool]{cluster_dme_tool()}}.
+\item \code{list(id, params)} -- \code{id} is looked up in the tool registry (see
+\code{\link[=register_tool]{register_tool()}}), and \code{run_module()} itself checks the tool's
+declared required \code{\link[=capabilities]{capabilities()}} before calling it. If unmet, the
+tool is skipped and the reason is recorded on the packet's
+\code{provenance$skipped} instead of the tool having to self-skip --
+core and custom tools registered via \code{\link[=register_tool]{register_tool()}} are run
+identically this way.
+}
+
+Either form's \code{params} is passed through as \code{ctx$params}.}
 
 \item{input_hash}{Optional hash of the input \code{ModuleSet}, recorded on the
 packet for provenance.}
@@ -25,13 +36,11 @@ An evidence packet; see \code{\link[=build_evidence_packet]{build_evidence_packe
 Runs every tool in \code{tool_config} against one module, in order, and bundles
 the resulting evidence fragments into a validated, hashed evidence packet
 via \code{\link[=build_evidence_packet]{build_evidence_packet()}}. One bad tool call fails the whole module --
-a partial packet would be worse than no packet. A tool that gracefully
-skips itself (returns \code{NULL}, e.g. because \code{ms} lacks a capability it
-needs -- see \code{\link[=capabilities]{capabilities()}}) is simply omitted from the packet rather
-than failing the module; the full tool-requirement declaration and
-skip-reason logging is a later milestone, this just tolerates it.
+a partial packet would be worse than no packet; a malformed fragment fails
+loudly the same way, via \code{\link[=validate_evidence_fragment]{validate_evidence_fragment()}}.
 }
 \examples{
 ms <- sentit_example_moduleset()
 run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+run_module(ms, modules(ms)[1], list(list(id = 'hub_genes', params = list())))
 }
