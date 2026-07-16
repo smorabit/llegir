@@ -1,8 +1,8 @@
 ---
-title: "Getting started with sentit"
+title: "Getting started with llegir"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Getting started with sentit}
+  %\VignetteIndexEntry{Getting started with llegir}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-**sentit** ("to sense", Catalan) is a Module Interpretation Engine: it loads a
+**llegir** ("to sense", Catalan) is a Module Interpretation Engine: it loads a
 gene co-expression module object (starting with hdWGCNA), gathers a
 standardized bundle of evidence per module through a toolbox of deterministic
 R functions, and drafts an evidence-backed interpretation paragraph via a
@@ -27,7 +27,7 @@ network access or API key required. It builds entirely offline via
 [`mock_backend()`], so it runs the same way in `R CMD check` as it does
 interactively.
 
-*sentit is experimental: the public API, especially the `ModuleSet` adapter
+*llegir is experimental: the public API, especially the `ModuleSet` adapter
 contract and the custom-tool interface, is expected to evolve before a 1.0
 release.*
 
@@ -38,14 +38,14 @@ Every core tool depends only on the `ModuleSet` adapter contract --
 [`metadata()`], [`pkg_versions()`] -- never on a specific backend package.
 [`hdWGCNA_ModuleSet()`] is the real-world adapter, built from a Seurat object
 that has been run through hdWGCNA. For this vignette we instead use
-[`sentit_example_moduleset()`], a small simulated dataset (two co-expressed
+[`llegir_example_moduleset()`], a small simulated dataset (two co-expressed
 gene modules plus background noise genes, 200 cells) that satisfies the same
 contract, so every tool below runs unmodified against it.
 
 ```{r}
-library(sentit)
+library(llegir)
 
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 modules(ms)
 ```
 
@@ -95,7 +95,7 @@ enrichment against a local GMT file (`ctx$params$db_files`); it's omitted
 here since no gene-set library ships with the package, but it follows the
 same `ctx -> evidence_fragment` contract as the tools above.
 
-User-supplied result tables (e.g. a DME table computed outside sentit) can be
+User-supplied result tables (e.g. a DME table computed outside llegir) can be
 folded into the same pipeline via [`import_fragment()`] /
 [`import_fragment_tool()`], tagged `provenance$source = 'user_supplied'`
 rather than `'computed'`.
@@ -177,7 +177,7 @@ cat(render_paragraph(interp))
 
 ### Live backends
 
-sentit's synthesis backends are pluggable via [`resolve_backend()`]
+llegir's synthesis backends are pluggable via [`resolve_backend()`]
 (`provider = 'github'` or `'gemini'`, both built on [`ellmer_backend()`]) or
 [`ellmer_backend()`] directly with any `ellmer::chat_*()` constructor. These
 need network access and a provider API key (picked up by `ellmer` itself from

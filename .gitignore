@@ -1,0 +1,39 @@
+# --- data & outputs (never commit the dev object or generated packets) ---
+data/
+output/
+figures/
+*.rds
+*.rda
+*.feather
+*.h5ad
+*.h5seurat
+
+# --- secrets / API keys ---
+.Renviron
+.env
+*.key
+
+# --- R session / project cruft ---
+.Rhistory
+.RData
+.Rproj.user/
+*.Rproj
+.Ruserdata
+
+# --- renv (if used) ---
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/staging/
+
+# --- OS / cloud sync ---
+.DS_Store
+Icon?
+*~
+Thumbs.db
+
+# --- misc ---
+*.log
+*.tmp
+node_modules/

@@ -1,4 +1,4 @@
-# sentit 0.0.0.9000
+# llegir 0.0.0.9000
 
 * Packaged the deterministic evidence core and synthesis layer as an
   installable, documented R package. No behavior change from the

@@ -87,7 +87,7 @@ gene_list_ModuleSet <- function(gene_sets, expression, metadata, cluster_col = N
 #' @rdname gene_list_ModuleSet
 #' @export
 pkg_versions.gene_list_ModuleSet <- function(ms, ...){
-    versions <- list(sentit = as.character(utils::packageVersion('sentit')))
+    versions <- list(llegir = as.character(utils::packageVersion('llegir')))
     versions[[ms$method]] <- as.character(utils::packageVersion(ms$method))
     versions
 }

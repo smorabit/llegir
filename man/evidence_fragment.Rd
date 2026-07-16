@@ -51,6 +51,6 @@ An \code{evidence_fragment} object.
 }
 \description{
 One tool's result for one module; every core/custom tool must return one
-of these. See \code{vignette('getting-started', package = 'sentit')} and
+of these. See \code{vignette('getting-started', package = 'llegir')} and
 \code{inst/schemas/evidence_fragment.schema.json} for the full contract.
 }

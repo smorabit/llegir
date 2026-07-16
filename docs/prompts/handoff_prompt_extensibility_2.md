@@ -11,7 +11,7 @@ Handoff for a fresh Claude Code instance. Paste the block below from the repo ro
 ## Prompt
 
 ```
-You're starting Part 2 of the extensibility milestone for `sentit` (installed
+You're starting Part 2 of the extensibility milestone for `llegir` (installed
 experimental R package). Part 1 is done: three ModuleSet adapters (hdWGCNA,
 components, gene-list), a capabilities()/has_capability() system, tools that skip
 gracefully on missing capabilities, and UCell/decoupleR scoring used by the gene-list

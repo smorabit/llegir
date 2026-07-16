@@ -11,7 +11,7 @@ synthesize_module(
   temperature = 0,
   seed = NA_real_,
   prompt_template_version = PROMPT_TEMPLATE_VERSION,
-  schema_path = system.file("schemas", "interpretation.schema.json", package = "sentit")
+  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir")
 )
 }
 \arguments{
@@ -45,7 +45,7 @@ steps always run together -- an interpretation that skipped faithfulness
 or fusion isn't one this engine should emit.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 synthesize_module(packet, desc, mock_backend())

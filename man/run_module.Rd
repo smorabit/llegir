@@ -40,7 +40,7 @@ a partial packet would be worse than no packet; a malformed fragment fails
 loudly the same way, via \code{\link[=validate_evidence_fragment]{validate_evidence_fragment()}}.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 run_module(ms, modules(ms)[1], list(list(id = 'hub_genes', params = list())))
 }

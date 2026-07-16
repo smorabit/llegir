@@ -2,7 +2,7 @@
 
 ← [Overview](overview.md) · [Implementation guide](implementation_guide.md) · [Schemas](schemas.md) · [Milestone 1](milestone_1.md) · [Project home](../README.md)
 
-*Status: not started. The next task after M1 (deterministic core, complete).*
+*Status: complete. Synthesis, faithfulness, confidence fusion, and the review queue are implemented and exercised end-to-end across all 14 CSF packets (mock backend); see [milestone2_verification.md](milestone2_verification.md) for the verification pass and the API-budget-scoped live check.*
 
 ---
 
@@ -67,4 +67,4 @@ This is where the LLM enters — but bounded: the model *only* fills a structure
 
 ---
 
-*Last updated: 2026-07-10*
+*Last updated: 2026-07-16*

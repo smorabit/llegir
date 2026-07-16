@@ -40,7 +40,7 @@ single-gene overlap against a narrow term is a classic false positive in
 a small hub-gene list).
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 compute_evidence_signals(packet)
 }

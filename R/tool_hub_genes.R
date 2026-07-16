@@ -11,7 +11,7 @@
 #'   genes to keep.
 #' @return An `evidence_fragment` of type `'ranked_genes'`.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' hub_genes_tool(list(ms = ms, module_id = modules(ms)[1], params = list(n_hubs = 10)))
 #' @export
 hub_genes_tool <- function(ctx){

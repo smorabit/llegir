@@ -11,7 +11,7 @@ A quick, standalone task: add a regression test proving the hdWGCNA adapter and 
 ## Prompt
 
 ```
-Quick standalone task for `sentit` (installed experimental R package). After the
+Quick standalone task for `llegir` (installed experimental R package). After the
 Part 1 extensibility refactor, hdWGCNA_ModuleSet delegates to a components_ModuleSet
 internally, and we assert "no behavior change for hdWGCNA" only manually. Add a
 testthat regression test that PROVES it.

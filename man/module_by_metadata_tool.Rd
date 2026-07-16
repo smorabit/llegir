@@ -29,7 +29,7 @@ Kruskal/one-vs-rest Wilcoxon; continuous columns get Pearson/Spearman
 correlation.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 module_by_metadata_tool(list(
     ms = ms, module_id = modules(ms)[1],
     params = list(column = 'diagnosis', column_type = 'categorical')

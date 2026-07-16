@@ -1,61 +1,44 @@
 # CLAUDE.md
 
-Guidance for Claude Code working in this repo.
+## System Commands
+- **Run Tests**: `devtools::test()` or `testthat::test_dir('tests/testthat')`
+- **Run Package Check**: `devtools::check()`
+- **Build Documentation**: `devtools::document()`
+- **Build Pkgdown Site**: `pkgdown::build_site()`
 
-## What this is
+## Core Architecture Contracts
+- **Framework**: `llegir` is an R package utilizing `ellmer` for LLM orchestration.
+- **No Direct Imports**: Core tools must depend strictly on the `ModuleSet` adapter, never directly on `hdWGCNA` or `Seurat`.
+- **Contracts**: Every tool output must strictly validate against the `evidence_fragment` schema.
+- **Boilerplate Prose**: Programmatic synthesis outputs must strictly match the `interpretation` schema. No free-form prose generation.
+- **Style Rules**: Follow `STYLE.md` exactly (tidyverse, snake_case, 4-space indent, single quotes, no roxygen comments unless explicitly asked).
 
-The **Module Interpretation Engine**: loads a gene co-expression module object (hdWGCNA first), gathers a standardized bundle of evidence per module via a toolbox of R functions, and (later) drafts an evidence-backed interpretation paragraph with confidence-gated human review. Deterministic evidence core in R; model-agnostic synthesis layer added later.
+## Environment & Budget Rules
+- **Environment**: Always use the active `hdWGCNA` conda environment. Do not install new packages.
+- **API Budget Constraints (Strict)**: 
+  - Iteration should be run offline using the mock backend or response cache.
+  - For live validation, iterate using **exactly ONE** module. Do not call full pipeline syntheses.
+  - Default development provider is Github (`ellmer::chat_github(model = 'gpt-4o-mini')` or Google Gemini `chat_google_gemini(model = 'gemini-1.5-flash')`).
+  - Never prompt for API keys.
 
-Read [`README.md`](README.md) and the design docs in [`docs/`](docs/) before starting:
-- [`docs/overview.md`](docs/overview.md) — concept + design principles
-- [`docs/implementation_guide.md`](docs/implementation_guide.md) — architecture
-- [`docs/schemas.md`](docs/schemas.md) — the two data contracts (build against these)
-- **[`docs/milestone_1.md`](docs/milestone_1.md) — the current task. Start here.**
-
-## Current status
-
-Milestone 1: deterministic evidence core, **no LLM**. Build the `ModuleSet` adapter + core tools + evidence-packet serialization + spike-in smoke test, tested on `data/CSF_Myeloid_hdWGCNA.rds`. Do not build the synthesis/LLM layer yet.
-
-## Non-negotiables
-
-- **Core tools depend only on the `ModuleSet` adapter, never on hdWGCNA/Seurat directly.** This is what keeps the engine generalizable. (Only the adapter imports Seurat/hdWGCNA.)
-- **Everything a tool returns is an `evidence_fragment`; validate it.** See `docs/schemas.md`.
-- **Reproducibility is anchored on the evidence packet:** hash it, log provenance (params, input hashes, package versions).
-- Follow [`STYLE.md`](STYLE.md) for all R code (tidyverse, snake_case, 4-space blocks, single quotes, no roxygen).
-
-## Layout (functionality first; formal package later)
-
-**Nail the functionality with plain sourced R functions — do NOT scaffold a formal
-R package yet** (no `DESCRIPTION`/`NAMESPACE`/roxygen exports). Package structure and
-pkgdown are handled later by the maintainer.
-
+## Conversational Guidelines (Strict Token-Saving)
+- **Be highly concise.** Skip all conversational filler, pleasantries, or framing (e.g., do not say "Certainly, let's write a spec" or "I can help with that").
+- **No explanations/summaries:** Deliver code, scripts, markdown updates, and specs directly with zero wrapping explanatory text.
+- **Limit output prose:** Keep chat responses under 3 sentences unless specifically asked to explain reasoning.
+## Git & Commit Guidelines (Strict)
+- **Automated Commits**: When asked to commit code, always use a highly detailed, descriptive title and body.
+- **Commit Format**: Use Conventional Commits style (e.g., `feat: ...`, `fix: ...`, `refactor: ...`).
+- **No Self-Attribution**: Do NOT add "Co-authored-by: Claude", "Created by AI", or any text referring to yourself as a contributor, assistant, or author. The commit message must read purely as though written by a human developer. Do not add conversational wrap-ups like "Everything is working great!".
+- **Commit Body**: Explicitly list all new functions added, modified data contracts, or newly passed test files in the body of the commit message. 
+- *Example*:
 ```
-R/                  # moduleset_*.R, tool_*.R, fragment.R, orchestrator.R (plain sourced functions)
-schemas/            # evidence_fragment.schema.json, interpretation.schema.json
-tests/              # testthat test files, run via testthat::test_dir('tests')
-scripts/            # run_csf.R — source R/, run the orchestrator end-to-end on the dev object
-data/               # CSF_Myeloid_hdWGCNA.rds (dev object; gitignored)
-docs/               # design notes
-output/             # evidence_packets/ (gitignored)
+ feat: implement format-specific evidence ingestion runners
+  - Added format-specific column mappings for Seurat, DESeq2, and edgeR in import_fragment.R
+  - Added hdWGCNA DME table mappings to state_expression fragments
+  - Updated tests in test-import_fragment.R; all 14 tests passing.```
 ```
 
-## Environment
-
-**All R runs in the conda env `hdWGCNA`** — `conda activate hdWGCNA` before anything. Everything required is already installed there; **do not install packages**. If something appears missing, stop and flag it rather than installing.
-
-**API budget — be extremely sparing with live model calls.** The maintainer is on free tiers only: Anthropic = 0/day, Google Gemini = ~20/day, **GitHub Models (`chat_github(model = "gpt-4o-mini")`) = ~150/day and is the default dev provider**. Never run live synthesis over all modules while iterating — **use ONE module for testing**, lean on the response cache and the offline mock backend, and spend a live call only when the packet/provider/model/prompt actually changed. When in doubt, don't send the request. (Long term the maintainer will move to a local model.)
-
-## Dependencies
-
-R (≥ 4.2), provided by the `hdWGCNA` env. Packages: `hdWGCNA`, `Seurat`, `WGCNA` (adapter only); `jsonlite`, `digest`, `dplyr`/`tidyr`, `testthat`. Milestone 2 adds `ellmer` for model-agnostic synthesis — provider/model are config-selected. **Prototyping uses Google Gemini** — `chat_google_gemini(model = 'gemini-3.5-flash')`, free tier (the CSF data is public so free-tier data use is fine). The `GEMINI_API_KEY` is already configured in the R environment; do not set it up or prompt for it. A local `chat_ollama()` option is a much-later consideration. Live synthesis is not required for M1/M1.5; tests always run on the offline mock backend.
-
-## Running
-
-- Load the dev object, run the orchestrator over all modules, write packets to `output/evidence_packets/`.
-- `testthat::test_dir('tests/testthat')` must pass, including the spike-in controls.
-
-## Ground rules
-
-- Verify the dev object's structure before assuming (task 0 in milestone 1).
-- Prefer offline/deterministic operation; if a tool needs the network (e.g. Enrichr), isolate it and note it.
-- Keep the deterministic core useful with no model.
+## Reference Docs (Static Anchors)
+- Design Principles: `docs/overview.md`
+- Current Architectural Plan: `docs/implementation_guide.md`
+- State Contracts: `docs/schemas.md`

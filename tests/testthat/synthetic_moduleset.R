@@ -1,6 +1,6 @@
 ## spike-in ground-truth fixtures, CSF-specific (docs/milestone_1.md task 5).
 ## synthetic_ModuleSet() itself now lives in R/example_moduleset.R (exposed
-## as the backend for sentit_example_moduleset() per
+## as the backend for llegir_example_moduleset() per
 ## docs/milestone_packaging.md task 4); only the CSF-specific gene lists
 ## below stay test-only.
 

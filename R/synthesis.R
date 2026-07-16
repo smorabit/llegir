@@ -55,7 +55,7 @@
 #' @examples
 #' model_output_schema_json()
 #' @export
-model_output_schema_json <- function(schema_path = system.file('schemas', 'interpretation.schema.json', package = 'sentit')){
+model_output_schema_json <- function(schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir')){
     schema <- jsonlite::fromJSON(schema_path, simplifyVector = FALSE)
     schema$`$schema` <- NULL
     schema$`$id` <- NULL
@@ -280,14 +280,14 @@ cached_backend <- function(backend, provider, model, prompt_template_version,
 #' @return An `interpretation` object (not yet faithfulness-checked or
 #'   confidence-fused; see [synthesize_module()] for the full pipeline).
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' synthesize_interpretation(packet, desc, mock_backend())
 #' @export
 synthesize_interpretation <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                        prompt_template_version = PROMPT_TEMPLATE_VERSION,
-                                       schema_path = system.file('schemas', 'interpretation.schema.json', package = 'sentit')){
+                                       schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir')){
     validate_dataset_description(desc)
 
     system_prompt <- build_system_prompt()

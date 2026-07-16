@@ -5,7 +5,7 @@
 ## itself: every core tool that only calls the ModuleSet generics works
 ## unmodified against ground-truth gene sets. Originally a spike-in-only test
 ## helper (docs/milestone_1.md task 5); exposed here (docs/milestone_packaging.md
-## task 4) as the backend for sentit_example_moduleset(), the self-contained
+## task 4) as the backend for llegir_example_moduleset(), the self-contained
 ## fixture used across @examples, tests, and the vignette.
 ##
 ## module score = mean z-scored expression across the gene set, per cell
@@ -43,7 +43,7 @@
 #' @param ... Passed to methods.
 #' @return A `synthetic_ModuleSet` object.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' modules(ms)
 #' @export
 synthetic_ModuleSet <- function(base_ms, gene_sets){
@@ -110,12 +110,12 @@ capabilities.synthetic_ModuleSet <- function(ms, ...){
     )
 }
 
-## sentit_example_moduleset(): a fully self-contained fixture (no Seurat/
+## llegir_example_moduleset(): a fully self-contained fixture (no Seurat/
 ## hdWGCNA, no external data file) for @examples, tests, and the vignette.
 ## .example_base_moduleset() simulates a small single-cell-like dataset with
 ## two hand-built co-expression modules plus background noise genes, so
 ## gene_membership()/hub-gene ranking carry real signal rather than being
-## pure noise; sentit_example_moduleset() wraps it with synthetic_ModuleSet().
+## pure noise; llegir_example_moduleset() wraps it with synthetic_ModuleSet().
 
 # minimal synthetic 'base' ModuleSet: simulated expression matrix + cell
 # metadata, nothing else. synthetic_ModuleSet() only ever calls
@@ -169,7 +169,7 @@ expression.example_base_ModuleSet <- function(ms, ...) ms$expr
 metadata.example_base_ModuleSet <- function(ms, ...) ms$meta
 #' @noRd
 pkg_versions.example_base_ModuleSet <- function(ms, ...){
-    list(sentit = as.character(utils::packageVersion('sentit')))
+    list(llegir = as.character(utils::packageVersion('llegir')))
 }
 #' @noRd
 capabilities.example_base_ModuleSet <- function(ms, ...){
@@ -195,11 +195,11 @@ capabilities.example_base_ModuleSet <- function(ms, ...){
 #' @return A `synthetic_ModuleSet` object with two modules, `'module_a'` and
 #'   `'module_b'`.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' modules(ms)
 #' gene_membership(ms, 'module_a')
 #' @export
-sentit_example_moduleset <- function(seed = 1){
+llegir_example_moduleset <- function(seed = 1){
     base_ms <- .example_base_moduleset(seed = seed)
     genes <- rownames(expression(base_ms))
     synthetic_ModuleSet(base_ms, list(

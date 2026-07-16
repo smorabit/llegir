@@ -42,7 +42,7 @@ report, but a p-value never is.
 }
 \examples{
 \dontrun{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 signature_correlation_tool(list(
     ms = ms, module_id = modules(ms)[1],
     params = list(library_files = c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt'))

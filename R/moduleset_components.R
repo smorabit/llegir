@@ -109,7 +109,7 @@ metadata.components_ModuleSet <- function(ms, ...) ms$metadata
 #' @rdname components_ModuleSet
 #' @export
 pkg_versions.components_ModuleSet <- function(ms, ...){
-    list(sentit = as.character(utils::packageVersion('sentit')))
+    list(llegir = as.character(utils::packageVersion('llegir')))
 }
 
 #' @rdname components_ModuleSet

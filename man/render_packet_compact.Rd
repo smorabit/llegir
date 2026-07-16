@@ -23,7 +23,7 @@ never the raw \code{result} tables -- so the prompt stays small and the model
 only sees pre-summarized evidence.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 cat(render_packet_compact(packet))
 }

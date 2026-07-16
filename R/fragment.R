@@ -15,7 +15,7 @@
 #' Construct an evidence fragment
 #'
 #' One tool's result for one module; every core/custom tool must return one
-#' of these. See `vignette('getting-started', package = 'sentit')` and
+#' of these. See `vignette('getting-started', package = 'llegir')` and
 #' `inst/schemas/evidence_fragment.schema.json` for the full contract.
 #'
 #' @param fragment_id Unique id within a packet, e.g. `'cluster_dme'` or

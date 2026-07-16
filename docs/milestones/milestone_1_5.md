@@ -2,7 +2,7 @@
 
 ← [Overview](overview.md) · [Implementation guide](implementation_guide.md) · [Milestone 1](milestone_1.md) · [Milestone 2](milestone_2.md) · [Project home](../README.md)
 
-*Status: not started. A short pass between M1 (done) and M2 (synthesis).*
+*Status: complete. Rigor/reproducibility hardening landed ahead of M2 (synthesis).*
 
 ---
 
@@ -81,4 +81,4 @@ overlap_df$fdr <- p.adjust(overlap_df$pval, 'fdr')
 
 ---
 
-*Last updated: 2026-07-10*
+*Last updated: 2026-07-16*

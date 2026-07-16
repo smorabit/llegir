@@ -1,4 +1,4 @@
-Package: sentit
+Package: llegir
 Title: Deterministic Evidence and Model-Assisted Interpretation of Gene Co-Expression Modules
 Version: 0.0.0.9000
 Authors@R: person('Sam', 'Morabito', email = 'smorabit82@gmail.com', role = c('aut', 'cre'))

@@ -55,6 +55,6 @@ expression across each gene set per cell, and \code{kme} (returned by
 a simple, backend-agnostic stand-in for a real module eigengene / kME.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 modules(ms)
 }

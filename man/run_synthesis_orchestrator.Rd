@@ -12,7 +12,7 @@ run_synthesis_orchestrator(
   temperature = 0,
   seed = NA_real_,
   prompt_template_version = PROMPT_TEMPLATE_VERSION,
-  schema_path = system.file("schemas", "interpretation.schema.json", package = "sentit")
+  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir")
 )
 }
 \arguments{
@@ -50,7 +50,7 @@ writing per-module interpretation JSON and rendered Markdown paragraphs
 and recorded as \code{NULL}, mirroring \code{\link[=run_orchestrator]{run_orchestrator()}}'s failure isolation.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 packets <- run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 run_synthesis_orchestrator(packets, desc, mock_backend(), output_dir = tempfile())

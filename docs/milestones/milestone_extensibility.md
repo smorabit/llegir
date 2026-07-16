@@ -2,7 +2,7 @@
 
 ← [Overview](overview.md) · [Implementation guide](implementation_guide.md) · [Schemas](schemas.md) · [Project home](../README.md)
 
-*Status: in progress. Turns `sentit` from "hdWGCNA + built-in tools" into a general, pluggable engine.*
+*Status: in progress. Turns `llegir` from "hdWGCNA + built-in tools" into a general, pluggable engine.*
 
 ---
 
@@ -39,7 +39,7 @@ Two threads (see [handoff_prompt_extensibility_2.md](handoff_prompt_extensibilit
 
 ### Part 3 — Evidence ingestion  *(stub)*
 
-Generalize `import_fragment` (M1.5 seed) into a set of **importers with configurable column mapping** for the formats people actually have: Seurat `FindMarkers` / DESeq2 / edgeR DEG tables → `categorical_association` / `cross_condition_delta`; hdWGCNA DME → `state_expression`; EnrichR / GeneOverlap → `geneset_enrichment`. Sensible per-format defaults + a column-map override; record the source file + mapping in provenance; tag `source = user_supplied`. Only produces fragments (doesn't touch the `ModuleSet`), so it can proceed in parallel with Part 2.
+Generalize `import_fragment` into a set of **importers with configurable column mapping** for the formats people actually have: Seurat `FindMarkers` / DESeq2 / edgeR DEG tables → `categorical_association` / `cross_condition_delta`; hdWGCNA DME → `state_expression`; EnrichR / GeneOverlap → `geneset_enrichment`. Sensible per-format defaults + a column-map override; record the source file + mapping in provenance; tag `source = user_supplied`. Only produces fragments (doesn't touch the `ModuleSet`), so it can proceed in parallel with Part 2.
 
 ## Definition of done (whole milestone)
 

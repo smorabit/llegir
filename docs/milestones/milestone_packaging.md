@@ -2,7 +2,7 @@
 
 ← [Overview](overview.md) · [Implementation guide](implementation_guide.md) · [Project home](../README.md)
 
-*Status: not started. The chosen path: package the working codebase as an installable, documented, **experimental** R package (v0.x, API marked unstable), with a pkgdown site.*
+*Status: complete. The codebase is packaged as an installable, documented, **experimental** R package (v0.x, API marked unstable), with a pkgdown site (rebuilt on `llegir` naming).*
 
 ---
 
@@ -61,4 +61,4 @@ Custom-tool registry redesign, a second `ModuleSet` adapter, literature/PubMed, 
 
 ---
 
-*Last updated: 2026-07-12*
+*Last updated: 2026-07-16*

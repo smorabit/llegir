@@ -134,8 +134,8 @@ Honest claim: *the evidence is fully reproducible; the paragraph is a versioned 
 - **User-supplied inputs:** which inputs to *disallow*, and what format enforcement / compatibility-check helpers to provide (Part 3 — evidence ingestion).
 - **Packaging:** experimental R package chosen (done).
 - **Literature access:** bounded live PubMed call vs. pre-retrieved deterministic literature.
-- **Name:** `sentit` for now; considering `modprism`/`geneprism`/`moduleprism` (`prism`/`prismatic` are taken). Undecided, not blocking.
+- **Name:** finalized as `llegir`. Package, `DESCRIPTION`, `NAMESPACE`, `man/`, docs, and the rebuilt pkgdown site are all on `llegir` naming; `prismatic`-family alternatives considered and dropped (`prism`/`prismatic` are taken).
 
 ---
 
-*Last updated: 2026-07-10*
+*Last updated: 2026-07-16*

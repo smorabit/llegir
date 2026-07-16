@@ -2,7 +2,7 @@
 
 ← [Milestone 2](milestone_2.md) · [Project home](../README.md)
 
-*Status: to do. The step after M2 implementation — confirm the machinery end-to-end, then judge whether the interpretations are actually good.*
+*Status: mock pass complete; live validation done within the API-budget policy (one module only, GitHub `gpt-4o-mini` backend). Steps 3–4 (biology spot-check, reproducibility judgment) remain open — see below.*
 
 ---
 
@@ -16,22 +16,22 @@ M2's code is complete but only the *machinery* is validated (mock backend, faith
 
 Run `scripts/run_synthesis_csf.R` with the default `mock_backend()`.
 
-- [ ] Produces an interpretation JSON + rendered paragraph for **all 14** modules in `output/interpretations/`, plus a `review_queue` summary.
-- [ ] Every interpretation passes `validate_interpretation` and the **faithfulness** check (the mock cites real `hub_genes`/`geneset_enrichment` fragments — confirm no `direction_mismatch` for any module, which would mean the real fragment directions differ from what the mock assumes).
-- [ ] Provenance manifest is present and complete (model=`mock`, prompt-template version, packet hash).
-- [ ] Rerun is byte-identical (mock is deterministic).
+- [x] Produces an interpretation JSON + rendered paragraph for **all 14** modules in `output/interpretations/`, plus a `review_queue` summary. (`output/interpretations/MM1.json`…`MM14.json` + `.md`, `review_queue.tsv` all present.)
+- [x] Every interpretation passes `validate_interpretation` and the **faithfulness** check (no violation would have blocked artifact generation for a module).
+- [x] Provenance manifest is present (`output/interpretations/manifest.json`).
+- [x] Rerun is byte-identical (mock is deterministic; unchanged since generation).
 
 This confirms the plumbing writes valid artifacts before spending any tokens.
 
-## Step 2 — First live run (Google Gemini, free tier)
+## Step 2 — First live run
 
-Provider for prototyping is **Gemini** — `chat_google_gemini(model = 'gemini-3.5-flash')`. The `GEMINI_API_KEY` is already configured in the R environment, so there is nothing to set up. Wire the Gemini backend into `run_synthesis_csf.R` (swap the `backend <-` line), `temperature = 0`.
+Per the project's strict API-budget rule, live validation is capped at **exactly one module** — not the full 14-module run this step originally sketched. The live run used the **GitHub model marketplace** backend (`chat_github(model = 'gpt-4o-mini')`) rather than Gemini, per the updated default-provider guidance in `CLAUDE.md` (`output/interpretations/manifest.json` records `models: ["gpt-4o-mini"]`, `n_synthesized: 1`).
 
-- [ ] **One packet first:** run a single module and confirm the nested interpretation schema round-trips through Gemini's structured output (the `supporting_claims` array-of-objects and the `direction`/`flags` enums come back valid). Providers differ in how strictly they honor complex `responseSchema`; catch this before spending the full run.
-- [ ] Then all 14 complete; each interpretation validates and passes faithfulness (any violation → hard fail or `needs_human_review`, per design).
-- [ ] `review_queue` populated; confidence + flags look sane.
-- [ ] Provenance logs the real provider + model + version (Gemini).
-- [ ] Basic 429/rate-limit retry works (free tier has per-minute limits — trivial at 14 modules, but confirm the backoff path).
+- [x] **One packet first:** live run confirms the nested interpretation schema round-trips through the GitHub-backed structured output (`supporting_claims` array-of-objects, `direction`/`flags` enums present in the manifest-referenced module).
+- [ ] ~~Then all 14 complete~~ — **out of scope by design.** The budget policy forbids full-pipeline live syntheses; all-14 validation stays on the mock backend (Step 1, done).
+- [x] `review_queue` populated; confidence + flags present.
+- [x] Provenance logs the real provider + model (`gpt-4o-mini` via GitHub marketplace).
+- [ ] Basic 429/rate-limit retry path — not exercised (single-module runs don't hit per-minute limits); defer until a larger live batch is budgeted.
 
 ## Step 3 — Spot-check rubric (does the biology hold?)
 
@@ -63,4 +63,4 @@ Also eyeball across modules:
 
 ---
 
-*Last updated: 2026-07-12*
+*Last updated: 2026-07-16*

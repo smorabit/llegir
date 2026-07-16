@@ -28,7 +28,7 @@ construction. Touches the \code{ModuleSet} adapter contract
 }
 \examples{
 \dontrun{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 geneset_enrichment_tool(list(
     ms = ms, module_id = modules(ms)[1],
     params = list(n_hubs = 10, db_files = c(GO_BP = 'path/to/gene_sets.gmt'))

@@ -39,7 +39,7 @@ PROMPT_TEMPLATE_VERSION <- '0.2'
 #'   `top_findings` to a handful of entries.
 #' @return A single character string.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' cat(render_packet_compact(packet))
 #' @export
@@ -90,7 +90,7 @@ build_system_prompt <- function(){
 #' @param desc A `dataset_description`; see [dataset_description()].
 #' @return A single character string.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' cat(build_user_prompt(packet, desc))

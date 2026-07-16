@@ -19,6 +19,6 @@ A core evidence tool. Touches only the \code{ModuleSet} adapter contract
 (\code{\link[=gene_membership]{gene_membership()}}, \code{\link[=pkg_versions]{pkg_versions()}}), so it works against any backend.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 hub_genes_tool(list(ms = ms, module_id = modules(ms)[1], params = list(n_hubs = 10)))
 }

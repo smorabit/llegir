@@ -22,6 +22,6 @@ A core evidence tool. Touches only the \code{ModuleSet} adapter contract
 \code{\link[=categorical_group_test]{categorical_group_test()}} helper, so it works against any backend.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 cluster_dme_tool(list(ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type')))
 }

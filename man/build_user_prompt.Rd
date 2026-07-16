@@ -19,7 +19,7 @@ Concatenates the rendered \code{\link[=dataset_description]{dataset_description(
 evidence packet (\code{\link[=render_packet_compact]{render_packet_compact()}}).
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 cat(build_user_prompt(packet, desc))

@@ -1,0 +1,253 @@
+{
+  "main": {
+    "id": "d692f55274518ccd",
+    "type": "split",
+    "children": [
+      {
+        "id": "c47214c4f2d6ece1",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "43c1eaff2834dcca",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "CLAUDE.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "CLAUDE"
+            }
+          },
+          {
+            "id": "7491a5d75705248c",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docs/prompts/handoff_prompt_extensibility_1.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "handoff_prompt_extensibility_1"
+            }
+          },
+          {
+            "id": "683540b5e36ac53f",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docs/prompts/handoff_prompt_extensibility_2.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "handoff_prompt_extensibility_2"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "bde2357856f2c51d",
+    "type": "split",
+    "children": [
+      {
+        "id": "97ef9e207168f1b9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "8323b74e82a7aeb7",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "76d189093e022278",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "209ef398fa082ed3",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "b0f07d6d41bdd90e",
+    "type": "split",
+    "children": [
+      {
+        "id": "833da583b6aa46f6",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "76d29d71c120f68e",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "CLAUDE.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for CLAUDE"
+            }
+          },
+          {
+            "id": "556eb3bf20500643",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "CLAUDE.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from CLAUDE"
+            }
+          },
+          {
+            "id": "7b915f95199ea1d4",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "5087cdde814245ba",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "e2a2392fd37058f6",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "CLAUDE.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of CLAUDE"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "8323b74e82a7aeb7",
+  "lastOpenFiles": [
+    "docs/milestones/milestone_extensibility.md",
+    "tests/testthat/_snaps",
+    "man/import_enrichr.Rd",
+    "man/import_hdwgcna_dme.Rd",
+    "man/import_seurat_markers.Rd",
+    "docs/prompts/handoff_prompt_extensibility_1.md",
+    "docs/prompts/handoff_prompt_extensibility_2.md",
+    "docs/milestones/milestone2_verification.md",
+    "docs/milestones/milestone_2.md",
+    "docs/milestones/milestone_packaging.md",
+    "docs/repo_map.md",
+    "pkgdown_site/reference/pkg_versions.gene_list_ModuleSet.html",
+    "pkgdown_site/reference/pkg_versions.components_ModuleSet.html",
+    "pkgdown_site/reference/modules.components_ModuleSet.html",
+    "pkgdown_site/reference/module_scores.components_ModuleSet.html",
+    "pkgdown_site/reference/metadata.components_ModuleSet.html",
+    "pkgdown_site/reference/llegir.html",
+    "CLAUDE.md",
+    "CLAUDE_old.md",
+    "Untitled 1.md",
+    "docs/overview.md",
+    "Untitled 2.md",
+    "docs/implementation_guide.md",
+    "NEWS.md",
+    "docs/2026-07-13.md",
+    "docs/milestones/milestone_1.md",
+    "docs/milestones/milestone_1_5.md",
+    "docs/prompts/handoff_prompt.md",
+    "docs/prompts/handoff_prompt_packaging.md",
+    "docs/prompts/handoff_prompt_m2.md",
+    "docs/prompts/handoff_prompt_m2_run.md",
+    "docs/prompts/handoff_prompt_m1_5.md",
+    "docs/prompts/handoff_prompt_hdwgcna_equivalence.md",
+    "docs/prompts/handoff_prompt_dev_economy.md",
+    "docs/custom_tools.md",
+    "pkgdown_site/link.svg"
+  ]
+}

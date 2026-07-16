@@ -42,6 +42,6 @@ returned list. \code{tables_dir}, when given, also persists every fragment's
 result table (via \code{\link[=write_fragment_tables]{write_fragment_tables()}}) alongside the JSON packets.
 }
 \examples{
-ms <- sentit_example_moduleset()
+ms <- llegir_example_moduleset()
 run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
 }

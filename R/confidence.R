@@ -58,7 +58,7 @@
 #'   `n_testable_tools`, `n_tools_with_signal`, `cross_tool_agreement` (one of
 #'   `'convergent_signal'`, `'convergent_null'`, `'conflicting'`, or `NA`).
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' compute_evidence_signals(packet)
 #' @export
@@ -167,7 +167,7 @@ compute_evidence_signals <- function(packet, sig_threshold = 0.05, effect_floor 
 #' @return `interp`, with `confidence$score`, `confidence$rationale`, and
 #'   `flags` updated.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' interp <- synthesize_interpretation(packet, desc, mock_backend())

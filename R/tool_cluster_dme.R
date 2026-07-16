@@ -15,7 +15,7 @@
 #'   `ctx$ms` lacks the `clusters` or `module_scores` capability (see
 #'   [capabilities()]) -- a graceful skip, not an error.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' cluster_dme_tool(list(ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type')))
 #' @export
 cluster_dme_tool <- function(ctx){

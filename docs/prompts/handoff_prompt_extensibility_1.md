@@ -11,7 +11,7 @@ Handoff for a fresh Claude Code instance: generalize the `ModuleSet` contract be
 ## Prompt
 
 ```
-You're starting Part 1 of the extensibility milestone for `sentit` (an installed,
+You're starting Part 1 of the extensibility milestone for `llegir` (an installed,
 experimental R package with a pkgdown site). Goal: make the module source pluggable
 by generalizing the ModuleSet contract beyond hdWGCNA. The engine currently works
 end to end on hdWGCNA modules; nothing about the evidence tools, synthesis, or
@@ -82,7 +82,7 @@ ModuleSet runs the pipeline end to end, before building the gene-list adapter.
 
 ## Notes
 
-- Package is `sentit`; it's now a real R package — new exported functions need roxygen + `devtools::document()`, and `R CMD check` must stay clean.
+- Package is `llegir`; it's now a real R package — new exported functions need roxygen + `devtools::document()`, and `R CMD check` must stay clean.
 - The keystone risk is the contract refactor — hence task 0 is an audit + proposal with a mandatory check-in before any refactoring.
 - `capabilities()` introduced here seeds Part 2's tool-requirement / graceful-skip system.
 - Gene-list scoring: UCell or decoupleR (whichever is in the env); if missing, stop and flag — don't install.

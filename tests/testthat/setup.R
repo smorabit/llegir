@@ -49,7 +49,7 @@ csf_dataset_description <- function(){
 
 # interpretation.schema.json now ships at inst/schemas/ and is resolved via
 # system.file(); works under devtools::load_all() and once installed alike
-test_schema_path <- system.file('schemas', 'interpretation.schema.json', package = 'sentit')
+test_schema_path <- system.file('schemas', 'interpretation.schema.json', package = 'llegir')
 
 # a real evidence packet for mod_test, built with the same tool_config as
 # scripts/run_csf.R, for prompt/synthesis tests that need a real packet

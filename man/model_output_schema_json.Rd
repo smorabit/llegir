@@ -5,7 +5,7 @@
 \title{Model-facing interpretation schema, derived from the canonical schema}
 \usage{
 model_output_schema_json(
-  schema_path = system.file("schemas", "interpretation.schema.json", package = "sentit")
+  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir")
 )
 }
 \arguments{

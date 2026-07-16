@@ -33,7 +33,7 @@
 #'   call needs (`module_scores` always; `sample_ids` for categorical
 #'   testing, see [capabilities()]) -- a graceful skip, not an error.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' module_by_metadata_tool(list(
 #'     ms = ms, module_id = modules(ms)[1],
 #'     params = list(column = 'diagnosis', column_type = 'categorical')

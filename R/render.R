@@ -23,7 +23,7 @@ RENDER_TEMPLATE_VERSION <- '0.1'
 #' @param interp An `interpretation` object.
 #' @return A single character string (Markdown).
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' interp <- synthesize_interpretation(packet, desc, mock_backend())
@@ -106,7 +106,7 @@ describe_flags <- function(flags){
 #'   [run_synthesis_orchestrator()].
 #' @return A data.frame: `module_id`, `confidence`, `flags`, `reason`.
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' interp <- synthesize_interpretation(packet, desc, mock_backend())
@@ -154,7 +154,7 @@ write_review_queue <- function(interps, path){
 #' @param render_template_version Render template version to record.
 #' @return A list, suitable for [write_synthesis_manifest()].
 #' @examples
-#' ms <- sentit_example_moduleset()
+#' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' interp <- synthesize_interpretation(packet, desc, mock_backend())

@@ -9,7 +9,7 @@ template:
   bootstrap: 5
 
 home:
-  title: sentit
+  title: llegir
   description: >
     Deterministic evidence and model-assisted interpretation of gene
     co-expression modules.
@@ -50,7 +50,7 @@ reference:
   - components_ModuleSet
   - gene_list_ModuleSet
   - synthetic_ModuleSet
-  - sentit_example_moduleset
+  - llegir_example_moduleset
 
 - title: Evidence tools
   desc: Core deterministic evidence tools; each returns one evidence_fragment.
