@@ -10,7 +10,8 @@ import_fragment(
   result,
   fragment_id = NULL,
   tool_id = "import_fragment",
-  params = list()
+  params = list(),
+  source_file = NULL
 )
 }
 \arguments{
@@ -30,6 +31,12 @@ import_fragment(
 \code{significance_col}, \code{effect_col}) and other normalizer options (e.g.
 \code{n_top}), since a user-supplied table won't share this package's exact
 column names.}
+
+\item{source_file}{Optional path to the file \code{result} was originally read
+from (e.g. a \code{FindMarkers()} CSV export). Recorded in
+\code{provenance$params$source_file}, and content-hashed into
+\code{provenance$input_hashes$source_file} if the file still exists, so the
+import is traceable back to its origin.}
 }
 \value{
 An \code{evidence_fragment} object.

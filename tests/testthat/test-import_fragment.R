@@ -72,3 +72,157 @@ test_that('import_fragment_tool() flows through the orchestrator unchanged', {
     expect_true(validate_evidence_fragment(imported))
     expect_equal(imported$provenance$source, 'user_supplied')
 })
+
+## milestone_extensibility Part 3: format-specific importers with sensible
+## per-format defaults (Seurat/DESeq2/edgeR DE tables, hdWGCNA DME, EnrichR/
+## GeneOverlap enrichment), all funneling through import_fragment().
+
+test_that('import_fragment() normalizes a cross_condition_delta table (gene-level DE contrast)', {
+    user_table <- data.frame(
+        gene = c('IFIT3', 'ISG15', 'ACTB'),
+        log2FC = c(2.1, 1.8, 0.05),
+        padj = c(0.001, 0.01, 0.9)
+    )
+    frag <- import_fragment(module_id = 'MM1', type = 'cross_condition_delta', result = user_table)
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$type, 'cross_condition_delta')
+    expect_equal(frag$provenance$source, 'user_supplied')
+    expect_equal(frag$direction, 'up')
+    expect_equal(frag$significance, 0.001)
+    expect_equal(frag$top_findings[[1]]$feature, 'IFIT3')
+})
+
+test_that('import_fragment() falls back to rownames for cross_condition_delta feature_col', {
+    user_table <- data.frame(log2FC = c(-2.5, 0.1), padj = c(0.002, 0.7), row.names = c('CX3CR1', 'ACTB'))
+    frag <- import_fragment(module_id = 'MM1', type = 'cross_condition_delta', result = user_table)
+    expect_equal(frag$top_findings[[1]]$feature, 'CX3CR1')
+    expect_equal(frag$direction, 'down')
+})
+
+test_that('import_fragment() normalizes a state_expression table (e.g. an externally-run DME)', {
+    user_table <- data.frame(
+        group = c('pDC', 'Monocyte', 'Macrophage'),
+        avg_log2FC = c(1.4, -0.2, -0.5),
+        p_val_adj = c(0.001, 0.5, 0.2)
+    )
+    frag <- import_fragment(module_id = 'MM1', type = 'state_expression', result = user_table)
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$type, 'state_expression')
+    expect_equal(frag$provenance$source, 'user_supplied')
+    expect_equal(frag$direction, 'up')
+    expect_equal(frag$effect_strength, 1.4)
+})
+
+test_that('import_seurat_markers() defaults to Seurat FindMarkers column names and yields cross_condition_delta with no group_col', {
+    user_table <- data.frame(
+        gene = c('IFIT3', 'ACTB'),
+        avg_log2FC = c(2.0, 0.02),
+        p_val_adj = c(0.001, 0.95)
+    )
+    frag <- import_seurat_markers(module_id = 'MM1', result = user_table)
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$type, 'cross_condition_delta')
+    expect_equal(frag$provenance$source, 'user_supplied')
+    expect_equal(frag$provenance$params$effect_col, 'avg_log2FC')
+})
+
+test_that('import_seurat_markers() yields categorical_association when a group_col is present (e.g. FindAllMarkers)', {
+    user_table <- data.frame(
+        gene = c('IFIT3', 'RPL13', 'CX3CR1'),
+        cluster = c('pDC', 'Monocyte', 'Macrophage'),
+        avg_log2FC = c(2.0, 1.5, -0.8),
+        p_val_adj = c(0.001, 0.02, 0.3)
+    )
+    frag <- import_seurat_markers(module_id = 'MM1', result = user_table)
+    expect_equal(frag$type, 'categorical_association')
+    expect_equal(frag$provenance$params$group_col, 'cluster')
+})
+
+test_that('import_seurat_markers() reuses the same importer for a DESeq2 table via column_map', {
+    user_table <- data.frame(
+        gene = c('IFIT3', 'ACTB'),
+        log2FoldChange = c(1.9, -0.1),
+        padj = c(0.003, 0.8)
+    )
+    frag <- import_seurat_markers(
+        module_id = 'MM1', result = user_table,
+        column_map = list(effect_col = 'log2FoldChange', significance_col = 'padj')
+    )
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$type, 'cross_condition_delta')
+    expect_equal(frag$direction, 'up')
+})
+
+test_that('import_seurat_markers() reuses the same importer for an edgeR table via column_map', {
+    user_table <- data.frame(
+        gene = c('IFIT3', 'ACTB'),
+        logFC = c(-1.6, 0.05),
+        FDR = c(0.004, 0.9)
+    )
+    frag <- import_seurat_markers(
+        module_id = 'MM1', result = user_table,
+        column_map = list(effect_col = 'logFC', significance_col = 'FDR')
+    )
+    expect_equal(frag$direction, 'down')
+})
+
+test_that('import_hdwgcna_dme() defaults to hdWGCNA FindAllDMEs column names', {
+    user_table <- data.frame(
+        group = c('pDC', 'Monocyte'),
+        avg_log2FC = c(1.4, -0.3),
+        p_val_adj = c(0.001, 0.4)
+    )
+    frag <- import_hdwgcna_dme(module_id = 'MM1', result = user_table)
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$type, 'state_expression')
+    expect_equal(frag$provenance$source, 'user_supplied')
+    expect_equal(frag$top_findings[[1]]$group, 'pDC')
+})
+
+test_that('import_hdwgcna_dme() respects column_map overrides', {
+    user_table <- data.frame(cell_state = c('pDC', 'Monocyte'), fc = c(2.0, -0.1), fdr = c(0.001, 0.6))
+    frag <- import_hdwgcna_dme(
+        module_id = 'MM1', result = user_table,
+        column_map = list(group_col = 'cell_state', effect_col = 'fc', significance_col = 'fdr')
+    )
+    expect_equal(frag$type, 'state_expression')
+    expect_equal(frag$effect_strength, 2.0)
+})
+
+test_that('import_enrichr() defaults to EnrichR column names', {
+    user_table <- data.frame(
+        Term = c('Interferon Response', 'Cell Cycle'),
+        Odds.Ratio = c(12.5, 1.1),
+        Adjusted.P.value = c(0.001, 0.7)
+    )
+    frag <- import_enrichr(module_id = 'MM1', result = user_table)
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$type, 'geneset_enrichment')
+    expect_equal(frag$provenance$source, 'user_supplied')
+    expect_equal(frag$top_findings[[1]]$term, 'Interferon Response')
+})
+
+test_that('import_enrichr() reuses the same importer for a GeneOverlap table via column_map', {
+    user_table <- data.frame(
+        category = c('HALLMARK_INTERFERON_GAMMA_RESPONSE', 'HALLMARK_E2F_TARGETS'),
+        odds.ratio = c(8.2, 0.9),
+        pval = c(0.002, 0.6)
+    )
+    frag <- import_enrichr(
+        module_id = 'MM1', result = user_table,
+        column_map = list(term_col = 'category', effect_col = 'odds.ratio', significance_col = 'pval')
+    )
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$top_findings[[1]]$term, 'HALLMARK_INTERFERON_GAMMA_RESPONSE')
+})
+
+test_that('import_fragment() records source_file path and content hash in provenance', {
+    user_table <- data.frame(term = 'A', odds_ratio = 5, fdr = 0.01)
+    tmp <- tempfile(fileext = '.tsv')
+    utils::write.table(user_table, tmp, sep = '\t', row.names = FALSE)
+    on.exit(unlink(tmp))
+
+    frag <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = user_table, source_file = tmp)
+    expect_equal(frag$provenance$params$source_file, tmp)
+    expect_false(is.null(frag$provenance$input_hashes$source_file))
+})
