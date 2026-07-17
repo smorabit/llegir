@@ -1,6 +1,6 @@
 # llegir — Overview
 
-← [Project home](../README.md) · [Implementation guide](implementation_guide.md) · [Schemas](schemas.md) · [Milestone 1](milestone_1.md)
+← [Project home](../README.md) · [Implementation guide](implementation_guide.md) · [Schemas](schemas.md) · [Milestone 1](milestones/milestone_1.md)
 
 *Status: Concept / design, started 2026-07.*
 
@@ -44,6 +44,17 @@ Pipeline, at a glance:
 8. **Model-agnostic and open-source.** A light R orchestrator (candidate: `ellmer`) so the user picks the model. Built for community extension via registered tools and data-source adapters.
 9. **Generalizable by design.** hdWGCNA first, but the core tools talk to a thin `ModuleSet` adapter, so other module/factor sources (NMF/cNMF, Hotspot, metaprograms, DE gene lists) can be swapped in later without rewriting the tools.
 
+## Milestone status
+
+| Milestone | Status |
+|---|---|
+| [M1 — Deterministic evidence core](milestones/milestone_1.md) | Complete |
+| [M1.5 — Rigor/reproducibility hardening](milestones/milestone_1_5.md) | Complete |
+| [M2 — Synthesis, faithfulness, review queue](milestones/milestone_2.md) | Complete |
+| [M2 verification](milestones/milestone2_verification.md) | Mock pass complete; live validation done within budget policy (biology spot-check, reproducibility judgment open) |
+| [Packaging](milestones/milestone_packaging.md) | Complete — installable `llegir` R package (v0.x, experimental), pkgdown site rebuilt on `llegir` naming |
+| [Extensibility](milestones/milestone_extensibility.md) | In progress — Parts 1–3 landed: generalized `ModuleSet` (tidy-components + gene-list adapters, on-the-fly scoring), custom-tool registry with `signature_correlation` core tool + worked custom-tool demo, and format-specific evidence ingestion importers; interactive end-to-end workflow notebook demonstrating custom-tool registration added |
+
 ---
 
-*Last updated: 2026-07-16*
+*Last updated: 2026-07-17*

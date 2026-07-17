@@ -1,337 +1,522 @@
-# Repository Map
-
-Generated via `tree -I 'node_modules|build|output|data|.git' -a --dirsfirst`. Excludes `node_modules`, `build`, `output`, `data`, and `.git`.
-
-```
 .
-|-- .claude
-|-- .obsidian
-|   |-- app.json
-|   |-- appearance.json
-|   |-- core-plugins.json
-|   `-- workspace.json
-|-- R
-|   |-- confidence.R
-|   |-- dataset_description.R
-|   |-- example_moduleset.R
-|   |-- faithfulness.R
-|   |-- fragment.R
-|   |-- import_fragment.R
-|   |-- interpretation.R
-|   |-- llegir-package.R
-|   |-- moduleset.R
-|   |-- moduleset_components.R
-|   |-- moduleset_gene_list.R
-|   |-- moduleset_hdwgcna.R
-|   |-- orchestrator.R
-|   |-- prompt.R
-|   |-- registry.R
-|   |-- render.R
-|   |-- stats_utils.R
-|   |-- synthesis.R
-|   |-- tool_cluster_dme.R
-|   |-- tool_geneset_enrichment.R
-|   |-- tool_hub_genes.R
-|   |-- tool_module_by_metadata.R
-|   |-- tool_signature_correlation.R
-|   `-- utils.R
-|-- docs
-|   |-- milestones
-|   |   |-- milestone2_verification.md
-|   |   |-- milestone_1.md
-|   |   |-- milestone_1_5.md
-|   |   |-- milestone_2.md
-|   |   |-- milestone_extensibility.md
-|   |   `-- milestone_packaging.md
-|   |-- prompts
-|   |   |-- handoff_prompt.md
-|   |   |-- handoff_prompt_dev_economy.md
-|   |   |-- handoff_prompt_extensibility_1.md
-|   |   |-- handoff_prompt_extensibility_2.md
-|   |   |-- handoff_prompt_hdwgcna_equivalence.md
-|   |   |-- handoff_prompt_m1_5.md
-|   |   |-- handoff_prompt_m2.md
-|   |   |-- handoff_prompt_m2_run.md
-|   |   `-- handoff_prompt_packaging.md
-|   |-- 2026-07-10.md
-|   |-- 2026-07-13.md
-|   |-- custom_tools.md
-|   |-- dev_economy.md
-|   |-- implementation_guide.md
-|   |-- overview.md
-|   |-- repo_map.md
-|   `-- schemas.md
-|-- inst
-|   `-- schemas
-|       |-- evidence_fragment.schema.json
-|       `-- interpretation.schema.json
-|-- man
-|   |-- PROMPT_TEMPLATE_VERSION.Rd
-|   |-- RENDER_TEMPLATE_VERSION.Rd
-|   |-- aggregate_by_sample.Rd
-|   |-- assert_faithfulness.Rd
-|   |-- build_evidence_packet.Rd
-|   |-- build_review_queue.Rd
-|   |-- build_synthesis_manifest.Rd
-|   |-- build_system_prompt.Rd
-|   |-- build_user_prompt.Rd
-|   |-- cached_backend.Rd
-|   |-- capabilities.Rd
-|   |-- categorical_group_test.Rd
-|   |-- check_faithfulness.Rd
-|   |-- cluster_dme_tool.Rd
-|   |-- components_ModuleSet.Rd
-|   |-- compute_evidence_signals.Rd
-|   |-- continuous_correlation_test.Rd
-|   |-- dataset_description.Rd
-|   |-- describe_flags.Rd
-|   |-- ellmer_backend.Rd
-|   |-- enforce_faithfulness.Rd
-|   |-- evidence_fragment.Rd
-|   |-- expression.Rd
-|   |-- fragment_from_json.Rd
-|   |-- fragment_to_json.Rd
-|   |-- fuse_confidence.Rd
-|   |-- gene_list_ModuleSet.Rd
-|   |-- gene_membership.Rd
-|   |-- geneset_enrichment_tool.Rd
-|   |-- get_tool.Rd
-|   |-- has_capability.Rd
-|   |-- hdWGCNA_ModuleSet.Rd
-|   |-- hub_genes_tool.Rd
-|   |-- import_fragment.Rd
-|   |-- import_fragment_tool.Rd
-|   |-- interpretation.Rd
-|   |-- interpretation_from_json.Rd
-|   |-- interpretation_hash.Rd
-|   |-- interpretation_to_json.Rd
-|   |-- is_faithful.Rd
-|   |-- is_sample_constant.Rd
-|   |-- list_tools.Rd
-|   |-- llegir-package.Rd
-|   |-- llegir_example_moduleset.Rd
-|   |-- make_interpretation_provenance.Rd
-|   |-- make_provenance.Rd
-|   |-- metadata.Rd
-|   |-- mock_backend.Rd
-|   |-- model_output_schema_json.Rd
-|   |-- module_by_metadata_tool.Rd
-|   |-- module_scores.Rd
-|   |-- modules.Rd
-|   |-- needs_review.Rd
-|   |-- packet_to_json.Rd
-|   |-- pkg_versions.Rd
-|   |-- read_evidence_packet.Rd
-|   |-- read_interpretation.Rd
-|   |-- register_tool.Rd
-|   |-- render_dataset_description.Rd
-|   |-- render_packet_compact.Rd
-|   |-- render_paragraph.Rd
-|   |-- resolve_backend.Rd
-|   |-- run_module.Rd
-|   |-- run_orchestrator.Rd
-|   |-- run_synthesis_orchestrator.Rd
-|   |-- signature_correlation_tool.Rd
-|   |-- synthesize_interpretation.Rd
-|   |-- synthesize_module.Rd
-|   |-- synthetic_ModuleSet.Rd
-|   |-- validate_dataset_description.Rd
-|   |-- validate_evidence_fragment.Rd
-|   |-- validate_interpretation.Rd
-|   |-- write_evidence_packet.Rd
-|   |-- write_fragment_tables.Rd
-|   |-- write_interpretation.Rd
-|   |-- write_review_queue.Rd
-|   `-- write_synthesis_manifest.Rd
-|-- pkgdown_site
-|   |-- articles
-|   |   |-- getting-started.html
-|   |   `-- index.html
-|   |-- deps
-|   |   |-- bootstrap-5.3.8
-|   |   |   |-- bootstrap.bundle.min.js
-|   |   |   |-- bootstrap.bundle.min.js.map
-|   |   |   `-- bootstrap.min.css
-|   |   |-- bootstrap-toc-1.0.1
-|   |   |   `-- bootstrap-toc.min.js
-|   |   |-- clipboard.js-2.0.11
-|   |   |   `-- clipboard.min.js
-|   |   |-- font-awesome-6.5.2
-|   |   |   |-- css
-|   |   |   |   |-- all.css
-|   |   |   |   |-- all.min.css
-|   |   |   |   |-- v4-shims.css
-|   |   |   |   `-- v4-shims.min.css
-|   |   |   `-- webfonts
-|   |   |       |-- fa-brands-400.ttf
-|   |   |       |-- fa-brands-400.woff2
-|   |   |       |-- fa-regular-400.ttf
-|   |   |       |-- fa-regular-400.woff2
-|   |   |       |-- fa-solid-900.ttf
-|   |   |       |-- fa-solid-900.woff2
-|   |   |       |-- fa-v4compatibility.ttf
-|   |   |       `-- fa-v4compatibility.woff2
-|   |   |-- headroom-0.11.0
-|   |   |   |-- headroom.min.js
-|   |   |   `-- jQuery.headroom.min.js
-|   |   |-- jquery-3.6.0
-|   |   |   |-- jquery-3.6.0.js
-|   |   |   |-- jquery-3.6.0.min.js
-|   |   |   `-- jquery-3.6.0.min.map
-|   |   |-- search-1.0.0
-|   |   |   |-- autocomplete.jquery.min.js
-|   |   |   |-- fuse.min.js
-|   |   |   `-- mark.min.js
-|   |   `-- data-deps.txt
-|   |-- news
-|   |   `-- index.html
-|   |-- reference
-|   |   |-- PROMPT_TEMPLATE_VERSION.html
-|   |   |-- RENDER_TEMPLATE_VERSION.html
-|   |   |-- aggregate_by_sample.html
-|   |   |-- assert_faithfulness.html
-|   |   |-- build_evidence_packet.html
-|   |   |-- build_review_queue.html
-|   |   |-- build_synthesis_manifest.html
-|   |   |-- build_system_prompt.html
-|   |   |-- build_user_prompt.html
-|   |   |-- cached_backend.html
-|   |   |-- categorical_group_test.html
-|   |   |-- check_faithfulness.html
-|   |   |-- cluster_dme_tool.html
-|   |   |-- compute_evidence_signals.html
-|   |   |-- continuous_correlation_test.html
-|   |   |-- dataset_description.html
-|   |   |-- describe_flags.html
-|   |   |-- ellmer_backend.html
-|   |   |-- enforce_faithfulness.html
-|   |   |-- evidence_fragment.html
-|   |   |-- expression.hdWGCNA_ModuleSet.html
-|   |   |-- expression.html
-|   |   |-- expression.synthetic_ModuleSet.html
-|   |   |-- fragment_from_json.html
-|   |   |-- fragment_to_json.html
-|   |   |-- fuse_confidence.html
-|   |   |-- gene_membership.hdWGCNA_ModuleSet.html
-|   |   |-- gene_membership.html
-|   |   |-- gene_membership.synthetic_ModuleSet.html
-|   |   |-- geneset_enrichment_tool.html
-|   |   |-- hdWGCNA_ModuleSet.html
-|   |   |-- hub_genes_tool.html
-|   |   |-- import_fragment.html
-|   |   |-- import_fragment_tool.html
-|   |   |-- index.html
-|   |   |-- interpretation.html
-|   |   |-- interpretation_from_json.html
-|   |   |-- interpretation_hash.html
-|   |   |-- interpretation_to_json.html
-|   |   |-- is_faithful.html
-|   |   |-- is_sample_constant.html
-|   |   |-- make_interpretation_provenance.html
-|   |   |-- make_provenance.html
-|   |   |-- metadata.hdWGCNA_ModuleSet.html
-|   |   |-- metadata.html
-|   |   |-- metadata.synthetic_ModuleSet.html
-|   |   |-- mock_backend.html
-|   |   |-- model_output_schema_json.html
-|   |   |-- module_by_metadata_tool.html
-|   |   |-- module_scores.hdWGCNA_ModuleSet.html
-|   |   |-- module_scores.html
-|   |   |-- module_scores.synthetic_ModuleSet.html
-|   |   |-- modules.hdWGCNA_ModuleSet.html
-|   |   |-- modules.html
-|   |   |-- modules.synthetic_ModuleSet.html
-|   |   |-- needs_review.html
-|   |   |-- packet_to_json.html
-|   |   |-- pkg_versions.hdWGCNA_ModuleSet.html
-|   |   |-- pkg_versions.html
-|   |   |-- pkg_versions.synthetic_ModuleSet.html
-|   |   |-- read_evidence_packet.html
-|   |   |-- read_interpretation.html
-|   |   |-- render_dataset_description.html
-|   |   |-- render_packet_compact.html
-|   |   |-- render_paragraph.html
-|   |   |-- resolve_backend.html
-|   |   |-- run_module.html
-|   |   |-- run_orchestrator.html
-|   |   |-- run_synthesis_orchestrator.html
-|   |   |-- sentit-package.html
-|   |   |-- sentit.html
-|   |   |-- sentit_example_moduleset.html
-|   |   |-- synthesize_interpretation.html
-|   |   |-- synthesize_module.html
-|   |   |-- synthetic_ModuleSet.html
-|   |   |-- validate_dataset_description.html
-|   |   |-- validate_evidence_fragment.html
-|   |   |-- validate_interpretation.html
-|   |   |-- write_evidence_packet.html
-|   |   |-- write_fragment_tables.html
-|   |   |-- write_interpretation.html
-|   |   |-- write_review_queue.html
-|   |   `-- write_synthesis_manifest.html
-|   |-- tutorials
-|   |-- .DS_Store
-|   |-- 2026-07-10.html
-|   |-- 2026-07-13.html
-|   |-- 404.html
-|   |-- CLAUDE.html
-|   |-- LICENSE-text.html
-|   |-- LICENSE.html
-|   |-- STYLE.html
-|   |-- authors.html
-|   |-- index.html
-|   |-- katex-auto.js
-|   |-- lightswitch.js
-|   |-- link.svg
-|   |-- pkgdown.js
-|   |-- pkgdown.yml
-|   |-- search.json
-|   `-- sitemap.xml
-|-- scripts
-|   |-- run_csf.R
-|   `-- run_synthesis_csf.R
-|-- tests
-|   `-- testthat
-|       |-- setup.R
-|       |-- synthetic_extensibility.R
-|       |-- synthetic_moduleset.R
-|       |-- test-confidence.R
-|       |-- test-faithfulness.R
-|       |-- test-fragment.R
-|       |-- test-import_fragment.R
-|       |-- test-interpretation.R
-|       |-- test-moduleset_adapter.R
-|       |-- test-moduleset_components.R
-|       |-- test-moduleset_gene_list.R
-|       |-- test-prompt.R
-|       |-- test-registry.R
-|       |-- test-render.R
-|       |-- test-spike_in.R
-|       |-- test-synthesis.R
-|       |-- test-tool_signature_correlation.R
-|       `-- test-tools.R
-|-- vignettes
-|   `-- getting-started.Rmd
-|-- .DS_Store
-|-- .Rbuildignore
-|-- .gitignore
-|-- CLAUDE.md
-|-- CLAUDE_old.md
-|-- DESCRIPTION
-|-- LICENSE
-|-- LICENSE.md
-|-- NAMESPACE
-|-- NEWS.md
-|-- README.Rmd
-|-- README.md
-|-- STYLE.md
-`-- _pkgdown.yml
+├── _pkgdown.yml
+├── CLAUDE_old.md
+├── CLAUDE.md
+├── data
+│   ├── CSF_Myeloid_hdWGCNA.rds
+│   ├── GO_Biological_Process_2026.txt
+│   └── h.all.v2026.1.Hs.symbols.gmt
+├── DESCRIPTION
+├── docs
+│   ├── 2026-07-10.md
+│   ├── 2026-07-13.md
+│   ├── custom_tools.md
+│   ├── dev_economy.md
+│   ├── implementation_guide.md
+│   ├── milestones
+│   │   ├── milestone_1_5.md
+│   │   ├── milestone_1.md
+│   │   ├── milestone_2.md
+│   │   ├── milestone_extensibility.md
+│   │   ├── milestone_packaging.md
+│   │   └── milestone2_verification.md
+│   ├── overview.md
+│   ├── prompts
+│   │   ├── handoff_prompt_dev_economy.md
+│   │   ├── handoff_prompt_extensibility_1.md
+│   │   ├── handoff_prompt_extensibility_2.md
+│   │   ├── handoff_prompt_hdwgcna_equivalence.md
+│   │   ├── handoff_prompt_m1_5.md
+│   │   ├── handoff_prompt_m2_run.md
+│   │   ├── handoff_prompt_m2.md
+│   │   ├── handoff_prompt_packaging.md
+│   │   └── handoff_prompt.md
+│   ├── repo_map.md
+│   └── schemas.md
+├── inst
+│   └── schemas
+│       ├── evidence_fragment.schema.json
+│       └── interpretation.schema.json
+├── LICENSE
+├── LICENSE.md
+├── man
+│   ├── aggregate_by_sample.Rd
+│   ├── assert_faithfulness.Rd
+│   ├── build_evidence_packet.Rd
+│   ├── build_review_queue.Rd
+│   ├── build_synthesis_manifest.Rd
+│   ├── build_system_prompt.Rd
+│   ├── build_user_prompt.Rd
+│   ├── cached_backend.Rd
+│   ├── capabilities.Rd
+│   ├── categorical_group_test.Rd
+│   ├── check_faithfulness.Rd
+│   ├── cluster_dme_tool.Rd
+│   ├── components_ModuleSet.Rd
+│   ├── compute_evidence_signals.Rd
+│   ├── continuous_correlation_test.Rd
+│   ├── dataset_description.Rd
+│   ├── describe_flags.Rd
+│   ├── ellmer_backend.Rd
+│   ├── enforce_faithfulness.Rd
+│   ├── evidence_fragment.Rd
+│   ├── expression.Rd
+│   ├── fragment_from_json.Rd
+│   ├── fragment_to_json.Rd
+│   ├── fuse_confidence.Rd
+│   ├── gene_list_ModuleSet.Rd
+│   ├── gene_membership.Rd
+│   ├── geneset_enrichment_tool.Rd
+│   ├── get_tool.Rd
+│   ├── has_capability.Rd
+│   ├── hdWGCNA_ModuleSet.Rd
+│   ├── hub_genes_tool.Rd
+│   ├── import_enrichr.Rd
+│   ├── import_fragment_tool.Rd
+│   ├── import_fragment.Rd
+│   ├── import_hdwgcna_dme.Rd
+│   ├── import_seurat_markers.Rd
+│   ├── interpretation_from_json.Rd
+│   ├── interpretation_hash.Rd
+│   ├── interpretation_to_json.Rd
+│   ├── interpretation.Rd
+│   ├── is_faithful.Rd
+│   ├── is_sample_constant.Rd
+│   ├── list_tools.Rd
+│   ├── llegir_example_moduleset.Rd
+│   ├── llegir-package.Rd
+│   ├── make_interpretation_provenance.Rd
+│   ├── make_provenance.Rd
+│   ├── metadata.Rd
+│   ├── mock_backend.Rd
+│   ├── model_output_schema_json.Rd
+│   ├── module_by_metadata_tool.Rd
+│   ├── module_scores.Rd
+│   ├── modules.Rd
+│   ├── needs_review.Rd
+│   ├── packet_to_json.Rd
+│   ├── pkg_versions.Rd
+│   ├── PROMPT_TEMPLATE_VERSION.Rd
+│   ├── read_evidence_packet.Rd
+│   ├── read_interpretation.Rd
+│   ├── register_tool.Rd
+│   ├── render_dataset_description.Rd
+│   ├── render_packet_compact.Rd
+│   ├── render_paragraph.Rd
+│   ├── RENDER_TEMPLATE_VERSION.Rd
+│   ├── resolve_backend.Rd
+│   ├── run_module.Rd
+│   ├── run_orchestrator.Rd
+│   ├── run_synthesis_orchestrator.Rd
+│   ├── signature_correlation_tool.Rd
+│   ├── synthesize_interpretation.Rd
+│   ├── synthesize_module.Rd
+│   ├── synthetic_ModuleSet.Rd
+│   ├── validate_dataset_description.Rd
+│   ├── validate_evidence_fragment.Rd
+│   ├── validate_interpretation.Rd
+│   ├── write_evidence_packet.Rd
+│   ├── write_fragment_tables.Rd
+│   ├── write_interpretation.Rd
+│   ├── write_review_queue.Rd
+│   └── write_synthesis_manifest.Rd
+├── NAMESPACE
+├── NEWS.md
+├── output
+│   ├── cache
+│   │   ├── 0e687097cd09776cbdb31aa22c29b5862663bb894429165265eebba9f7f73cb0.rds
+│   │   ├── 1015b77398b6919441426aafc0d20601a6b5663f48f01d967bcbf1e76c50a4ed.rds
+│   │   ├── 200d397836b6d8ccaf08ef2834034ac29829806a2870587791c84ca10b98e291.rds
+│   │   ├── 2c0dfb8d5c26d59ee35c4665f9003e5a164dc27fbc942371e8f2b03324f48aa4.rds
+│   │   ├── 4b49ae991414e8d1192eebfc82b1a40c7f20290b7f70329dc1d41a477f99b3bf.rds
+│   │   ├── 5e22b2ca1345d6add78fcb8232379c2e6413148865e60ffb31e8321f259294ed.rds
+│   │   ├── 669f4d0799c69e511e0e994da1a79e99c9c43d553b9c407c9b3a631d72ba841e.rds
+│   │   ├── 7db8711381f73d00d7bff9f590dc9c8ac9e8f6e9a502fcc23368d157fec65474.rds
+│   │   ├── 91cce207e7129f7707db4f8157ddd04051a6ca58d802956eeb6319a9d99fc6d3.rds
+│   │   ├── 9be6081354a3b91fad47b6b79da6463d5e0ce57715b237824a42ded0abc5184b.rds
+│   │   ├── bec484bb4d8b45b23719924a181d73e9c6f72e11b0a725f871ec7e4c59fa5519.rds
+│   │   ├── da022940ced7cad00d90d72b2161f3e29f03eb4bd8ca54e2b8149a84ae4b7397.rds
+│   │   ├── e1dc871c4796673611038145ae1350aa4ae59ad98a66c8d86b5954708c7f5500.rds
+│   │   ├── e42868506259fe8d214767f0e630a8a4cb7aeeaf39408b18e8ee1d535dd3fa32.rds
+│   │   ├── f001d2669b078055995ad0e570443b2ef1b498b3f84f9e384c60aff42dbc99e7.rds
+│   │   └── fc066d152a2d129ba0bb8fb0b962b965aa0768c9643f115732c8ef5bbacb795b.rds
+│   ├── evidence_packets
+│   │   ├── MM1.json
+│   │   ├── MM10.json
+│   │   ├── MM11.json
+│   │   ├── MM12.json
+│   │   ├── MM13.json
+│   │   ├── MM14.json
+│   │   ├── MM2.json
+│   │   ├── MM3.json
+│   │   ├── MM4.json
+│   │   ├── MM5.json
+│   │   ├── MM6.json
+│   │   ├── MM7.json
+│   │   ├── MM8.json
+│   │   └── MM9.json
+│   ├── evidence_packets_deg
+│   │   ├── MM1.json
+│   │   ├── MM2.json
+│   │   └── MM3.json
+│   ├── interpretations
+│   │   ├── manifest.json
+│   │   ├── MM1.json
+│   │   ├── MM1.md
+│   │   ├── MM10.json
+│   │   ├── MM10.md
+│   │   ├── MM11.json
+│   │   ├── MM11.md
+│   │   ├── MM12.json
+│   │   ├── MM12.md
+│   │   ├── MM13.json
+│   │   ├── MM13.md
+│   │   ├── MM14.json
+│   │   ├── MM14.md
+│   │   ├── MM2.json
+│   │   ├── MM2.md
+│   │   ├── MM3.json
+│   │   ├── MM3.md
+│   │   ├── MM4.json
+│   │   ├── MM4.md
+│   │   ├── MM5.json
+│   │   ├── MM5.md
+│   │   ├── MM6.json
+│   │   ├── MM6.md
+│   │   ├── MM7.json
+│   │   ├── MM7.md
+│   │   ├── MM8.json
+│   │   ├── MM8.md
+│   │   ├── MM9.json
+│   │   ├── MM9.md
+│   │   └── review_queue.tsv
+│   ├── interpretations_deg
+│   │   ├── manifest.json
+│   │   ├── MM1.json
+│   │   ├── MM1.md
+│   │   ├── MM2.json
+│   │   ├── MM2.md
+│   │   ├── MM3.json
+│   │   ├── MM3.md
+│   │   └── review_queue.tsv
+│   └── tables
+│       ├── MM1
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM10
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM11
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM12
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM13
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM14
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM2
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM3
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM4
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM5
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM6
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM7
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       ├── MM8
+│       │   ├── cluster_dme.tsv
+│       │   ├── geneset_enrichment.tsv
+│       │   ├── hub_genes.tsv
+│       │   ├── metadata__diagnosis.tsv
+│       │   ├── metadata__sample.tsv
+│       │   └── signature_correlation.tsv
+│       └── MM9
+│           ├── cluster_dme.tsv
+│           ├── geneset_enrichment.tsv
+│           ├── hub_genes.tsv
+│           ├── metadata__diagnosis.tsv
+│           ├── metadata__sample.tsv
+│           └── signature_correlation.tsv
+├── pkgdown_site
+│   ├── 2026-07-10.html
+│   ├── 2026-07-13.html
+│   ├── 404.html
+│   ├── articles
+│   │   ├── getting-started.html
+│   │   └── index.html
+│   ├── authors.html
+│   ├── CLAUDE_old.html
+│   ├── CLAUDE.html
+│   ├── deps
+│   │   ├── bootstrap-5.3.8
+│   │   │   ├── bootstrap.bundle.min.js
+│   │   │   ├── bootstrap.bundle.min.js.map
+│   │   │   └── bootstrap.min.css
+│   │   ├── bootstrap-toc-1.0.1
+│   │   │   └── bootstrap-toc.min.js
+│   │   ├── clipboard.js-2.0.11
+│   │   │   └── clipboard.min.js
+│   │   ├── data-deps.txt
+│   │   ├── font-awesome-6.5.2
+│   │   │   ├── css
+│   │   │   │   ├── all.css
+│   │   │   │   ├── all.min.css
+│   │   │   │   ├── v4-shims.css
+│   │   │   │   └── v4-shims.min.css
+│   │   │   └── webfonts
+│   │   │       ├── fa-brands-400.ttf
+│   │   │       ├── fa-brands-400.woff2
+│   │   │       ├── fa-regular-400.ttf
+│   │   │       ├── fa-regular-400.woff2
+│   │   │       ├── fa-solid-900.ttf
+│   │   │       ├── fa-solid-900.woff2
+│   │   │       ├── fa-v4compatibility.ttf
+│   │   │       └── fa-v4compatibility.woff2
+│   │   ├── headroom-0.11.0
+│   │   │   ├── headroom.min.js
+│   │   │   └── jQuery.headroom.min.js
+│   │   ├── jquery-3.6.0
+│   │   │   ├── jquery-3.6.0.js
+│   │   │   ├── jquery-3.6.0.min.js
+│   │   │   └── jquery-3.6.0.min.map
+│   │   └── search-1.0.0
+│   │       ├── autocomplete.jquery.min.js
+│   │       ├── fuse.min.js
+│   │       └── mark.min.js
+│   ├── index.html
+│   ├── katex-auto.js
+│   ├── LICENSE-text.html
+│   ├── LICENSE.html
+│   ├── lightswitch.js
+│   ├── link.svg
+│   ├── news
+│   │   └── index.html
+│   ├── pkgdown.js
+│   ├── pkgdown.yml
+│   ├── reference
+│   │   ├── aggregate_by_sample.html
+│   │   ├── assert_faithfulness.html
+│   │   ├── build_evidence_packet.html
+│   │   ├── build_review_queue.html
+│   │   ├── build_synthesis_manifest.html
+│   │   ├── build_system_prompt.html
+│   │   ├── build_user_prompt.html
+│   │   ├── cached_backend.html
+│   │   ├── capabilities.components_ModuleSet.html
+│   │   ├── capabilities.hdWGCNA_ModuleSet.html
+│   │   ├── capabilities.html
+│   │   ├── capabilities.synthetic_ModuleSet.html
+│   │   ├── categorical_group_test.html
+│   │   ├── check_faithfulness.html
+│   │   ├── cluster_dme_tool.html
+│   │   ├── components_ModuleSet.html
+│   │   ├── compute_evidence_signals.html
+│   │   ├── continuous_correlation_test.html
+│   │   ├── dataset_description.html
+│   │   ├── describe_flags.html
+│   │   ├── ellmer_backend.html
+│   │   ├── enforce_faithfulness.html
+│   │   ├── evidence_fragment.html
+│   │   ├── expression.components_ModuleSet.html
+│   │   ├── expression.hdWGCNA_ModuleSet.html
+│   │   ├── expression.html
+│   │   ├── expression.synthetic_ModuleSet.html
+│   │   ├── fragment_from_json.html
+│   │   ├── fragment_to_json.html
+│   │   ├── fuse_confidence.html
+│   │   ├── gene_list_ModuleSet.html
+│   │   ├── gene_membership.components_ModuleSet.html
+│   │   ├── gene_membership.hdWGCNA_ModuleSet.html
+│   │   ├── gene_membership.html
+│   │   ├── gene_membership.synthetic_ModuleSet.html
+│   │   ├── geneset_enrichment_tool.html
+│   │   ├── get_tool.html
+│   │   ├── has_capability.html
+│   │   ├── hdWGCNA_ModuleSet.html
+│   │   ├── hub_genes_tool.html
+│   │   ├── import_fragment_tool.html
+│   │   ├── import_fragment.html
+│   │   ├── index.html
+│   │   ├── interpretation_from_json.html
+│   │   ├── interpretation_hash.html
+│   │   ├── interpretation_to_json.html
+│   │   ├── interpretation.html
+│   │   ├── is_faithful.html
+│   │   ├── is_sample_constant.html
+│   │   ├── list_tools.html
+│   │   ├── llegir_example_moduleset.html
+│   │   ├── llegir-package.html
+│   │   ├── llegir.html
+│   │   ├── make_interpretation_provenance.html
+│   │   ├── make_provenance.html
+│   │   ├── metadata.components_ModuleSet.html
+│   │   ├── metadata.hdWGCNA_ModuleSet.html
+│   │   ├── metadata.html
+│   │   ├── metadata.synthetic_ModuleSet.html
+│   │   ├── mock_backend.html
+│   │   ├── model_output_schema_json.html
+│   │   ├── module_by_metadata_tool.html
+│   │   ├── module_scores.components_ModuleSet.html
+│   │   ├── module_scores.hdWGCNA_ModuleSet.html
+│   │   ├── module_scores.html
+│   │   ├── module_scores.synthetic_ModuleSet.html
+│   │   ├── modules.components_ModuleSet.html
+│   │   ├── modules.hdWGCNA_ModuleSet.html
+│   │   ├── modules.html
+│   │   ├── modules.synthetic_ModuleSet.html
+│   │   ├── needs_review.html
+│   │   ├── packet_to_json.html
+│   │   ├── pkg_versions.components_ModuleSet.html
+│   │   ├── pkg_versions.gene_list_ModuleSet.html
+│   │   ├── pkg_versions.hdWGCNA_ModuleSet.html
+│   │   ├── pkg_versions.html
+│   │   ├── pkg_versions.synthetic_ModuleSet.html
+│   │   ├── PROMPT_TEMPLATE_VERSION.html
+│   │   ├── read_evidence_packet.html
+│   │   ├── read_interpretation.html
+│   │   ├── register_tool.html
+│   │   ├── render_dataset_description.html
+│   │   ├── render_packet_compact.html
+│   │   ├── render_paragraph.html
+│   │   ├── RENDER_TEMPLATE_VERSION.html
+│   │   ├── resolve_backend.html
+│   │   ├── run_module.html
+│   │   ├── run_orchestrator.html
+│   │   ├── run_synthesis_orchestrator.html
+│   │   ├── sentit_example_moduleset.html
+│   │   ├── sentit-package.html
+│   │   ├── sentit.html
+│   │   ├── signature_correlation_tool.html
+│   │   ├── synthesize_interpretation.html
+│   │   ├── synthesize_module.html
+│   │   ├── synthetic_ModuleSet.html
+│   │   ├── validate_dataset_description.html
+│   │   ├── validate_evidence_fragment.html
+│   │   ├── validate_interpretation.html
+│   │   ├── write_evidence_packet.html
+│   │   ├── write_fragment_tables.html
+│   │   ├── write_interpretation.html
+│   │   ├── write_review_queue.html
+│   │   └── write_synthesis_manifest.html
+│   ├── search.json
+│   ├── sitemap.xml
+│   ├── STYLE.html
+│   └── tutorials
+├── R
+│   ├── confidence.R
+│   ├── dataset_description.R
+│   ├── example_moduleset.R
+│   ├── faithfulness.R
+│   ├── fragment.R
+│   ├── import_fragment.R
+│   ├── interpretation.R
+│   ├── llegir-package.R
+│   ├── moduleset_components.R
+│   ├── moduleset_gene_list.R
+│   ├── moduleset_hdwgcna.R
+│   ├── moduleset.R
+│   ├── orchestrator.R
+│   ├── prompt.R
+│   ├── registry.R
+│   ├── render.R
+│   ├── stats_utils.R
+│   ├── synthesis.R
+│   ├── tool_cluster_dme.R
+│   ├── tool_geneset_enrichment.R
+│   ├── tool_hub_genes.R
+│   ├── tool_module_by_metadata.R
+│   ├── tool_signature_correlation.R
+│   └── utils.R
+├── README.md
+├── README.Rmd
+├── scripts
+│   ├── interactive_test.R
+│   ├── interactive_test.Rmd
+│   ├── run_csf.R
+│   └── run_synthesis_csf.R
+├── STYLE.md
+├── tests
+│   └── testthat
+│       ├── setup.R
+│       ├── synthetic_extensibility.R
+│       ├── synthetic_moduleset.R
+│       ├── test-confidence.R
+│       ├── test-faithfulness.R
+│       ├── test-fragment.R
+│       ├── test-import_fragment.R
+│       ├── test-interpretation.R
+│       ├── test-moduleset_adapter.R
+│       ├── test-moduleset_components.R
+│       ├── test-moduleset_gene_list.R
+│       ├── test-prompt.R
+│       ├── test-registry.R
+│       ├── test-render.R
+│       ├── test-spike_in.R
+│       ├── test-synthesis.R
+│       ├── test-tool_signature_correlation.R
+│       └── test-tools.R
+└── vignettes
+    └── getting-started.Rmd
 
-29 directories, 294 files
-```
-
-Note: `pkgdown_site` has since been rebuilt on `llegir` naming. `R/`, `man/`, and the pkgdown site are all consistent.
-
----
-
-*Last updated: 2026-07-16*
+49 directories, 471 files

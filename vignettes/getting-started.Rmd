@@ -9,215 +9,165 @@ vignette: >
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = '#>'
+  collapse = FALSE,
+  comment = NA
 )
+
+# data/ and output/ paths in this vignette are relative to the package root,
+# so evaluate chunks there rather than in vignettes/
+knitr::opts_knit$set(root.dir = normalizePath('..'))
 ```
 
-**llegir** ("to sense", Catalan) is a Module Interpretation Engine: it loads a
-gene co-expression module object (starting with hdWGCNA), gathers a
-standardized bundle of evidence per module through a toolbox of deterministic
-R functions, and drafts an evidence-backed interpretation paragraph via a
-model-agnostic synthesis layer with faithfulness checking and confidence
-fusion.
+**llegir** is an R package to automate the interpretation of gene modules in a specific context. From an input gene expression dataset (single-cell, spatial transcriptomics, or bulk RNA-seq) and a set of gene modules, **llegir** gathers a standardized bundle of evidence per module using a pre-built toolbox of analysis functions, and drafts an evidence-backed interpretation via a LLM-enabled synthesis layer.
 
-This vignette walks the whole pipeline end to end on a small, self-contained
-synthetic dataset -- no Seurat/hdWGCNA object, no external data file, and no
-network access or API key required. It builds entirely offline via
-[`mock_backend()`], so it runs the same way in `R CMD check` as it does
-interactively.
+*NOTE* this package is at an experimental development stage, and much of the interface is subject to change.
 
-*llegir is experimental: the public API, especially the `ModuleSet` adapter
-contract and the custom-tool interface, is expected to evolve before a 1.0
-release.*
+## Setup data and define the `ModuleSet`
 
-## 1. A `ModuleSet`
+In this vignette, we demonstrate **llegir** using a scRNA-seq dataset of myeloid cells from cerebrospinal fluid (CSF) cells profiled across several CNS conditions, with co-expression modules computed by hdWGCNA. 
 
-Every core tool depends only on the `ModuleSet` adapter contract --
-[`modules()`], [`gene_membership()`], [`module_scores()`], [`expression()`],
-[`metadata()`], [`pkg_versions()`] -- never on a specific backend package.
-[`hdWGCNA_ModuleSet()`] is the real-world adapter, built from a Seurat object
-that has been run through hdWGCNA. For this vignette we instead use
-[`llegir_example_moduleset()`], a small simulated dataset (two co-expressed
-gene modules plus background noise genes, 200 cells) that satisfies the same
-contract, so every tool below runs unmodified against it.
+To start the **llegir** pipeline, we first define the `ModuleSet`, which contains the following attributes: `modules()`, `gene_membership()`, `module_scores()`, `expression()`, `metadata()`, `capabilities()`, `pkg_versions()`. The function `hdWGCNA_ModuleSet()` automatically formats the `ModuleSet` object for hdWGCNA results, but this framework is flexible to modules from other packages.
 
-```{r}
+```{r, message = FALSE, warning = FALSE}
+library(Seurat)
+library(hdWGCNA)
+library(tidyverse)
 library(llegir)
 
-ms <- llegir_example_moduleset()
+# load the CSF dataset, which has already been processed with hdWGCNA
+seurat_obj <- readRDS('data/CSF_Myeloid_hdWGCNA.rds')
+
+# initialize the ModuleSet 
+ms <- hdWGCNA_ModuleSet(seurat_obj)
 modules(ms)
+
 ```
 
+A quick look at the two attributes most tools lean on: the ranked
+gene membership of a module and the cell-level metadata.
+
 ```{r}
-head(gene_membership(ms, 'module_a'))
+head(gene_membership(ms, 'MM1'))
 ```
 
 ```{r}
 head(metadata(ms))
 ```
 
-`module_a` is simulated to associate with the `diagnosis` column, and
-`module_b` with `cell_type` -- used below to show a real (not null) evidence
-signal.
+## Orchestrating a chain of analysis tools
 
-## 2. Evidence tools
-
-Each tool takes a `ctx <- list(ms, module_id, params)` and returns a single,
-validated `evidence_fragment` -- see [`evidence_fragment()`] and the shipped
-`evidence_fragment.schema.json` for the full contract.
+Each module is characterized by running a set of analysis tools. Every tool takes the same inputs (the `ModuleSet`, a module, and some parameters, bundled together as `ctx`) and returns one `evidence_fragment`: a standardized summary of what that tool found. To demonstrate this, we run a single tool on its own to see what it produces:
 
 ```{r}
-ctx <- list(ms = ms, module_id = 'module_a', params = list(n_hubs = 10))
+
+# set up the context (ctx) for the tool
+ctx <- list(ms = ms, module_id = 'MM1', params = list(n_hubs = 10))
+
+# run the hub genes tool to get the top 10 hub genes
 hub_frag <- hub_genes_tool(ctx)
+
+# sanity check:
 validate_evidence_fragment(hub_frag)
+
+# show the result
 hub_frag$compact_summary
 ```
 
-```{r}
-meta_frag <- module_by_metadata_tool(list(
-    ms = ms, module_id = 'module_a',
-    params = list(column = 'diagnosis', column_type = 'categorical')
-))
-meta_frag$compact_summary
-```
+**llegir** ships several pre-built analysis tools:
+
+- `hub_genes_tool()`: top hub genes by kME
+- `module_by_metadata_tool()`: association with a metadata column
+- `cluster_dme_tool()`: differential module expression across clusters
+- `geneset_enrichment_tool()`: GO/pathway enrichment
+
+Additionally, external results you have already computed elsewhere can be leveraged the same way via `import_fragment()`.
+
+We run a chain of tools over the module set using `run_orchestrator()`, which then collects the results into one **evidence packet** per module, saved as a JSON file. The tool list pairs each tool (`fn`) with its parameters, and `modules_use` limits the run to three modules for this example:
 
 ```{r}
-cluster_frag <- cluster_dme_tool(list(
-    ms = ms, module_id = 'module_b',
-    params = list(group_by = 'cell_type')
-))
-cluster_frag$compact_summary
-```
+modules_use <- c('MM1', 'MM2', 'MM3')
 
-A fourth core tool, [`geneset_enrichment_tool()`], runs offline GO/pathway
-enrichment against a local GMT file (`ctx$params$db_files`); it's omitted
-here since no gene-set library ships with the package, but it follows the
-same `ctx -> evidence_fragment` contract as the tools above.
-
-User-supplied result tables (e.g. a DME table computed outside llegir) can be
-folded into the same pipeline via [`import_fragment()`] /
-[`import_fragment_tool()`], tagged `provenance$source = 'user_supplied'`
-rather than `'computed'`.
-
-## 3. Evidence packets
-
-[`run_module()`] runs a configured list of tools against one module and
-bundles the fragments into a validated, hashed evidence packet --
-[`build_evidence_packet()`] under the hood. The `packet_hash` is a content
-hash of the fragments (timestamps excluded), so it's a reproducibility
-fingerprint: the same evidence always hashes the same way.
-
-```{r}
 tool_config <- list(
-    list(fn = hub_genes_tool, params = list(n_hubs = 10)),
-    list(fn = module_by_metadata_tool, params = list(column = 'diagnosis', column_type = 'categorical'))
+    list(fn = hub_genes_tool, params = list(n_hubs = 25)),
+    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+    list(fn = geneset_enrichment_tool, params = list(
+        n_hubs = 25,
+        db_files = c(
+            GO_BP = 'data/GO_Biological_Process_2026.txt',
+            Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt'
+        )
+    ))
 )
-packet <- run_module(ms, 'module_a', tool_config, input_hash = 'vignette-example')
+
+packets <- run_orchestrator(ms, tool_config, output_dir = 'output/evidence_packets', modules_use = modules_use)
+```
+
+Each packet holds its evidence fragments plus a `packet_hash`, a fingerprint of
+the evidence it contains. The same evidence always produces the same hash, which
+makes runs easy to track and reproduce.
+
+```{r}
+packet <- packets[['MM1']]
 packet$packet_hash
 length(packet$fragments)
 ```
 
-[`run_orchestrator()`] does this for every module in a `ModuleSet` at once,
-writing one packet JSON per module (plus, optionally, every fragment's full
-result table via `tables_dir`):
+## Provide dataset context
 
-```{r}
-out_dir <- tempfile('packets_')
-packets <- run_orchestrator(ms, tool_config, output_dir = out_dir)
-list.files(out_dir)
-```
-
-A single module failing (e.g. a degenerate module tripping up one tool)
-doesn't take down the whole batch -- it's warned and recorded as `NULL`,
-leaving every other module's packet intact.
-
-## 4. Dataset context
-
-Synthesis requires a [`dataset_description()`] -- the biological context
-prepended to every prompt, so the model interprets a module in the right
-frame (e.g. CSF myeloid vs. tumor tissue changes what a given program means).
-It's a hard requirement, not a default: [`validate_dataset_description()`]
-errors on a missing/empty required field.
+Before interpreting the modules, we provide a brief description of the dataset `dataset_description()`. This biological context is given to the model so it interprets each module in an appropriate setting (the same gene program can mean something different in CSF myeloid cells than in a solid tumor). It is required: **llegir** will not run synthesis without it.
 
 ```{r}
 desc <- dataset_description(
-    species = 'human', tissue = 'simulated tissue', cell_compartment = 'simulated cells',
-    assay = 'simulated scRNA-seq', conditions = c('case', 'control')
+    species = 'human',
+    tissue = 'cerebrospinal fluid (CSF)',
+    cell_compartment = 'myeloid cells',
+    assay = 'single-cell RNA-seq (10x)',
+    conditions = c(
+        'Glioblastoma', 'Brain Metastasis', 'Primary CNS lymphoma',
+        'Secondary CNS lymphoma', 'Inflammatory / other neuroinflammatory'
+    ),
+    notes = 'Modules are CSF-myeloid co-expression programs; interpret in a CNS-myeloid, neuro-oncology / neuroinflammation context.'
 )
 cat(render_dataset_description(desc))
 ```
 
-## 5. Synthesis
+## Interpreting evidence
 
-[`synthesize_module()`] runs the full packet -> interpretation pipeline:
-calls a backend via [`synthesize_interpretation()`], enforces citation
-faithfulness ([`enforce_faithfulness()`] -- every claim's `fragment_ids` must
-actually exist in the packet, and its `direction` must match), and fuses
-model and deterministic confidence ([`fuse_confidence()`]).
+`run_synthesis_orchestrator()` turns the evidence packets into written interpretations. Each module's evidence packet is sent to a user-specified LLM, checks that every claim is actually backed by the evidence (`enforce_faithfulness()`), and combines the model's confidence with the evidence-based confidence (`fuse_confidence()`). It saves an interpretation and a readable Markdown paragraph per module, plus a `review_queue.tsv` and `manifest.json` for the whole run.
 
-The model's role is bounded by design: it only ever sees the compact prompt
-built by [`build_system_prompt()`] / [`build_user_prompt()`] (fragment
-summaries and top findings, never raw result tables), and it never runs
-analysis code.
+The language model's role is deliberately limited: it only ever sees the summarized evidence, never the raw data tables, and it never runs any analysis itself.
 
-Here, [`mock_backend()`] stands in for a live model -- a canned, fixed
-response that never touches the network, used by the whole test suite and by
-this vignette:
+You can use different model providers through `resolve_backend()` (here
+`'github'`; `'gemini'` also works), which reads your API key from the
+environment (e.g. `GITHUB_PAT` or `GEMINI_API_KEY`). Wrapping it in
+`cached_backend()` saves each result to disk, so re-running synthesis on
+unchanged packets doesn't spend another API call.
 
 ```{r}
-interp <- synthesize_module(packet, desc, backend = mock_backend())
-interp$proposed_label
-interp$confidence$score
+backend <- cached_backend(
+    resolve_backend('github'),
+    provider = 'github',
+    model = 'gpt-4o-mini',
+    prompt_template_version = PROMPT_TEMPLATE_VERSION
+)
+
+interps <- run_synthesis_orchestrator(packets, desc, backend = backend, output_dir = 'output/interpretations')
 ```
 
+Inspect one interpretation: its proposed label, fused confidence, and the
+rendered paragraph.
+
 ```{r}
+interp <- interps[['MM1']]
+interp$proposed_label
+interp$confidence$score
 cat(render_paragraph(interp))
 ```
 
-### Live backends
-
-llegir's synthesis backends are pluggable via [`resolve_backend()`]
-(`provider = 'github'` or `'gemini'`, both built on [`ellmer_backend()`]) or
-[`ellmer_backend()`] directly with any `ellmer::chat_*()` constructor. These
-need network access and a provider API key (picked up by `ellmer` itself from
-the provider's environment variable, e.g. `GITHUB_PAT` or `GEMINI_API_KEY`),
-so they aren't exercised in this vignette or in `R CMD check` -- only shown
-here for reference:
-
-```{r, eval = FALSE}
-backend <- resolve_backend(provider = 'gemini')
-interp <- synthesize_module(packet, desc, backend = backend)
-```
-
-[`cached_backend()`] wraps any backend with an on-disk cache keyed on the
-packet hash + provider + model + prompt template version, so re-running
-synthesis over an unchanged packet never re-spends an API call.
-
-## 6. Batch synthesis: review queue and manifest
-
-[`run_synthesis_orchestrator()`] runs [`synthesize_module()`] over a batch of
-packets (e.g. the output of [`run_orchestrator()`]), writing per-module
-interpretation JSON and rendered Markdown paragraphs, plus a run-level
-`review_queue.tsv` and `manifest.json`:
-
-```{r}
-synth_dir <- tempfile('synthesis_')
-interps <- run_synthesis_orchestrator(packets, desc, backend = mock_backend(), output_dir = synth_dir)
-list.files(synth_dir)
-```
-
-The review queue ([`build_review_queue()`]) lists only flagged
-interpretations ([`needs_review()`]) -- a triage queue for a human reviewer,
-not a summary of every module -- sorted lowest-confidence first:
+The review queue (`build_review_queue()`) collects only the interpretations
+flagged for a closer look (`needs_review()`), sorted lowest-confidence first,
+so you know which modules to check by hand:
 
 ```{r}
 build_review_queue(interps)
 ```
-
-The mock backend always returns the same fixed, generic content regardless
-of the actual evidence packet -- so its citations and confidence score are
-never truly grounded in this vignette's per-module evidence, and
-`needs_human_review` is expected here. A live model, synthesizing from the
-real packet contents, will typically agree with the deterministic evidence
-more often and flag fewer modules.

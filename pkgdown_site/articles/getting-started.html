@@ -73,166 +73,202 @@
 
     
     
-<p><strong>llegir</strong> (“to sense”, Catalan) is a Module Interpretation Engine: it loads a gene co-expression module object (starting with hdWGCNA), gathers a standardized bundle of evidence per module through a toolbox of deterministic R functions, and drafts an evidence-backed interpretation paragraph via a model-agnostic synthesis layer with faithfulness checking and confidence fusion.</p>
-<p>This vignette walks the whole pipeline end to end on a small, self-contained synthetic dataset – no Seurat/hdWGCNA object, no external data file, and no network access or API key required. It builds entirely offline via [<code><a href="../reference/mock_backend.html">mock_backend()</a></code>], so it runs the same way in <code>R CMD check</code> as it does interactively.</p>
-<p><em>llegir is experimental: the public API, especially the <code>ModuleSet</code> adapter contract and the custom-tool interface, is expected to evolve before a 1.0 release.</em></p>
+<p><strong>llegir</strong> is an R package to automate the interpretation of gene modules in a specific context. From an input gene expression dataset (single-cell, spatial transcriptomics, or bulk RNA-seq) and a set of gene modules, <strong>llegir</strong> gathers a standardized bundle of evidence per module using a pre-built toolbox of analysis functions, and drafts an evidence-backed interpretation via a LLM-enabled synthesis layer.</p>
+<p><em>NOTE</em> this package is at an experimental development stage, and much of the interface is subject to change.</p>
 <div class="section level2">
-<h2 id="a-moduleset">1. A <code>ModuleSet</code><a class="anchor" aria-label="anchor" href="#a-moduleset"></a>
+<h2 id="setup-data-and-define-the-moduleset">Setup data and define the <code>ModuleSet</code><a class="anchor" aria-label="anchor" href="#setup-data-and-define-the-moduleset"></a>
 </h2>
-<p>Every core tool depends only on the <code>ModuleSet</code> adapter contract – [<code><a href="../reference/modules.html">modules()</a></code>], [<code><a href="../reference/gene_membership.html">gene_membership()</a></code>], [<code><a href="../reference/module_scores.html">module_scores()</a></code>], [<code><a href="../reference/expression.html">expression()</a></code>], [<code><a href="../reference/metadata.html">metadata()</a></code>], [<code><a href="../reference/pkg_versions.html">pkg_versions()</a></code>] – never on a specific backend package. [<code><a href="../reference/hdWGCNA_ModuleSet.html">hdWGCNA_ModuleSet()</a></code>] is the real-world adapter, built from a Seurat object that has been run through hdWGCNA. For this vignette we instead use [<code><a href="../reference/llegir_example_moduleset.html">llegir_example_moduleset()</a></code>], a small simulated dataset (two co-expressed gene modules plus background noise genes, 200 cells) that satisfies the same contract, so every tool below runs unmodified against it.</p>
+<p>In this vignette, we demonstrate <strong>llegir</strong> using a scRNA-seq dataset of myeloid cells from cerebrospinal fluid (CSF) cells profiled across several CNS conditions, with co-expression modules computed by hdWGCNA.</p>
+<p>To start the <strong>llegir</strong> pipeline, we first define the <code>ModuleSet</code>, which contains the following attributes: <code><a href="../reference/modules.html">modules()</a></code>, <code><a href="../reference/gene_membership.html">gene_membership()</a></code>, <code><a href="../reference/module_scores.html">module_scores()</a></code>, <code><a href="../reference/expression.html">expression()</a></code>, <code><a href="../reference/metadata.html">metadata()</a></code>, <code><a href="../reference/capabilities.html">capabilities()</a></code>, <code><a href="../reference/pkg_versions.html">pkg_versions()</a></code>. The function <code><a href="../reference/hdWGCNA_ModuleSet.html">hdWGCNA_ModuleSet()</a></code> automatically formats the <code>ModuleSet</code> object for hdWGCNA results, but this framework is flexible to modules from other packages.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/smorabit/Module_Interpretation" class="external-link">llegir</a></span><span class="op">)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Attaching package: 'llegir'</span></span>
-<span><span class="co">#&gt; The following objects are masked from 'package:base':</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;     capabilities, expression</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://satijalab.org/seurat" class="external-link">Seurat</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://smorabit.github.io/hdWGCNA/" class="external-link">hdWGCNA</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/smorabit/Module_Interpretation" class="external-link">llegir</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/llegir_example_moduleset.html">llegir_example_moduleset</a></span><span class="op">(</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/modules.html">modules</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "module_a" "module_b"</span></span></code></pre></div>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/gene_membership.html">gene_membership</a></span><span class="op">(</span><span class="va">ms</span>, <span class="st">'module_a'</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;    gene_name   module       kme</span></span>
-<span><span class="co">#&gt; 4     GENEA4 module_a 0.9389462</span></span>
-<span><span class="co">#&gt; 9     GENEA9 module_a 0.9368404</span></span>
-<span><span class="co">#&gt; 5     GENEA5 module_a 0.9330942</span></span>
-<span><span class="co">#&gt; 10   GENEA10 module_a 0.9324491</span></span>
-<span><span class="co">#&gt; 8     GENEA8 module_a 0.9304695</span></span>
-<span><span class="co">#&gt; 1     GENEA1 module_a 0.9299657</span></span></code></pre></div>
+<span><span class="co"># load the CSF dataset, which has already been processed with hdWGCNA</span></span>
+<span><span class="va">seurat_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="st">'data/CSF_Myeloid_hdWGCNA.rds'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># initialize the ModuleSet </span></span>
+<span><span class="va">ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hdWGCNA_ModuleSet.html">hdWGCNA_ModuleSet</a></span><span class="op">(</span><span class="va">seurat_obj</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/modules.html">modules</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span></span></code></pre></div>
+<pre><code> [1] "MM1"  "MM2"  "MM3"  "MM4"  "MM5"  "MM6"  "MM7"  "MM8"  "MM9"  "MM10"
+[11] "MM11" "MM12" "MM13" "MM14"</code></pre>
+<p>A quick look at the two attributes most tools lean on: the ranked gene membership of a module and the cell-level metadata.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/metadata.html">metadata</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;       diagnosis cell_type  sample</span></span>
-<span><span class="co">#&gt; cell1      case myeloid_b sample1</span></span>
-<span><span class="co">#&gt; cell2   control myeloid_b sample1</span></span>
-<span><span class="co">#&gt; cell3      case myeloid_a sample3</span></span>
-<span><span class="co">#&gt; cell4      case myeloid_b sample2</span></span>
-<span><span class="co">#&gt; cell5   control myeloid_b sample3</span></span>
-<span><span class="co">#&gt; cell6      case myeloid_b sample4</span></span></code></pre></div>
-<p><code>module_a</code> is simulated to associate with the <code>diagnosis</code> column, and <code>module_b</code> with <code>cell_type</code> – used below to show a real (not null) evidence signal.</p>
-</div>
-<div class="section level2">
-<h2 id="evidence-tools">2. Evidence tools<a class="anchor" aria-label="anchor" href="#evidence-tools"></a>
-</h2>
-<p>Each tool takes a <code>ctx &lt;- list(ms, module_id, params)</code> and returns a single, validated <code>evidence_fragment</code> – see [<code><a href="../reference/evidence_fragment.html">evidence_fragment()</a></code>] and the shipped <code>evidence_fragment.schema.json</code> for the full contract.</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>ms <span class="op">=</span> <span class="va">ms</span>, module_id <span class="op">=</span> <span class="st">'module_a'</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_hubs <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">hub_frag</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hub_genes_tool.html">hub_genes_tool</a></span><span class="op">(</span><span class="va">ctx</span><span class="op">)</span></span>
-<span><span class="fu"><a href="../reference/validate_evidence_fragment.html">validate_evidence_fragment</a></span><span class="op">(</span><span class="va">hub_frag</span><span class="op">)</span></span>
-<span><span class="va">hub_frag</span><span class="op">$</span><span class="va">compact_summary</span></span>
-<span><span class="co">#&gt; [1] "top 10 hub genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6"</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/gene_membership.html">gene_membership</a></span><span class="op">(</span><span class="va">ms</span>, <span class="st">'MM1'</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code>    gene_name module       kme
+237     FCGBP    MM1 0.8274590
+89        A2M    MM1 0.7623179
+65      DOCK4    MM1 0.7402873
+5        C1QB    MM1 0.7244926
+4        C1QC    MM1 0.7211557
+3        C1QA    MM1 0.7155457</code></pre>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">meta_frag</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/module_by_metadata_tool.html">module_by_metadata_tool</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    ms <span class="op">=</span> <span class="va">ms</span>, module_id <span class="op">=</span> <span class="st">'module_a'</span>,</span>
-<span>    params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>column <span class="op">=</span> <span class="st">'diagnosis'</span>, column_type <span class="op">=</span> <span class="st">'categorical'</span><span class="op">)</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">meta_frag</span><span class="op">$</span><span class="va">compact_summary</span></span>
-<span><span class="co">#&gt; [1] "diagnosis (cell-level): strongest group case (r=0.8, FDR=9.5e-23); omnibus Kruskal p=9.4e-23"</span></span></code></pre></div>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cluster_frag</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cluster_dme_tool.html">cluster_dme_tool</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    ms <span class="op">=</span> <span class="va">ms</span>, module_id <span class="op">=</span> <span class="st">'module_b'</span>,</span>
-<span>    params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group_by <span class="op">=</span> <span class="st">'cell_type'</span><span class="op">)</span></span>
-<span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">cluster_frag</span><span class="op">$</span><span class="va">compact_summary</span></span>
-<span><span class="co">#&gt; [1] "strongest state: myeloid_a (r=0.86, FDR=1.1e-25); omnibus Kruskal p=1.1e-25"</span></span></code></pre></div>
-<p>A fourth core tool, [<code><a href="../reference/geneset_enrichment_tool.html">geneset_enrichment_tool()</a></code>], runs offline GO/pathway enrichment against a local GMT file (<code>ctx$params$db_files</code>); it’s omitted here since no gene-set library ships with the package, but it follows the same <code>ctx -&gt; evidence_fragment</code> contract as the tools above.</p>
-<p>User-supplied result tables (e.g. a DME table computed outside llegir) can be folded into the same pipeline via [<code><a href="../reference/import_fragment.html">import_fragment()</a></code>] / [<code><a href="../reference/import_fragment_tool.html">import_fragment_tool()</a></code>], tagged <code>provenance$source = 'user_supplied'</code> rather than <code>'computed'</code>.</p>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/metadata.html">metadata</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code>                             nCount_RNA nFeature_RNA percent.mt project sample
+CSF_01_4608_AAAGATGAGTGAAGAG       2229         1207   8.209960  CSF_01    S01
+CSF_01_4608_AAAGCAAGTGCAGACA       1884         1037   6.475584  CSF_01    S01
+CSF_01_4608_AAATGCCTCACGATGT       7446         2561   1.960784  CSF_01    S01
+CSF_01_4608_AACACGTGTGCTTCTC       3612         1562   5.841639  CSF_01    S01
+CSF_01_4608_AACCATGGTAAACGCG       8805         2361   2.759796  CSF_01    S01
+CSF_01_4608_AACCATGGTACCGCTG       5416         1947   3.637371  CSF_01    S01
+                             patient general_annot   lv1_annot
+CSF_01_4608_AAAGATGAGTGAAGAG     P01       Myeloid          DC
+CSF_01_4608_AAAGCAAGTGCAGACA     P01       Myeloid          DC
+CSF_01_4608_AAATGCCTCACGATGT     P01       Myeloid          DC
+CSF_01_4608_AACACGTGTGCTTCTC     P01       Myeloid Macrophages
+CSF_01_4608_AACCATGGTAAACGCG     P01       Myeloid          DC
+CSF_01_4608_AACCATGGTACCGCTG     P01       Myeloid          DC
+                                            lv2_annot            diagnosis
+CSF_01_4608_AAAGATGAGTGAAGAG DC non-inflammatory CD1C Primary CNS lymphoma
+CSF_01_4608_AAAGCAAGTGCAGACA DC non-inflammatory CD1C Primary CNS lymphoma
+CSF_01_4608_AAATGCCTCACGATGT DC non-inflammatory CD1C Primary CNS lymphoma
+CSF_01_4608_AACACGTGTGCTTCTC                     BAMs Primary CNS lymphoma
+CSF_01_4608_AACCATGGTAAACGCG               DC1 CLEC9A Primary CNS lymphoma
+CSF_01_4608_AACCATGGTACCGCTG DC non-inflammatory CD1C Primary CNS lymphoma
+                             CSF_collection_site metacell_grouping
+CSF_01_4608_AAAGATGAGTGAAGAG              lumbar    S01#P01#CSF_01
+CSF_01_4608_AAAGCAAGTGCAGACA              lumbar    S01#P01#CSF_01
+CSF_01_4608_AAATGCCTCACGATGT              lumbar    S01#P01#CSF_01
+CSF_01_4608_AACACGTGTGCTTCTC              lumbar    S01#P01#CSF_01
+CSF_01_4608_AACCATGGTAAACGCG              lumbar    S01#P01#CSF_01
+CSF_01_4608_AACCATGGTACCGCTG              lumbar    S01#P01#CSF_01</code></pre>
 </div>
 <div class="section level2">
-<h2 id="evidence-packets">3. Evidence packets<a class="anchor" aria-label="anchor" href="#evidence-packets"></a>
+<h2 id="orchestrating-a-chain-of-analysis-tools">Orchestrating a chain of analysis tools<a class="anchor" aria-label="anchor" href="#orchestrating-a-chain-of-analysis-tools"></a>
 </h2>
-<p>[<code><a href="../reference/run_module.html">run_module()</a></code>] runs a configured list of tools against one module and bundles the fragments into a validated, hashed evidence packet – [<code><a href="../reference/build_evidence_packet.html">build_evidence_packet()</a></code>] under the hood. The <code>packet_hash</code> is a content hash of the fragments (timestamps excluded), so it’s a reproducibility fingerprint: the same evidence always hashes the same way.</p>
+<p>Each module is characterized by running a set of analysis tools. Every tool takes the same inputs (the <code>ModuleSet</code>, a module, and some parameters, bundled together as <code>ctx</code>) and returns one <code>evidence_fragment</code>: a standardized summary of what that tool found. To demonstrate this, we run a single tool on its own to see what it produces:</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">tool_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">hub_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_hubs <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span>,</span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">module_by_metadata_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>column <span class="op">=</span> <span class="st">'diagnosis'</span>, column_type <span class="op">=</span> <span class="st">'categorical'</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span></span>
-<span><span class="va">packet</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_module.html">run_module</a></span><span class="op">(</span><span class="va">ms</span>, <span class="st">'module_a'</span>, <span class="va">tool_config</span>, input_hash <span class="op">=</span> <span class="st">'vignette-example'</span><span class="op">)</span></span>
-<span><span class="va">packet</span><span class="op">$</span><span class="va">packet_hash</span></span>
-<span><span class="co">#&gt; [1] "f4ced8450d61cbef823fbdd533dc32bb37b5803252ebc593d1510c23b3c25732"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">packet</span><span class="op">$</span><span class="va">fragments</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 2</span></span></code></pre></div>
-<p>[<code><a href="../reference/run_orchestrator.html">run_orchestrator()</a></code>] does this for every module in a <code>ModuleSet</code> at once, writing one packet JSON per module (plus, optionally, every fragment’s full result table via <code>tables_dir</code>):</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">out_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">'packets_'</span><span class="op">)</span></span>
-<span><span class="va">packets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_orchestrator.html">run_orchestrator</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">tool_config</span>, output_dir <span class="op">=</span> <span class="va">out_dir</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">out_dir</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "module_a.json" "module_b.json"</span></span></code></pre></div>
-<p>A single module failing (e.g. a degenerate module tripping up one tool) doesn’t take down the whole batch – it’s warned and recorded as <code>NULL</code>, leaving every other module’s packet intact.</p>
-</div>
-<div class="section level2">
-<h2 id="dataset-context">4. Dataset context<a class="anchor" aria-label="anchor" href="#dataset-context"></a>
-</h2>
-<p>Synthesis requires a [<code><a href="../reference/dataset_description.html">dataset_description()</a></code>] – the biological context prepended to every prompt, so the model interprets a module in the right frame (e.g. CSF myeloid vs. tumor tissue changes what a given program means). It’s a hard requirement, not a default: [<code><a href="../reference/validate_dataset_description.html">validate_dataset_description()</a></code>] errors on a missing/empty required field.</p>
+<code class="sourceCode R"><span><span class="co"># set up the context (ctx) for the tool</span></span>
+<span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>ms <span class="op">=</span> <span class="va">ms</span>, module_id <span class="op">=</span> <span class="st">'MM1'</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_hubs <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># run the hub genes tool to get the top 10 hub genes</span></span>
+<span><span class="va">hub_frag</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hub_genes_tool.html">hub_genes_tool</a></span><span class="op">(</span><span class="va">ctx</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># sanity check:</span></span>
+<span><span class="fu"><a href="../reference/validate_evidence_fragment.html">validate_evidence_fragment</a></span><span class="op">(</span><span class="va">hub_frag</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># show the result</span></span>
+<span><span class="va">hub_frag</span><span class="op">$</span><span class="va">compact_summary</span></span></code></pre></div>
+<pre><code>[1] "top 10 hub genes by kME: FCGBP, A2M, DOCK4, C1QB, C1QC, C1QA, TREM2, MSR1, EPB41L3, C5AR1"</code></pre>
+<p><strong>llegir</strong> ships several pre-built analysis tools:</p>
+<ul>
+<li>
+<code><a href="../reference/hub_genes_tool.html">hub_genes_tool()</a></code>: top hub genes by kME</li>
+<li>
+<code><a href="../reference/module_by_metadata_tool.html">module_by_metadata_tool()</a></code>: association with a metadata column</li>
+<li>
+<code><a href="../reference/cluster_dme_tool.html">cluster_dme_tool()</a></code>: differential module expression across clusters</li>
+<li>
+<code><a href="../reference/geneset_enrichment_tool.html">geneset_enrichment_tool()</a></code>: GO/pathway enrichment</li>
+</ul>
+<p>Additionally, external results you have already computed elsewhere can be leveraged the same way via <code><a href="../reference/import_fragment.html">import_fragment()</a></code>.</p>
+<p>We run a chain of tools over the module set using <code><a href="../reference/run_orchestrator.html">run_orchestrator()</a></code>, which then collects the results into one <strong>evidence packet</strong> per module, saved as a JSON file. The tool list pairs each tool (<code>fn</code>) with its parameters, and <code>modules_use</code> limits the run to three modules for this example:</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataset_description.html">dataset_description</a></span><span class="op">(</span></span>
-<span>    species <span class="op">=</span> <span class="st">'human'</span>, tissue <span class="op">=</span> <span class="st">'simulated tissue'</span>, cell_compartment <span class="op">=</span> <span class="st">'simulated cells'</span>,</span>
-<span>    assay <span class="op">=</span> <span class="st">'simulated scRNA-seq'</span>, conditions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'case'</span>, <span class="st">'control'</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">modules_use</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'MM1'</span>, <span class="st">'MM2'</span>, <span class="st">'MM3'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tool_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">hub_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_hubs <span class="op">=</span> <span class="fl">25</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">cluster_dme_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group_by <span class="op">=</span> <span class="st">'lv2_annot'</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">geneset_enrichment_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        n_hubs <span class="op">=</span> <span class="fl">25</span>,</span>
+<span>        db_files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>            GO_BP <span class="op">=</span> <span class="st">'data/GO_Biological_Process_2026.txt'</span>,</span>
+<span>            Hallmark <span class="op">=</span> <span class="st">'data/h.all.v2026.1.Hs.symbols.gmt'</span></span>
+<span>        <span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_dataset_description.html">render_dataset_description</a></span><span class="op">(</span><span class="va">desc</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Dataset context:</span></span>
-<span><span class="co">#&gt; - species: human</span></span>
-<span><span class="co">#&gt; - tissue: simulated tissue</span></span>
-<span><span class="co">#&gt; - cell compartment: simulated cells</span></span>
-<span><span class="co">#&gt; - assay: simulated scRNA-seq</span></span>
-<span><span class="co">#&gt; - conditions: case, control</span></span></code></pre></div>
-</div>
-<div class="section level2">
-<h2 id="synthesis">5. Synthesis<a class="anchor" aria-label="anchor" href="#synthesis"></a>
-</h2>
-<p>[<code><a href="../reference/synthesize_module.html">synthesize_module()</a></code>] runs the full packet -&gt; interpretation pipeline: calls a backend via [<code><a href="../reference/synthesize_interpretation.html">synthesize_interpretation()</a></code>], enforces citation faithfulness ([<code><a href="../reference/enforce_faithfulness.html">enforce_faithfulness()</a></code>] – every claim’s <code>fragment_ids</code> must actually exist in the packet, and its <code>direction</code> must match), and fuses model and deterministic confidence ([<code><a href="../reference/fuse_confidence.html">fuse_confidence()</a></code>]).</p>
-<p>The model’s role is bounded by design: it only ever sees the compact prompt built by [<code><a href="../reference/build_system_prompt.html">build_system_prompt()</a></code>] / [<code><a href="../reference/build_user_prompt.html">build_user_prompt()</a></code>] (fragment summaries and top findings, never raw result tables), and it never runs analysis code.</p>
-<p>Here, [<code><a href="../reference/mock_backend.html">mock_backend()</a></code>] stands in for a live model – a canned, fixed response that never touches the network, used by the whole test suite and by this vignette:</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">interp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/synthesize_module.html">synthesize_module</a></span><span class="op">(</span><span class="va">packet</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="fu"><a href="../reference/mock_backend.html">mock_backend</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">interp</span><span class="op">$</span><span class="va">proposed_label</span></span>
-<span><span class="co">#&gt; [1] "Myeloid activation program (mock)"</span></span>
-<span><span class="va">interp</span><span class="op">$</span><span class="va">confidence</span><span class="op">$</span><span class="va">score</span></span>
-<span><span class="co">#&gt; [1] 0.5731577</span></span></code></pre></div>
+<span></span>
+<span><span class="va">packets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_orchestrator.html">run_orchestrator</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">tool_config</span>, output_dir <span class="op">=</span> <span class="st">'output/evidence_packets'</span>, modules_use <span class="op">=</span> <span class="va">modules_use</span><span class="op">)</span></span></code></pre></div>
+<pre><code>Warning in readLines(gmt.file): incomplete final line found on
+'data/GO_Biological_Process_2026.txt'
+Warning in readLines(gmt.file): incomplete final line found on
+'data/GO_Biological_Process_2026.txt'
+Warning in readLines(gmt.file): incomplete final line found on
+'data/GO_Biological_Process_2026.txt'</code></pre>
+<p>Each packet holds its evidence fragments plus a <code>packet_hash</code>, a fingerprint of the evidence it contains. The same evidence always produces the same hash, which makes runs easy to track and reproduce.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_paragraph.html">render_paragraph</a></span><span class="op">(</span><span class="va">interp</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; **Myeloid activation program (mock)** (module_a)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Mock synthesis output for offline testing; not derived from the evidence packet.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Dominant biology: Not evaluated by the mock backend.</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Supporting evidence:</span></span>
-<span><span class="co">#&gt; - Hub genes were computed by the deterministic core. (hub_genes; direction: na)</span></span>
-<span><span class="co">#&gt; - The module has enriched gene-set terms. (geneset_enrichment; direction: up)</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Confidence: 0.57 -- Mock backend: fixed neutral confidence, not evidence-derived. [fusion: model=0.50, evidence=0.65 (effect=0.94, enrichment=0.00, agreement=1.00/convergent_signal), fused=0.57]</span></span>
-<span><span class="co">#&gt; Flags: needs_human_review</span></span></code></pre></div>
-<div class="section level3">
-<h3 id="live-backends">Live backends<a class="anchor" aria-label="anchor" href="#live-backends"></a>
-</h3>
-<p>llegir’s synthesis backends are pluggable via [<code><a href="../reference/resolve_backend.html">resolve_backend()</a></code>] (<code>provider = 'github'</code> or <code>'gemini'</code>, both built on [<code><a href="../reference/ellmer_backend.html">ellmer_backend()</a></code>]) or [<code><a href="../reference/ellmer_backend.html">ellmer_backend()</a></code>] directly with any <code>ellmer::chat_*()</code> constructor. These need network access and a provider API key (picked up by <code>ellmer</code> itself from the provider’s environment variable, e.g. <code>GITHUB_PAT</code> or <code>GEMINI_API_KEY</code>), so they aren’t exercised in this vignette or in <code>R CMD check</code> – only shown here for reference:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">backend</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/resolve_backend.html">resolve_backend</a></span><span class="op">(</span>provider <span class="op">=</span> <span class="st">'gemini'</span><span class="op">)</span></span>
-<span><span class="va">interp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/synthesize_module.html">synthesize_module</a></span><span class="op">(</span><span class="va">packet</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="va">backend</span><span class="op">)</span></span></code></pre></div>
-<p>[<code><a href="../reference/cached_backend.html">cached_backend()</a></code>] wraps any backend with an on-disk cache keyed on the packet hash + provider + model + prompt template version, so re-running synthesis over an unchanged packet never re-spends an API call.</p>
-</div>
+<code class="sourceCode R"><span><span class="va">packet</span> <span class="op">&lt;-</span> <span class="va">packets</span><span class="op">[[</span><span class="st">'MM1'</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">packet</span><span class="op">$</span><span class="va">packet_hash</span></span></code></pre></div>
+<pre><code>[1] "6f8c9d360b0491e09c421ca0c12d8ea1145a9449e82a07f51d1b43e1ce8aa906"</code></pre>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">packet</span><span class="op">$</span><span class="va">fragments</span><span class="op">)</span></span></code></pre></div>
+<pre><code>[1] 3</code></pre>
 </div>
 <div class="section level2">
-<h2 id="batch-synthesis-review-queue-and-manifest">6. Batch synthesis: review queue and manifest<a class="anchor" aria-label="anchor" href="#batch-synthesis-review-queue-and-manifest"></a>
+<h2 id="dataset-context">Dataset context<a class="anchor" aria-label="anchor" href="#dataset-context"></a>
 </h2>
-<p>[<code><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator()</a></code>] runs [<code><a href="../reference/synthesize_module.html">synthesize_module()</a></code>] over a batch of packets (e.g. the output of [<code><a href="../reference/run_orchestrator.html">run_orchestrator()</a></code>]), writing per-module interpretation JSON and rendered Markdown paragraphs, plus a run-level <code>review_queue.tsv</code> and <code>manifest.json</code>:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">synth_dir</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="st">'synthesis_'</span><span class="op">)</span></span>
-<span><span class="va">interps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator</a></span><span class="op">(</span><span class="va">packets</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="fu"><a href="../reference/mock_backend.html">mock_backend</a></span><span class="op">(</span><span class="op">)</span>, output_dir <span class="op">=</span> <span class="va">synth_dir</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">synth_dir</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "manifest.json"    "module_a.json"    "module_a.md"      "module_b.json"   </span></span>
-<span><span class="co">#&gt; [5] "module_b.md"      "review_queue.tsv"</span></span></code></pre></div>
-<p>The review queue ([<code><a href="../reference/build_review_queue.html">build_review_queue()</a></code>]) lists only flagged interpretations ([<code><a href="../reference/needs_review.html">needs_review()</a></code>]) – a triage queue for a human reviewer, not a summary of every module – sorted lowest-confidence first:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/build_review_queue.html">build_review_queue</a></span><span class="op">(</span><span class="va">interps</span><span class="op">)</span></span>
-<span><span class="co">#&gt;          module_id confidence              flags</span></span>
-<span><span class="co">#&gt; module_b  module_b      0.491 needs_human_review</span></span>
-<span><span class="co">#&gt; module_a  module_a      0.573 needs_human_review</span></span>
-<span><span class="co">#&gt;                                                                                       reason</span></span>
-<span><span class="co">#&gt; module_b model confidence and deterministic evidence disagree, or a citation issue was found</span></span>
-<span><span class="co">#&gt; module_a model confidence and deterministic evidence disagree, or a citation issue was found</span></span></code></pre></div>
-<p>The mock backend always returns the same fixed, generic content regardless of the actual evidence packet – so its citations and confidence score are never truly grounded in this vignette’s per-module evidence, and <code>needs_human_review</code> is expected here. A live model, synthesizing from the real packet contents, will typically agree with the deterministic evidence more often and flag fewer modules.</p>
+<p>Before interpreting the modules, we provide a brief description of the dataset <code><a href="../reference/dataset_description.html">dataset_description()</a></code>. This biological context is given to the model so it interprets each module in an appropriate setting (the same gene program can mean something different in CSF myeloid cells than in a solid tumor). It is required: <strong>llegir</strong> will not run synthesis without it.</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataset_description.html">dataset_description</a></span><span class="op">(</span></span>
+<span>    species <span class="op">=</span> <span class="st">'human'</span>,</span>
+<span>    tissue <span class="op">=</span> <span class="st">'cerebrospinal fluid (CSF)'</span>,</span>
+<span>    cell_compartment <span class="op">=</span> <span class="st">'myeloid cells'</span>,</span>
+<span>    assay <span class="op">=</span> <span class="st">'single-cell RNA-seq (10x)'</span>,</span>
+<span>    conditions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>        <span class="st">'Glioblastoma'</span>, <span class="st">'Brain Metastasis'</span>, <span class="st">'Primary CNS lymphoma'</span>,</span>
+<span>        <span class="st">'Secondary CNS lymphoma'</span>, <span class="st">'Inflammatory / other neuroinflammatory'</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    notes <span class="op">=</span> <span class="st">'Modules are CSF-myeloid co-expression programs; interpret in a CNS-myeloid, neuro-oncology / neuroinflammation context.'</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_dataset_description.html">render_dataset_description</a></span><span class="op">(</span><span class="va">desc</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code>Dataset context:
+- species: human
+- tissue: cerebrospinal fluid (CSF)
+- cell compartment: myeloid cells
+- assay: single-cell RNA-seq (10x)
+- conditions: Glioblastoma, Brain Metastasis, Primary CNS lymphoma, Secondary CNS lymphoma, Inflammatory / other neuroinflammatory
+- notes: Modules are CSF-myeloid co-expression programs; interpret in a CNS-myeloid, neuro-oncology / neuroinflammation context.</code></pre>
+</div>
+<div class="section level2">
+<h2 id="synthesis">Synthesis<a class="anchor" aria-label="anchor" href="#synthesis"></a>
+</h2>
+<p><code><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator()</a></code> turns the evidence packets into written interpretations. For each module it sends the evidence to the model, checks that every claim is actually backed by the evidence (<code><a href="../reference/enforce_faithfulness.html">enforce_faithfulness()</a></code>), and combines the model’s confidence with the evidence-based confidence (<code><a href="../reference/fuse_confidence.html">fuse_confidence()</a></code>). It saves an interpretation and a readable Markdown paragraph per module, plus a <code>review_queue.tsv</code> and <code>manifest.json</code> for the whole run.</p>
+<p>The model’s role is deliberately limited: it only ever sees the summarized evidence, never the raw data tables, and it never runs any analysis itself.</p>
+<p>You can use different model providers through <code><a href="../reference/resolve_backend.html">resolve_backend()</a></code> (here <code>'github'</code>; <code>'gemini'</code> also works), which reads your API key from the environment (e.g. <code>GITHUB_PAT</code> or <code>GEMINI_API_KEY</code>). Wrapping it in <code><a href="../reference/cached_backend.html">cached_backend()</a></code> saves each result to disk, so re-running synthesis on unchanged packets doesn’t spend another API call.</p>
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">backend</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cached_backend.html">cached_backend</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="../reference/resolve_backend.html">resolve_backend</a></span><span class="op">(</span><span class="st">'github'</span><span class="op">)</span>,</span>
+<span>    provider <span class="op">=</span> <span class="st">'github'</span>,</span>
+<span>    model <span class="op">=</span> <span class="st">'gpt-4o-mini'</span>,</span>
+<span>    prompt_template_version <span class="op">=</span> <span class="va">PROMPT_TEMPLATE_VERSION</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">interps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator</a></span><span class="op">(</span><span class="va">packets</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="va">backend</span>, output_dir <span class="op">=</span> <span class="st">'output/interpretations'</span><span class="op">)</span></span></code></pre></div>
+<p>Inspect one interpretation: its proposed label, fused confidence, and the rendered paragraph.</p>
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">interp</span> <span class="op">&lt;-</span> <span class="va">interps</span><span class="op">[[</span><span class="st">'MM1'</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">interp</span><span class="op">$</span><span class="va">proposed_label</span></span></code></pre></div>
+<pre><code>[1] "Myeloid Activation in CNS Tumors"</code></pre>
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">interp</span><span class="op">$</span><span class="va">confidence</span><span class="op">$</span><span class="va">score</span></span></code></pre></div>
+<pre><code>[1] 0.9032809</code></pre>
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_paragraph.html">render_paragraph</a></span><span class="op">(</span><span class="va">interp</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<pre><code>**Myeloid Activation in CNS Tumors** (MM1)
+
+Myeloid cell activation in response to CNS tumors and inflammation
+
+Dominant biology: Myeloid cell activation in neuro-oncology
+Primarily expressed in: Border TAMs
+Condition dynamics: 
+
+Supporting evidence:
+- Myeloid cell states are significantly upregulated in the context of CNS tumors. (cluster_dme; direction: up)
+- Genes associated with myeloid activation are enriched in biological processes related to immune response and synapse pruning. (geneset_enrichment; direction: up)
+
+Metadata associations:
+- cell_state: Strong expression in Border TAMs indicates a significant role in the module. (cluster_dme)
+
+Confidence: 0.90 -- The evidence indicates a strong upregulation of myeloid cell states and significant enrichment in relevant biological processes, supporting the proposed label. [fusion: model=0.85, evidence=0.96 (effect=0.87, enrichment=1.00, agreement=1.00/convergent_signal), fused=0.90]</code></pre>
+<p>The review queue (<code><a href="../reference/build_review_queue.html">build_review_queue()</a></code>) collects only the interpretations flagged for a closer look (<code><a href="../reference/needs_review.html">needs_review()</a></code>), sorted lowest-confidence first, so you know which modules to check by hand:</p>
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="../reference/build_review_queue.html">build_review_queue</a></span><span class="op">(</span><span class="va">interps</span><span class="op">)</span></span></code></pre></div>
+<pre><code>    module_id confidence                 flags
+MM2       MM2      0.826 insufficient_evidence
+                                                                               reason
+MM2 deterministic evidence signals are weak (low effect size / few significant terms)</code></pre>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

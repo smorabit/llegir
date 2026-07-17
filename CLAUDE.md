@@ -6,6 +6,9 @@
 - **Build Documentation**: `devtools::document()`
 - **Build Pkgdown Site**: `pkgdown::build_site()`
 
+## Coding Guidelines
+@STYLE.md
+
 ## Core Architecture Contracts
 - **Framework**: `llegir` is an R package utilizing `ellmer` for LLM orchestration.
 - **No Direct Imports**: Core tools must depend strictly on the `ModuleSet` adapter, never directly on `hdWGCNA` or `Seurat`.

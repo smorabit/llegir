@@ -53,3 +53,5 @@ packets <- run_orchestrator(ms, tool_config, output_dir, tables_dir = tables_dir
 
 n_ok <- sum(!vapply(packets, is.null, logical(1)))
 cat(n_ok, '/', length(packets), 'modules written to', output_dir, '\n')
+
+# echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bash_profile && source ~/.bash_profile

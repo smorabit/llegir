@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "CLAUDE.md",
+                "file": "docs/implementation_guide.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "CLAUDE"
+              "title": "implementation_guide"
             }
           },
           {
@@ -122,7 +122,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "CLAUDE.md",
+                "file": "docs/implementation_guide.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -132,7 +132,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for CLAUDE"
+              "title": "Backlinks for implementation_guide"
             }
           },
           {
@@ -141,12 +141,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "CLAUDE.md",
+                "file": "docs/implementation_guide.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from CLAUDE"
+              "title": "Outgoing links from implementation_guide"
             }
           },
           {
@@ -184,13 +184,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "CLAUDE.md",
+                "file": "docs/implementation_guide.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of CLAUDE"
+              "title": "Outline of implementation_guide"
             }
           }
         ]
@@ -211,33 +211,37 @@
       "bases:Create new base": false
     }
   },
-  "active": "8323b74e82a7aeb7",
+  "active": "43c1eaff2834dcca",
   "lastOpenFiles": [
+    "vignettes/--find-assets.html",
+    "output/cache/f001d2669b078055995ad0e570443b2ef1b498b3f84f9e384c60aff42dbc99e7.rds",
+    "output/cache/fc066d152a2d129ba0bb8fb0b962b965aa0768c9643f115732c8ef5bbacb795b.rds",
+    "output/cache/5e22b2ca1345d6add78fcb8232379c2e6413148865e60ffb31e8321f259294ed.rds",
+    "vignettes/precompute.R",
+    "vignettes/precompute.R.tmp.2972.244f306b7c9a",
+    "vignettes/getting-started.Rmd.orig",
+    "docs/2026-07-13.md",
     "docs/milestones/milestone_extensibility.md",
-    "tests/testthat/_snaps",
-    "man/import_enrichr.Rd",
-    "man/import_hdwgcna_dme.Rd",
-    "man/import_seurat_markers.Rd",
+    "output/cache/da022940ced7cad00d90d72b2161f3e29f03eb4bd8ca54e2b8149a84ae4b7397.rds",
+    "output/cache/4b49ae991414e8d1192eebfc82b1a40c7f20290b7f70329dc1d41a477f99b3bf.rds",
+    "output/cache/2c0dfb8d5c26d59ee35c4665f9003e5a164dc27fbc942371e8f2b03324f48aa4.rds",
+    "scripts/interactive_test.Rmd.tmp.2972.276df53431b4",
+    "output/interpretations_deg/MM3.md",
+    "output/interpretations_deg/MM2.md",
+    "output/interpretations_deg/MM1.md",
+    "CLAUDE.md",
     "docs/prompts/handoff_prompt_extensibility_1.md",
     "docs/prompts/handoff_prompt_extensibility_2.md",
     "docs/milestones/milestone2_verification.md",
     "docs/milestones/milestone_2.md",
     "docs/milestones/milestone_packaging.md",
     "docs/repo_map.md",
-    "pkgdown_site/reference/pkg_versions.gene_list_ModuleSet.html",
-    "pkgdown_site/reference/pkg_versions.components_ModuleSet.html",
-    "pkgdown_site/reference/modules.components_ModuleSet.html",
-    "pkgdown_site/reference/module_scores.components_ModuleSet.html",
-    "pkgdown_site/reference/metadata.components_ModuleSet.html",
-    "pkgdown_site/reference/llegir.html",
-    "CLAUDE.md",
     "CLAUDE_old.md",
     "Untitled 1.md",
     "docs/overview.md",
     "Untitled 2.md",
     "docs/implementation_guide.md",
     "NEWS.md",
-    "docs/2026-07-13.md",
     "docs/milestones/milestone_1.md",
     "docs/milestones/milestone_1_5.md",
     "docs/prompts/handoff_prompt.md",
@@ -245,9 +249,6 @@
     "docs/prompts/handoff_prompt_m2.md",
     "docs/prompts/handoff_prompt_m2_run.md",
     "docs/prompts/handoff_prompt_m1_5.md",
-    "docs/prompts/handoff_prompt_hdwgcna_equivalence.md",
-    "docs/prompts/handoff_prompt_dev_economy.md",
-    "docs/custom_tools.md",
     "pkgdown_site/link.svg"
   ]
 }
