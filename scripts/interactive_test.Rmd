@@ -1,0 +1,278 @@
+---
+title: 'llegir interactive workflow test'
+output: html_document
+---
+
+Source/run this line-by-line in an interactive R session to walk the core
+package workflow end-to-end on three modules (MM1-MM3). `conda activate
+hdWGCNA` first, then step through each chunk and inspect the intermediate
+objects in the console as prompted.
+
+```{r setup}
+#---------------------------------------------------------
+# setup environment and load the dataset
+#---------------------------------------------------------
+
+devtools::load_all()
+
+# load the seurat object
+data_path <- 'data/CSF_Myeloid_hdWGCNA.rds'
+seurat_obj <- readRDS(data_path)
+
+# define the set of modules to use for this test
+modules_use <- c('MM1', 'MM2', 'MM3')
+```
+
+```{r custom-tool}
+#---------------------------------------------------------
+# define a custom, script-local evidence tool (Milestone 2 registry demo)
+#---------------------------------------------------------
+
+# this is a fully user-defined tool that lives outside the package. it obeys the
+# same contract as the package-native tools: it takes a single tool ctx
+# (list(ms, module_id, params), built by run_orchestrator) and returns a
+# validated evidence_fragment. `ms` and `n_hubs` arrive via ctx$ms /
+# ctx$params$n_hubs -- surfaced exactly like hub_genes_tool does it -- so this
+# slots straight into tool_config with no orchestrator changes.
+
+# small helper: hit the NCBI E-utils gene endpoints for one symbol and return a
+# one-line human summary. esearch resolves the human gene symbol to a UID, then
+# esummary pulls the curated description. wrapped by the caller in tryCatch so a
+# network failure degrades to the offline mock rather than aborting the run.
+.ncbi_summary_one <- function(symbol){
+
+    Sys.sleep(0.4)
+
+    esearch_url <- paste0(
+        'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi',
+        '?db=gene&retmode=json&term=', utils::URLencode(symbol),
+        '%5Bsym%5D+AND+human%5Borgn%5D'
+    )
+    uid <- jsonlite::fromJSON(esearch_url)$esearchresult$idlist[1]
+    if (is.na(uid) || length(uid) == 0) return(NA_character_)
+
+    esummary_url <- paste0(
+        'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi',
+        '?db=gene&retmode=json&id=', uid
+    )
+    rec <- jsonlite::fromJSON(esummary_url)$result[[uid]]
+
+    # NCBI's short blurb ('summary') is richer but often empty; fall back to the
+    # one-line 'description' so every resolved gene still gets a non-empty string
+    summary_text <- rec$summary
+    if (is.null(summary_text) || !nzchar(summary_text)) summary_text <- rec$description
+    summary_text %||% NA_character_
+}
+
+# vectorised lookup with an offline-safe fallback: try the live E-utils call for
+# the whole gene vector, and if anything fails (no network, throttling, budget
+# lockdown) synthesise a deterministic placeholder so the tool still emits a
+# well-formed fragment offline
+ncbi_gene_summaries <- function(genes){
+    live <- tryCatch(
+        vapply(genes, .ncbi_summary_one, character(1)),
+        error = function(e) NULL
+    )
+    if (is.null(live)) {
+        return(paste0('[mock summary] ', genes, ': human protein-coding gene (offline placeholder).'))
+    }
+
+    # patch only the genes E-utils could not resolve, keep real hits intact
+    live[is.na(live)] <- paste0(
+        '[mock summary] ', genes[is.na(live)], ': no NCBI record resolved (offline placeholder).'
+    )
+    unname(live)
+}
+
+# the tool proper -- same shape as hub_genes_tool: rank the module's genes by
+# kME, keep the top n_hubs, and attach an NCBI one-liner to each
+ncbi_gene_summary_tool <- function(ctx){
+    n_hubs <- ctx$params$n_hubs %||% 5
+
+    gm <- gene_membership(ctx$ms, ctx$module_id)
+    top <- utils::head(gm, n_hubs)
+    top$summary <- ncbi_gene_summaries(top$gene_name)
+
+    top_findings <- lapply(seq_len(nrow(top)), function(i){
+        list(gene = top$gene_name[i], kme = top$kme[i], summary = top$summary[i])
+    })
+
+    compact_summary <- paste0(
+        'NCBI summaries for top ', nrow(top), ' hub genes: ',
+        paste(top$gene_name, collapse = ', ')
+    )
+
+    evidence_fragment(
+        fragment_id = 'ncbi_gene_summary',
+        tool_id = 'ncbi_gene_summary',
+        module_id = ctx$module_id,
+        type = 'ranked_genes',
+        result = top,
+        compact_summary = compact_summary,
+        top_findings = top_findings,
+        effect_strength = if (nrow(top) > 0) max(top$kme) else 0,
+        direction = 'na',
+        provenance = make_provenance(
+            tool_version = '0.1',
+            params = list(n_hubs = n_hubs),
+            pkg_versions = pkg_versions(ctx$ms)
+        )
+    )
+}
+
+```
+
+```{r moduleset}
+
+# initialize the ModuleSet adapter
+ms <- hdWGCNA_ModuleSet(seurat_obj)
+modules(ms)
+
+# run the capabilities check
+capabilities(ms)
+
+# smoke-test the script-local custom tool standalone on MM1 before wiring it into
+# the orchestrator -- inspect result / top_findings and confirm each gene carries
+# a summary string (live NCBI text, or a '[mock summary]' placeholder if offline)
+ncbi_demo_frag <- ncbi_gene_summary_tool(list(ms = ms, module_id = 'MM1', params = list(n_hubs = 5)))
+ncbi_demo_frag$result
+ncbi_demo_frag$top_findings
+validate_evidence_fragment(ncbi_demo_frag)
+
+#---------------------------------------------------------
+# run core evidence tools over MM1-MM3 only
+#---------------------------------------------------------
+
+hallmark_gmt <- c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt')
+
+# define the list of tools to run -- the last entry is the script-local
+# ncbi_gene_summary_tool injected right alongside the package-native tools, which
+# is all it takes for the registry/orchestrator to treat it as a first-class tool
+tool_config <- list(
+    list(fn = hub_genes_tool, params = list(n_hubs = 30)),
+    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+    list(fn = geneset_enrichment_tool, params = list(
+        n_hubs = 25,
+        db_files = c(GO_BP = 'data/GO_Biological_Process_2026.txt', hallmark_gmt)
+    )),
+   # list(fn = signature_correlation_tool, params = list(library_files = hallmark_gmt)), # commented this out for now because it takes a long time to run
+    list(fn = ncbi_gene_summary_tool, params = list(n_hubs = 5))
+)
+
+# run the orchestrator over the list of tools to construct evidence packets per module
+packets <- run_orchestrator(ms, tool_config, output_dir = 'output/evidence_packets', modules_use = modules_use)
+
+# inspect one packet's fragments before moving on
+packets[['MM1']]
+packets[['MM1']]$fragments[[1]]
+
+#---------------------------------------------------------
+# run synthesis on the same three modules via GitHub Models
+#---------------------------------------------------------
+
+desc <- dataset_description(
+    species = 'human',
+    tissue = 'cerebrospinal fluid (CSF)',
+    cell_compartment = 'myeloid cells',
+    assay = 'single-cell RNA-seq (10x)',
+    conditions = c(
+        'Glioblastoma', 'Brain Metastasis', 'Primary CNS lymphoma',
+        'Secondary CNS lymphoma', 'Inflammatory / other neuroinflammatory'
+    ),
+    notes = 'Modules are CSF-myeloid co-expression programs; interpret in a CNS-myeloid, neuro-oncology / neuroinflammation context.'
+)
+
+backend <- cached_backend(
+    resolve_backend('github'), provider = 'github', model = .default_models[['github']],
+    prompt_template_version = PROMPT_TEMPLATE_VERSION
+)
+
+interps <- run_synthesis_orchestrator(packets, desc, backend, output_dir = 'output/interpretations')
+
+# inspect one interpretation
+interps[['MM1']]
+needs_review(interps[['MM1']])
+```
+
+## Importing pre-existing DEGs
+
+The section below is standalone: it shows how a DEG table you already have
+(here generated on the fly with `Seurat::FindMarkers`) is ingested as an
+evidence fragment and then fed to the orchestrator alongside the core tools.
+
+```{r deg-generation}
+#---------------------------------------------------------
+# generate a standard Seurat marker table
+#---------------------------------------------------------
+
+# quick contrast on the raw seurat object: Glioblastoma vs the inflammatory
+# group, grouped by the diagnosis metadata column. this stands in for any DEG
+# table a user already has sitting on disk.
+deg_df <- Seurat::FindMarkers(
+    seurat_obj,
+    ident.1 = 'Glioblastoma',
+    ident.2 = 'Inflammatory',
+    group.by = 'diagnosis'
+)
+
+# inspect the raw Seurat marker frame in the console -- note that features are
+# on the rownames and the effect/significance live in avg_log2FC / p_val_adj
+head(deg_df)
+
+#---------------------------------------------------------
+# ingest the DEG table as an evidence fragment
+#---------------------------------------------------------
+
+# no group_col -> a single-contrast cross_condition_delta fragment;
+# provenance$source is stamped 'user_supplied' so downstream faithfulness
+# checks can tell it apart from a tool-computed fragment
+deg_fragment <- import_seurat_markers(
+    module_id = 'MM1',
+    result = deg_df,
+    group_col = NULL
+)
+
+# inspect the imported fragment -- compare compact_summary / top_findings here
+# against the raw deg_df rows above to confirm the column mapping landed
+deg_fragment
+deg_fragment$top_findings
+
+#---------------------------------------------------------
+# pass the ingested DEGs through the orchestrator
+#---------------------------------------------------------
+
+# thin wrapper so the pre-computed DEG table flows through the orchestrator as
+# just another tool: it re-tags the imported fragment with whichever module_id
+# the orchestrator is currently on, alongside the deterministic tools
+deg_import_tool <- function(ctx){
+    import_seurat_markers(
+        module_id = ctx$module_id,
+        result = ctx$params$deg_table,
+        group_col = NULL
+    )
+}
+
+# same tool list as before, now with the DEG import appended
+tool_config_deg <- c(tool_config, list(
+    list(fn = deg_import_tool, params = list(deg_table = deg_df))
+))
+
+packets_deg <- run_orchestrator(ms, tool_config_deg, output_dir = 'output/evidence_packets_deg', modules_use = modules_use)
+
+# inspect one packet -- the ingested DEG fragment should now sit in here next
+# to the tool-computed ones
+packets_deg[['MM1']]
+
+#---------------------------------------------------------
+# synthesize the DEG-augmented packets
+#---------------------------------------------------------
+
+# reuse the same desc / backend from the core synthesis block above, now
+# running over the packets that carry the imported DEG fragment
+interps_deg <- run_synthesis_orchestrator(packets_deg, desc, backend, output_dir = 'output/interpretations_deg')
+
+# inspect one interpretation -- check whether the DEG evidence surfaces in the
+# synthesized narrative relative to the core-only run
+interps_deg[['MM1']]
+needs_review(interps_deg[['MM1']])
+```
