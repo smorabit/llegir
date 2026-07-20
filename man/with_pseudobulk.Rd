@@ -14,6 +14,11 @@ with_pseudobulk(cell_ms, pb_ms)
 
 \item{pb_ms}{A pseudo-bulk \code{ModuleSet}, normally built by
 \code{\link[=pseudobulk_ModuleSet]{pseudobulk_ModuleSet()}}.}
+
+\item{ms}{A \code{ModuleSet} object; the dispatch target for
+\code{\link[=capabilities.with_pseudobulk_ModuleSet]{capabilities.with_pseudobulk_ModuleSet()}}.}
+
+\item{...}{Passed to methods.}
 }
 \value{
 \code{cell_ms}, with \code{pb_ms} attached.

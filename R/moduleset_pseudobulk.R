@@ -158,6 +158,9 @@ pkg_versions.pseudobulk_ModuleSet <- function(ms, ...){
 #' @param cell_ms A cell-level `ModuleSet` (e.g. built by [hdWGCNA_ModuleSet()]).
 #' @param pb_ms A pseudo-bulk `ModuleSet`, normally built by
 #'   [pseudobulk_ModuleSet()].
+#' @param ms A `ModuleSet` object; the dispatch target for
+#'   [capabilities.with_pseudobulk_ModuleSet()].
+#' @param ... Passed to methods.
 #' @return `cell_ms`, with `pb_ms` attached.
 #' @examples
 #' \dontrun{
