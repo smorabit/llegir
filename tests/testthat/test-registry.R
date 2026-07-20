@@ -8,7 +8,7 @@
 ## tool, including the same graceful-skip and schema-validation machinery.
 
 test_that('core tools are registered via the same register_tool() mechanism', {
-    expect_true(all(c('hub_genes', 'cluster_dme', 'module_by_metadata', 'geneset_enrichment', 'signature_correlation') %in% list_tools()))
+    expect_true(all(c('hub_genes', 'cluster_dme', 'geneset_enrichment', 'signature_correlation') %in% list_tools()))
     spec <- get_tool('cluster_dme')
     expect_s3_class(spec, 'tool_spec')
     expect_equal(spec$requires, c('grouping', 'module_scores'))
@@ -22,8 +22,12 @@ test_that('register_tool() validates its arguments', {
     expect_error(register_tool(id = 'x', fn = hub_genes_tool, type = 'ranked_genes', description = 'x', requires = 1), 'requires must be')
 })
 
-test_that('module_by_metadata\'s requires is param-dependent (function form)', {
-    spec <- get_tool('module_by_metadata')
+test_that('register_tool() accepts a param-dependent requires (function form)', {
+    requires_fn <- function(params){
+        if ((params$column_type %||% 'categorical') == 'continuous') 'module_scores' else c('module_scores', 'sample_ids')
+    }
+    register_tool('param_dependent_tool', hub_genes_tool, type = 'ranked_genes', description = 'x', requires = requires_fn)
+    spec <- get_tool('param_dependent_tool')
     expect_true(is.function(spec$requires))
     expect_setequal(.tool_spec_requires(spec, list(column_type = 'categorical')), c('module_scores', 'sample_ids'))
     expect_equal(.tool_spec_requires(spec, list(column_type = 'continuous')), 'module_scores')

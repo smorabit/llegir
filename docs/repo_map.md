@@ -17,8 +17,10 @@
 │   │   ├── milestone_1_5.md
 │   │   ├── milestone_1.md
 │   │   ├── milestone_2.md
+│   │   ├── milestone_abstract_moduleset.md
 │   │   ├── milestone_extensibility.md
 │   │   ├── milestone_packaging.md
+│   │   ├── milestone_pseudobulk.md
 │   │   └── milestone2_verification.md
 │   ├── overview.md
 │   ├── prompts
@@ -34,13 +36,14 @@
 │   ├── repo_map.md
 │   └── schemas.md
 ├── inst
-│   └── schemas
-│       ├── evidence_fragment.schema.json
-│       └── interpretation.schema.json
+│   ├── schemas
+│   │   ├── evidence_fragment.schema.json
+│   │   └── interpretation.schema.json
+│   └── templates
+│       └── summary_report.Rmd
 ├── LICENSE
 ├── LICENSE.md
 ├── man
-│   ├── aggregate_by_sample.Rd
 │   ├── assert_faithfulness.Rd
 │   ├── build_evidence_packet.Rd
 │   ├── build_review_queue.Rd
@@ -54,9 +57,10 @@
 │   ├── cluster_dme_tool.Rd
 │   ├── components_ModuleSet.Rd
 │   ├── compute_evidence_signals.Rd
-│   ├── continuous_correlation_test.Rd
+│   ├── counts.Rd
 │   ├── dataset_description.Rd
 │   ├── describe_flags.Rd
+│   ├── differential_module_activity_tool.Rd
 │   ├── ellmer_backend.Rd
 │   ├── enforce_faithfulness.Rd
 │   ├── evidence_fragment.Rd
@@ -81,7 +85,6 @@
 │   ├── interpretation_to_json.Rd
 │   ├── interpretation.Rd
 │   ├── is_faithful.Rd
-│   ├── is_sample_constant.Rd
 │   ├── list_tools.Rd
 │   ├── llegir_example_moduleset.Rd
 │   ├── llegir-package.Rd
@@ -90,13 +93,16 @@
 │   ├── metadata.Rd
 │   ├── mock_backend.Rd
 │   ├── model_output_schema_json.Rd
-│   ├── module_by_metadata_tool.Rd
 │   ├── module_scores.Rd
 │   ├── modules.Rd
 │   ├── needs_review.Rd
 │   ├── packet_to_json.Rd
 │   ├── pkg_versions.Rd
 │   ├── PROMPT_TEMPLATE_VERSION.Rd
+│   ├── pseudobulk_de_limma_tool.Rd
+│   ├── pseudobulk_ModuleSet.Rd
+│   ├── pseudobulk_view.Rd
+│   ├── pseudobulk.Rd
 │   ├── read_evidence_packet.Rd
 │   ├── read_interpretation.Rd
 │   ├── register_tool.Rd
@@ -115,8 +121,11 @@
 │   ├── validate_dataset_description.Rd
 │   ├── validate_evidence_fragment.Rd
 │   ├── validate_interpretation.Rd
+│   ├── validate_moduleset.Rd
+│   ├── with_pseudobulk.Rd
 │   ├── write_evidence_packet.Rd
 │   ├── write_fragment_tables.Rd
+│   ├── write_interpretation_report.Rd
 │   ├── write_interpretation.Rd
 │   ├── write_review_queue.Rd
 │   └── write_synthesis_manifest.Rd
@@ -140,6 +149,7 @@
 │   │   ├── e42868506259fe8d214767f0e630a8a4cb7aeeaf39408b18e8ee1d535dd3fa32.rds
 │   │   ├── f001d2669b078055995ad0e570443b2ef1b498b3f84f9e384c60aff42dbc99e7.rds
 │   │   └── fc066d152a2d129ba0bb8fb0b962b965aa0768c9643f115732c8ef5bbacb795b.rds
+│   ├── dev_report.html
 │   ├── evidence_packets
 │   │   ├── MM1.json
 │   │   ├── MM10.json
@@ -298,6 +308,7 @@
 │           ├── metadata__diagnosis.tsv
 │           ├── metadata__sample.tsv
 │           └── signature_correlation.tsv
+├── outputs
 ├── pkgdown_site
 │   ├── 2026-07-10.html
 │   ├── 2026-07-13.html
@@ -467,6 +478,7 @@
 │   ├── confidence.R
 │   ├── dataset_description.R
 │   ├── example_moduleset.R
+│   ├── exporters.R
 │   ├── faithfulness.R
 │   ├── fragment.R
 │   ├── import_fragment.R
@@ -475,6 +487,7 @@
 │   ├── moduleset_components.R
 │   ├── moduleset_gene_list.R
 │   ├── moduleset_hdwgcna.R
+│   ├── moduleset_pseudobulk.R
 │   ├── moduleset.R
 │   ├── orchestrator.R
 │   ├── prompt.R
@@ -483,9 +496,10 @@
 │   ├── stats_utils.R
 │   ├── synthesis.R
 │   ├── tool_cluster_dme.R
+│   ├── tool_differential_module_activity.R
 │   ├── tool_geneset_enrichment.R
 │   ├── tool_hub_genes.R
-│   ├── tool_module_by_metadata.R
+│   ├── tool_pseudobulk_de_limma.R
 │   ├── tool_signature_correlation.R
 │   └── utils.R
 ├── README.md
@@ -493,14 +507,17 @@
 ├── scripts
 │   ├── interactive_test.R
 │   ├── interactive_test.Rmd
+│   ├── nmf_factor_test.R
 │   ├── run_csf.R
 │   └── run_synthesis_csf.R
 ├── STYLE.md
 ├── tests
 │   └── testthat
+│       ├── _snaps
 │       ├── setup.R
 │       ├── synthetic_extensibility.R
 │       ├── synthetic_moduleset.R
+│       ├── synthetic_pseudobulk.R
 │       ├── test-confidence.R
 │       ├── test-faithfulness.R
 │       ├── test-fragment.R
@@ -509,14 +526,18 @@
 │       ├── test-moduleset_adapter.R
 │       ├── test-moduleset_components.R
 │       ├── test-moduleset_gene_list.R
+│       ├── test-moduleset_pseudobulk.R
 │       ├── test-prompt.R
 │       ├── test-registry.R
 │       ├── test-render.R
 │       ├── test-spike_in.R
 │       ├── test-synthesis.R
+│       ├── test-tool_differential_module_activity.R
+│       ├── test-tool_pseudobulk_de_limma.R
 │       ├── test-tool_signature_correlation.R
-│       └── test-tools.R
+│       ├── test-tools.R
+│       └── test-validate_moduleset.R
 └── vignettes
     └── getting-started.Rmd
 
-49 directories, 471 files
+52 directories, 489 files

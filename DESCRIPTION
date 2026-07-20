@@ -22,6 +22,7 @@ Imports:
     WGCNA,
     UCell,
     decoupleR,
+    limma,
     jsonlite,
     digest,
     dplyr,
@@ -30,12 +31,14 @@ Imports:
     fgsea,
     ellmer,
     stats,
-    utils
+    utils,
+    methods
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    pkgdown
+    pkgdown,
+    SummarizedExperiment
 Config/testthat/edition: 3
 VignetteBuilder: knitr
 URL: https://github.com/smorabit/Module_Interpretation

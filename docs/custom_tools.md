@@ -70,7 +70,7 @@ register_tool(
     description = 'One-line description of what my_tool computes',
     requires = 'expression'               # a ModuleSet capabilities() name, a vector of them, or
                                            # function(params) -> character vector for a param-dependent
-                                           # requirement (see module_by_metadata's registration in R/registry.R)
+                                           # requirement
 )
 ```
 

@@ -1,8 +1,10 @@
 ## signature_correlation_tool: the co-variation sibling of geneset_enrichment
-## (docs/milestone_extensibility.md Part 2a). Uses the tiny synthetic
-## signature library from synthetic_extensibility.R, where module_a's own
-## gene set is included as one signature -- a spike-in-style sanity check
-## that it should come back with the top |r|.
+## (docs/milestone_extensibility.md Part 2a; refactored onto pseudobulk_view()
+## in docs/milestone_pseudobulk.md Part 2). Uses the tiny synthetic signature
+## library from synthetic_extensibility.R, where module_a's own gene set is
+## included as one signature -- a spike-in-style sanity check that it should
+## come back with the top |r| -- at both the cell level and, once a
+## pseudo-bulk view is attached, the pseudo-bulk level.
 
 test_that('signature_correlation_tool() skips gracefully without module_scores/expression', {
     skip_if_not(go_data_available, 'GO Biological Process data not available')
@@ -23,7 +25,7 @@ test_that('signature_correlation_tool() requires params$library_files', {
 test_that('signature_correlation_tool() finds a module\'s own gene set as its top |r| signature (cell level)', {
     skip_if_not(go_data_available, 'GO Biological Process data not available')
 
-    # no sample_col declared -> cell-level correlation, no p attached
+    # no pseudo-bulk view attached -> cell-level correlation, no p attached
     nocap_ms <- components_ModuleSet(
         go_components_gene_table, go_fixture$expr, go_fixture$meta, scores = go_components_scores
     )
@@ -42,27 +44,47 @@ test_that('signature_correlation_tool() finds a module\'s own gene set as its to
     expect_equal(frag$direction, 'up')
 })
 
-test_that('signature_correlation_tool() uses sample-level correlation (with p) when sample_ids is available', {
+test_that('signature_correlation_tool() is cell-level-only when no pseudo-bulk view is resolvable', {
     skip_if_not(go_data_available, 'GO Biological Process data not available')
 
+    # go_components_ms has sample_ids/grouping capabilities but no attached
+    # pseudo-bulk view -- capability alone must not trigger sample-level
+    # inference, only pseudobulk_view() resolving to something real does
+    expect_null(pseudobulk_view(go_components_ms))
     frag <- signature_correlation_tool(list(
         ms = go_components_ms, module_id = 'module_a',
         params = list(library_files = go_test_signature_files)
     ))
     expect_true(validate_evidence_fragment(frag))
-    expect_true(all(frag$result$level == 'sample'))
+    expect_true(all(frag$result$level == 'cell'))
+    expect_true(all(is.na(frag$result$p)))
+})
+
+test_that('signature_correlation_tool() uses pseudo-bulk correlation (with p) when a pseudo-bulk view is attached', {
+    skip_if_not(go_data_available, 'GO Biological Process data not available')
+
+    expect_identical(pseudobulk_view(go_components_ms_with_pb), go_pb_ms)
+    frag <- signature_correlation_tool(list(
+        ms = go_components_ms_with_pb, module_id = 'module_a',
+        params = list(library_files = go_test_signature_files)
+    ))
+    expect_true(validate_evidence_fragment(frag))
+    expect_true(all(frag$result$level == go_pb_ms$data_level))
     expect_true(all(!is.na(frag$result$p)))
-    expect_true(all(frag$result$n <= length(unique(go_fixture$meta$sample))))
+    expect_true(all(frag$result$n <= ncol(counts(go_pb_ms))))
+
+    top <- frag$result[which.max(abs(frag$result$r)), ]
+    expect_equal(top$signature, 'sig_match_a')
+    expect_gt(top$r, 0.5)
 })
 
 test_that('signature_correlation_tool() runs on gene_list_ModuleSet and shows strong co-variation with its own gene set', {
     skip_if_not(go_data_available, 'GO Biological Process data not available')
 
-    # both ModuleSets declare sample_col, so this exercises the sample-level
-    # path (n = 6 samples) -- noisy enough that the two scoring backends can
-    # disagree on the exact #1 rank between the two module-derived
-    # signatures (see the unambiguous n = 120 cell-level check above for a
-    # tighter sanity check), so this only asserts sig_match_a co-varies
+    # neither ModuleSet has a pseudo-bulk view attached, so this exercises
+    # the cell-level path (n = 120 cells) -- noisy enough that the two
+    # scoring backends can disagree on the exact #1 rank between the two
+    # module-derived signatures, so this only asserts sig_match_a co-varies
     # positively and ranks among the top 2 signatures by |r|, not that it's
     # always exactly #1
     for (ms in list(go_gene_list_ms_ucell, go_gene_list_ms_decoupler)) {

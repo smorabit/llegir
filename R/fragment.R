@@ -261,11 +261,10 @@ read_evidence_packet <- function(path){
 #' @return `tables_dir`, invisibly.
 #' @export
 write_fragment_tables <- function(packet, tables_dir){
-    # keyed by fragment_id rather than tool_id, since one tool can produce
-    # several fragments per module (e.g. module_by_metadata run once for
-    # 'diagnosis' and once for 'sample') and tool_id alone would collide;
-    # "::" in a fragment_id isn't safe in filenames everywhere, so it's
-    # swapped for "__"
+    # keyed by fragment_id rather than tool_id, since one tool can in
+    # principle produce several fragments per module and tool_id alone would
+    # collide; "::" in a fragment_id isn't safe in filenames everywhere, so
+    # it's swapped for "__"
     module_dir <- file.path(tables_dir, packet$module_id)
     dir.create(module_dir, recursive = TRUE, showWarnings = FALSE)
     for (frag in packet$fragments) {

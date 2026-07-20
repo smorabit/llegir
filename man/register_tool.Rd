@@ -16,17 +16,15 @@ register_tool(id, fn, type, description, requires = character(0))
 (see \code{\link[=evidence_fragment]{evidence_fragment()}}) this tool may emit. Descriptive only -- the
 fragment a tool actually returns is always checked against the full
 contract by \code{\link[=validate_evidence_fragment]{validate_evidence_fragment()}} regardless of what's declared
-here. A tool whose emitted type depends on its params (e.g.
-\code{\link[=module_by_metadata_tool]{module_by_metadata_tool()}}) can declare more than one.}
+here. A tool whose emitted type depends on its params can declare more
+than one.}
 
 \item{description}{A one-line, human-readable description of what the tool does.}
 
 \item{requires}{The \code{ModuleSet} \code{\link[=capabilities]{capabilities()}} this tool needs to run:
 either a character vector (e.g. \code{c('grouping', 'module_scores')}), or a
 \verb{function(params) -> character vector} for a tool whose requirement
-depends on how it's called (e.g. \code{\link[=module_by_metadata_tool]{module_by_metadata_tool()}} only needs
-\code{sample_ids} for categorical columns). Default \code{character(0)} (no
-requirement).}
+depends on how it's called. Default \code{character(0)} (no requirement).}
 }
 \value{
 \code{id}, invisibly.

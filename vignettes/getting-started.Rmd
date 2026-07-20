@@ -76,9 +76,9 @@ hub_frag$compact_summary
 **llegir** ships several pre-built analysis tools:
 
 - `hub_genes_tool()`: top hub genes by kME
-- `module_by_metadata_tool()`: association with a metadata column
 - `cluster_dme_tool()`: differential module expression across clusters
 - `geneset_enrichment_tool()`: GO/pathway enrichment
+- `signature_correlation_tool()`: co-variation with a signature library
 
 Additionally, external results you have already computed elsewhere can be leveraged the same way via `import_fragment()`.
 

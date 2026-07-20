@@ -18,8 +18,8 @@ Asserts that every required generic (\code{\link[=modules]{modules()}}, \code{\l
 \code{\link[=module_scores]{module_scores()}}, \code{\link[=expression]{expression()}}, \code{\link[=counts]{counts()}}, \code{\link[=metadata]{metadata()}},
 \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}) dispatches for \code{ms}'s class and
 returns the documented shape; that \code{\link[=capabilities]{capabilities()}} covers the full
-vocabulary (see \code{\link[=capabilities]{capabilities()}}) with \code{pseudobulk = FALSE} (the only
-value current adapters may report); that \code{ms$data_level} /
+vocabulary (see \code{\link[=capabilities]{capabilities()}}), with \code{\link[=pseudobulk_view]{pseudobulk_view()}} resolving to a
+real \code{ModuleSet} whenever \code{pseudobulk = TRUE}; that \code{ms$data_level} /
 \code{ms$aggregated} are a length-1 character / logical; and that
 \code{\link[=expression]{expression()}}, \code{metadata()}, \code{\link[=module_scores]{module_scores()}}, and \code{\link[=counts]{counts()}} agree in
 dimensions wherever their capability is declared \code{TRUE}. Intended as a

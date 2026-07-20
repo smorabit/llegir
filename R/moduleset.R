@@ -77,10 +77,12 @@ pkg_versions <- function(ms, ...) UseMethod('pkg_versions')
 #' available), `expression` (the backing expression matrix is available),
 #' `counts` (a raw counts matrix is available, see [counts()]), `grouping` (a
 #' cell/sample-state grouping column was declared to the adapter),
-#' `sample_ids` (a sample-id column was declared), and `pseudobulk` (the
-#' underlying data is already pseudobulk-aggregated rather than per-cell --
-#' `FALSE` for every current adapter; reserved for a future aggregation
-#' backend). Capabilities are declared by the adapter, not inferred from
+#' `sample_ids` (a sample-id column was declared), and `pseudobulk` (a
+#' pseudo-bulk view is resolvable via [pseudobulk_view()] -- `TRUE` for a
+#' [pseudobulk_ModuleSet()]'s own attached-view wrapper produced by
+#' [with_pseudobulk()], `FALSE` otherwise, including for a standalone
+#' `pseudobulk_ModuleSet` itself, which resolves via `data_level`/`aggregated`
+#' rather than an attachment). Capabilities are declared by the adapter, not inferred from
 #' probing `metadata()` -- declaring `grouping`/`sample_ids` is how a source
 #' advertises that it supports that concept at all, independent of which
 #' particular metadata column a tool is asked to use. Core tools consult this
@@ -138,8 +140,8 @@ has_capability <- function(ms, name){
 #' [module_scores()], [expression()], [counts()], [metadata()],
 #' [pkg_versions()], [capabilities()]) dispatches for `ms`'s class and
 #' returns the documented shape; that [capabilities()] covers the full
-#' vocabulary (see [capabilities()]) with `pseudobulk = FALSE` (the only
-#' value current adapters may report); that `ms$data_level` /
+#' vocabulary (see [capabilities()]), with [pseudobulk_view()] resolving to a
+#' real `ModuleSet` whenever `pseudobulk = TRUE`; that `ms$data_level` /
 #' `ms$aggregated` are a length-1 character / logical; and that
 #' [expression()], `metadata()`, [module_scores()], and [counts()] agree in
 #' dimensions wherever their capability is declared `TRUE`. Intended as a
@@ -161,8 +163,14 @@ validate_moduleset <- function(ms){
     if (length(missing_caps) > 0) {
         stop('validate_moduleset: capabilities() is missing: ', paste(missing_caps, collapse = ', '))
     }
-    if (!isFALSE(unname(caps[['pseudobulk']]))) {
-        stop('validate_moduleset: capabilities()$pseudobulk must be FALSE for every current adapter')
+    pseudobulk_flag <- unname(caps[['pseudobulk']])
+    if (isTRUE(pseudobulk_flag)) {
+        pb_view <- .validate_moduleset_call(ms, 'pseudobulk_view', pseudobulk_view(ms))
+        if (is.null(pb_view)) {
+            stop('validate_moduleset: capabilities()$pseudobulk is TRUE but pseudobulk_view() returned NULL')
+        }
+    } else if (!isFALSE(pseudobulk_flag)) {
+        stop('validate_moduleset: capabilities()$pseudobulk must be TRUE or FALSE')
     }
 
     gm <- .validate_moduleset_call(ms, 'gene_membership', gene_membership(ms, mods[1]), is.data.frame)

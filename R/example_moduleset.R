@@ -207,8 +207,7 @@ capabilities.example_base_ModuleSet <- function(ms, ...){
 #' vignette without any real dataset.
 #'
 #' The simulated [metadata()] includes `diagnosis`, `cell_type`, and `sample`
-#' columns, matching what [module_by_metadata_tool()] and
-#' [cluster_dme_tool()] expect.
+#' columns, matching what [cluster_dme_tool()] expects.
 #'
 #' @param seed Random seed for reproducibility. Default `1`.
 #' @return A `synthetic_ModuleSet` object with two modules, `'module_a'` and

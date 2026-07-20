@@ -17,10 +17,9 @@ association first) and \code{omnibus_p} (the Kruskal-Wallis p-value).
 }
 \description{
 Tests \code{scores} against every level of \code{groups} (one-vs-rest, rank-biserial
-effect size), plus an omnibus Kruskal-Wallis test across all levels.
-Shared by \code{cluster_dme_tool} (grouping = cell state) and the categorical
-branch of \code{module_by_metadata_tool} (grouping = a metadata column like
-diagnosis). Reimplements the statistic behind \code{hdWGCNA::FindAllDMEs}
-directly on \code{\link[=module_scores]{module_scores()}} + \code{\link[=metadata]{metadata()}} rather than calling
-\code{FindAllDMEs()} itself, since that function needs the Seurat object.
+effect size), plus an omnibus Kruskal-Wallis test across all levels. Used
+by \code{cluster_dme_tool} (grouping = cell state); reimplements the statistic
+behind \code{hdWGCNA::FindAllDMEs} directly on \code{\link[=module_scores]{module_scores()}} + \code{\link[=metadata]{metadata()}}
+rather than calling \code{FindAllDMEs()} itself, since that function needs the
+Seurat object.
 }

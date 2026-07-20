@@ -10,7 +10,7 @@ make_faithful_interpretation <- function(packet){
             list(claim = 'enrichment claim', fragment_ids = 'geneset_enrichment', direction = 'up')
         ),
         metadata_associations = list(
-            list(variable = 'diagnosis', summary = 'x', fragment_id = 'metadata::diagnosis')
+            list(variable = 'cell_state', summary = 'x', fragment_id = 'cluster_dme')
         ),
         confidence = list(score = 0.7, model_score = 0.7, rationale = 'x'),
         provenance = make_interpretation_provenance('mock', '0.1', 0, packet$packet_hash)

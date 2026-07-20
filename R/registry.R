@@ -33,15 +33,13 @@
 #'   (see [evidence_fragment()]) this tool may emit. Descriptive only -- the
 #'   fragment a tool actually returns is always checked against the full
 #'   contract by [validate_evidence_fragment()] regardless of what's declared
-#'   here. A tool whose emitted type depends on its params (e.g.
-#'   [module_by_metadata_tool()]) can declare more than one.
+#'   here. A tool whose emitted type depends on its params can declare more
+#'   than one.
 #' @param description A one-line, human-readable description of what the tool does.
 #' @param requires The `ModuleSet` [capabilities()] this tool needs to run:
 #'   either a character vector (e.g. `c('grouping', 'module_scores')`), or a
 #'   `function(params) -> character vector` for a tool whose requirement
-#'   depends on how it's called (e.g. [module_by_metadata_tool()] only needs
-#'   `sample_ids` for categorical columns). Default `character(0)` (no
-#'   requirement).
+#'   depends on how it's called. Default `character(0)` (no requirement).
 #' @return `id`, invisibly.
 #' @examples
 #' my_tool <- function(ctx) hub_genes_tool(ctx)
@@ -104,18 +102,6 @@ list_tools <- function(){
         requires = c('grouping', 'module_scores')
     )
     register_tool(
-        'module_by_metadata', module_by_metadata_tool,
-        type = c('categorical_association', 'continuous_correlation'),
-        description = 'Module score vs. a declared metadata column',
-        requires = function(params){
-            if ((params$column_type %||% 'categorical') == 'continuous') {
-                'module_scores'
-            } else {
-                c('module_scores', 'sample_ids')
-            }
-        }
-    )
-    register_tool(
         'geneset_enrichment', geneset_enrichment_tool, type = 'geneset_enrichment',
         description = "Gene-set overlap enrichment among a module's hub genes",
         requires = 'expression'
@@ -124,5 +110,17 @@ list_tools <- function(){
         'signature_correlation', signature_correlation_tool, type = 'signature_correlation',
         description = "Correlate a module's activity with a signature library",
         requires = c('module_scores', 'expression')
+    )
+    register_tool(
+        'differential_module_activity', differential_module_activity_tool,
+        type = c('cross_condition_delta', 'categorical_association'),
+        description = "Module-level differential activity across a condition, on pseudo-bulk samples",
+        requires = 'module_scores'
+    )
+    register_tool(
+        'pseudobulk_de_limma', pseudobulk_de_limma_tool,
+        type = 'cross_condition_delta',
+        description = "Gene-level differential expression (limma-voom) within a module, on pseudo-bulk counts",
+        requires = character(0)
     )
 }

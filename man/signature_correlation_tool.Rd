@@ -13,9 +13,7 @@ character vector of local \code{.gmt} or \code{.rds} signature-library file path
 e.g. \code{c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt')}. An \code{.rds} file
 must contain a named list of character vectors (gene sets); a \code{.gmt} is
 read via \code{\link[fgsea:gmtPathways]{fgsea::gmtPathways()}}. \code{ctx$params$method} is \code{'UCell'}
-(default) or \code{'decoupleR'}. \code{ctx$params$sample_col} (default
-\code{'sample'}) is the sample-id column used for the sample-level
-correlation.}
+(default) or \code{'decoupleR'}.}
 }
 \value{
 An \code{evidence_fragment} of type \code{'signature_correlation'}, or
@@ -32,13 +30,15 @@ scoring \code{\link[=gene_list_ModuleSet]{gene_list_ModuleSet()}} uses), then co
 score with this module's \code{\link[=module_scores]{module_scores()}}.
 }
 \details{
-Reports Pearson \emph{r} as descriptive co-variation at the cell level by
-default. When \code{ctx$ms} also has the \code{sample_ids} capability, the
-correlation (and its p-value) is instead computed at the sample level
-(mean score per sample, via \code{\link[=aggregate_by_sample]{aggregate_by_sample()}}) -- cells within a
-sample aren't independent, so a cell-level p-value would be inflated (the
-milestone 1.5 lesson); a cell-level \emph{r} is still descriptive and fine to
-report, but a p-value never is.
+Reports Pearson \emph{r} as descriptive co-variation at the cell level always
+(never a p-value there -- cells aren't independent). When
+\code{\link[=pseudobulk_view]{pseudobulk_view()}} resolves a pseudo-bulk view for \code{ctx$ms} (either
+\code{ctx$ms} is itself a pseudo-bulk \code{ModuleSet}, or one is attached via
+\code{\link[=with_pseudobulk]{with_pseudobulk()}}), the signature library is re-scored on that view's
+own expression and correlated against its own \code{\link[=module_scores]{module_scores()}} instead,
+with a real p-value from those independent pseudo-bulk units. With no
+pseudo-bulk view available, only the descriptive cell-level \emph{r} is
+reported.
 }
 \examples{
 \dontrun{

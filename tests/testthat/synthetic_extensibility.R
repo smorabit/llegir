@@ -148,7 +148,6 @@ if (go_data_available) {
         list(
             list(fn = hub_genes_tool, params = list(n_hubs = 6)),
             list(fn = cluster_dme_tool, params = list(group_by = 'cell_type')),
-            list(fn = module_by_metadata_tool, params = list(column = 'diagnosis', column_type = 'categorical')),
             list(fn = geneset_enrichment_tool, params = list(n_hubs = 6, db_files = db_files))
         )
     }

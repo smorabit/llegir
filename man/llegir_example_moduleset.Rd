@@ -25,8 +25,7 @@ vignette without any real dataset.
 }
 \details{
 The simulated \code{\link[=metadata]{metadata()}} includes \code{diagnosis}, \code{cell_type}, and \code{sample}
-columns, matching what \code{\link[=module_by_metadata_tool]{module_by_metadata_tool()}} and
-\code{\link[=cluster_dme_tool]{cluster_dme_tool()}} expect.
+columns, matching what \code{\link[=cluster_dme_tool]{cluster_dme_tool()}} expects.
 }
 \examples{
 ms <- llegir_example_moduleset()

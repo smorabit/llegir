@@ -26,8 +26,8 @@ expr <- matrix(
     nrow = n_genes, ncol = n_cells, dimnames = list(gene_names, cell_names)
 )
 
-# three simulated cell states, one per dominant factor below -- gives cluster_dme_tool
-# and module_by_metadata_tool a real grouping column to test against, not just noise
+# three simulated cell states, one per dominant factor below -- gives
+# cluster_dme_tool a real grouping column to test against, not just noise
 cell_state <- sample(c('state_a', 'state_b', 'state_c'), n_cells, replace = TRUE)
 sample_id <- sample(paste0('sample', 1:4), n_cells, replace = TRUE)
 meta <- data.frame(cell_state = cell_state, sample = sample_id, row.names = cell_names)

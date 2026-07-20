@@ -13,12 +13,26 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "docs/implementation_guide.md",
+                "file": "docs/milestones/milestone_abstract_moduleset.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "implementation_guide"
+              "title": "milestone_abstract_moduleset"
+            }
+          },
+          {
+            "id": "d83fccecf978a2af",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "docs/milestones/milestone_pseudobulk.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "milestone_pseudobulk"
             }
           },
           {
@@ -49,7 +63,8 @@
               "title": "handoff_prompt_extensibility_2"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -122,7 +137,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "docs/implementation_guide.md",
+                "file": "docs/milestones/milestone_pseudobulk.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -132,7 +147,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for implementation_guide"
+              "title": "Backlinks for milestone_pseudobulk"
             }
           },
           {
@@ -141,12 +156,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "docs/implementation_guide.md",
+                "file": "docs/milestones/milestone_pseudobulk.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from implementation_guide"
+              "title": "Outgoing links from milestone_pseudobulk"
             }
           },
           {
@@ -184,13 +199,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "docs/implementation_guide.md",
+                "file": "docs/milestones/milestone_pseudobulk.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of implementation_guide"
+              "title": "Outline of milestone_pseudobulk"
             }
           }
         ]
@@ -211,21 +226,25 @@
       "bases:Create new base": false
     }
   },
-  "active": "43c1eaff2834dcca",
+  "active": "d83fccecf978a2af",
   "lastOpenFiles": [
-    "vignettes/--find-assets.html",
-    "output/cache/f001d2669b078055995ad0e570443b2ef1b498b3f84f9e384c60aff42dbc99e7.rds",
-    "output/cache/fc066d152a2d129ba0bb8fb0b962b965aa0768c9643f115732c8ef5bbacb795b.rds",
-    "output/cache/5e22b2ca1345d6add78fcb8232379c2e6413148865e60ffb31e8321f259294ed.rds",
-    "vignettes/precompute.R",
-    "vignettes/precompute.R.tmp.2972.244f306b7c9a",
-    "vignettes/getting-started.Rmd.orig",
+    "tests/testthat/_snaps",
+    "man/pseudobulk_de_limma_tool.Rd",
+    "tests/testthat/test-tool_pseudobulk_de_limma.R",
+    "R/tool_pseudobulk_de_limma.R",
+    "tests/testthat/test-tool_differential_module_activity.R",
+    "man/differential_module_activity_tool.Rd",
+    "R/tool_differential_module_activity.R",
+    "R/tool_differential_module_activity.R.tmp.2972.49b3f1a5004a",
+    "tests/testthat/test-moduleset_gene_list.R.tmp.2972.fe4ddbf1db73",
+    "R/tool_signature_correlation.R.tmp.2972.e5683c7582bd",
+    "tests/testthat/test-moduleset_pseudobulk.R",
+    "docs/milestones/milestone_abstract_moduleset.md",
+    "docs/implementation_guide.md",
+    "docs/milestones/milestone_pseudobulk.md",
+    "inst/templates/summary_report.knit.md",
     "docs/2026-07-13.md",
     "docs/milestones/milestone_extensibility.md",
-    "output/cache/da022940ced7cad00d90d72b2161f3e29f03eb4bd8ca54e2b8149a84ae4b7397.rds",
-    "output/cache/4b49ae991414e8d1192eebfc82b1a40c7f20290b7f70329dc1d41a477f99b3bf.rds",
-    "output/cache/2c0dfb8d5c26d59ee35c4665f9003e5a164dc27fbc942371e8f2b03324f48aa4.rds",
-    "scripts/interactive_test.Rmd.tmp.2972.276df53431b4",
     "output/interpretations_deg/MM3.md",
     "output/interpretations_deg/MM2.md",
     "output/interpretations_deg/MM1.md",
@@ -240,15 +259,11 @@
     "Untitled 1.md",
     "docs/overview.md",
     "Untitled 2.md",
-    "docs/implementation_guide.md",
     "NEWS.md",
     "docs/milestones/milestone_1.md",
     "docs/milestones/milestone_1_5.md",
     "docs/prompts/handoff_prompt.md",
     "docs/prompts/handoff_prompt_packaging.md",
-    "docs/prompts/handoff_prompt_m2.md",
-    "docs/prompts/handoff_prompt_m2_run.md",
-    "docs/prompts/handoff_prompt_m1_5.md",
     "pkgdown_site/link.svg"
   ]
 }

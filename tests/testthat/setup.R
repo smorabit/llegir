@@ -10,6 +10,7 @@
 # dispatch the way this explicit source() into .GlobalEnv can
 source('synthetic_moduleset.R')
 source('synthetic_extensibility.R')
+source('synthetic_pseudobulk.R')
 
 # data/CSF_Myeloid_hdWGCNA.rds is a large, gitignored dev-only file, excluded
 # from the built package tarball via .Rbuildignore -- it won't exist under
@@ -57,8 +58,6 @@ test_schema_path <- system.file('schemas', 'interpretation.schema.json', package
 csf_tool_config <- list(
     list(fn = hub_genes_tool, params = list(n_hubs = 25)),
     list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
-    list(fn = module_by_metadata_tool, params = list(column = 'diagnosis', column_type = 'categorical')),
-    list(fn = module_by_metadata_tool, params = list(column = 'sample', column_type = 'categorical')),
     list(fn = geneset_enrichment_tool, params = list(n_hubs = 25, db_files = test_db_files))
 )
 
@@ -71,14 +70,13 @@ if (csf_data_available) {
     negative_ms <- synthetic_ModuleSet(ms_test, list(random_module = random_control_genes(so_test)))
 }
 
-# a full evidence packet (hub_genes, cluster_dme, module_by_metadata::diagnosis,
-# geneset_enrichment) for a spike-in module -- confidence/faithfulness tests
-# need a multi-fragment packet, not just a single tool's output
+# a full evidence packet (hub_genes, cluster_dme, geneset_enrichment) for a
+# spike-in module -- confidence/faithfulness tests need a multi-fragment
+# packet, not just a single tool's output
 build_spike_in_packet <- function(ms, module_id, n_hubs){
     tool_config <- list(
         list(fn = hub_genes_tool, params = list(n_hubs = n_hubs)),
         list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
-        list(fn = module_by_metadata_tool, params = list(column = 'diagnosis', column_type = 'categorical')),
         list(fn = geneset_enrichment_tool, params = list(n_hubs = n_hubs, db_files = test_db_files))
     )
     run_module(ms, module_id, tool_config, input_hash = 'spike_in')

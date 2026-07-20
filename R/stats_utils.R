@@ -1,4 +1,4 @@
-## shared statistics helpers for categorical / continuous module-score associations.
+## shared statistics helpers for categorical module-score associations.
 ## generic (base R only); no adapter or backend dependency, so any ModuleSet works here.
 
 # rank-biserial correlation from a two-sample Wilcoxon: bounded in [-1, 1] and
@@ -15,12 +15,11 @@
 #' One-vs-rest categorical group test with an omnibus Kruskal-Wallis test
 #'
 #' Tests `scores` against every level of `groups` (one-vs-rest, rank-biserial
-#' effect size), plus an omnibus Kruskal-Wallis test across all levels.
-#' Shared by `cluster_dme_tool` (grouping = cell state) and the categorical
-#' branch of `module_by_metadata_tool` (grouping = a metadata column like
-#' diagnosis). Reimplements the statistic behind `hdWGCNA::FindAllDMEs`
-#' directly on [module_scores()] + [metadata()] rather than calling
-#' `FindAllDMEs()` itself, since that function needs the Seurat object.
+#' effect size), plus an omnibus Kruskal-Wallis test across all levels. Used
+#' by `cluster_dme_tool` (grouping = cell state); reimplements the statistic
+#' behind `hdWGCNA::FindAllDMEs` directly on [module_scores()] + [metadata()]
+#' rather than calling `FindAllDMEs()` itself, since that function needs the
+#' Seurat object.
 #'
 #' @param scores A numeric vector of module scores.
 #' @param groups A vector (coercible to factor) of group labels, same length as `scores`.
@@ -54,68 +53,4 @@ categorical_group_test <- function(scores, groups){
     rownames(per_group) <- NULL
 
     list(table = per_group, omnibus_p = unname(kw$p.value))
-}
-
-#' Check whether a variable is constant within every sample
-#'
-#' `TRUE` if `x` takes at most one distinct non-NA value within every level of
-#' `sample_id` (e.g. diagnosis is constant per sample, a QC metric is not).
-#' Used by `module_by_metadata_tool` to auto-select cell- vs. sample-level
-#' testing so sample-level variables don't get pseudoreplicated across
-#' correlated cells.
-#'
-#' @param x A vector to test.
-#' @param sample_id A grouping vector (e.g. sample id), same length as `x`.
-#' @return A single logical.
-#' @export
-is_sample_constant <- function(x, sample_id){
-    per_sample <- tapply(x, sample_id, function(v) length(unique(v[!is.na(v)])))
-    all(per_sample <= 1)
-}
-
-#' Aggregate module scores to the sample level
-#'
-#' Mean module score per sample (the pseudoreplication fix: test at the
-#' sample level, not the cell level), plus one label per sample for
-#' `group_col` when supplied (assumes `group_col` is constant within sample).
-#'
-#' @param scores A numeric vector of per-cell module scores.
-#' @param sample_id A grouping vector (sample id), same length as `scores`.
-#' @param group_col Optional categorical vector (e.g. diagnosis), same length
-#'   as `scores`, assumed constant within each sample.
-#' @return A data.frame with one row per sample: `sample`, `mean_score`, and
-#'   `group` if `group_col` was supplied.
-#' @export
-aggregate_by_sample <- function(scores, sample_id, group_col = NULL){
-    agg_scores <- tapply(scores, sample_id, mean)
-    out <- data.frame(sample = names(agg_scores), mean_score = as.numeric(agg_scores))
-    if (!is.null(group_col)) {
-        agg_group <- tapply(group_col, sample_id, function(v) as.character(v[!is.na(v)][1]))
-        out$group <- unname(agg_group[out$sample])
-    }
-    out
-}
-
-#' Pearson and Spearman correlation of module scores against a continuous variable
-#'
-#' Used by the continuous branch of `module_by_metadata_tool`.
-#'
-#' @param scores A numeric vector of module scores.
-#' @param x A numeric vector, same length as `scores`.
-#' @return A one-row data.frame: `n`, `pearson_r`, `pearson_p`,
-#'   `spearman_rho`, `spearman_p`.
-#' @export
-continuous_correlation_test <- function(scores, x){
-    keep <- !is.na(x) & !is.na(scores)
-    scores <- scores[keep]
-    x <- x[keep]
-    pear <- suppressWarnings(stats::cor.test(scores, x, method = 'pearson'))
-    spear <- suppressWarnings(stats::cor.test(scores, x, method = 'spearman'))
-    data.frame(
-        n = length(x),
-        pearson_r = unname(pear$estimate),
-        pearson_p = pear$p.value,
-        spearman_rho = unname(spear$estimate),
-        spearman_p = spear$p.value
-    )
 }
