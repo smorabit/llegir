@@ -1,0 +1,114 @@
+---
+title: 'llegir module interpretation report'
+date: '`r format(Sys.time(), "%Y-%m-%d %H:%M")`'
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cosmo
+params:
+  interps: !r NULL
+  packets: !r NULL
+  desc: !r NULL
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+interps <- params$interps
+packets <- params$packets
+desc <- params$desc
+
+# module order is driven by the interpretations; a packet with no matching
+# interpretation is skipped rather than rendered evidence-only
+module_ids <- names(interps)
+
+# flatten one fragment's top_findings (a list of named lists, one per salient
+# item) into a character data.frame for a clean kable, coercing every cell to a
+# scalar string so ragged / nested entries never break the table
+findings_table <- function(top_findings) {
+    if (length(top_findings) == 0) return(NULL)
+    rows <- lapply(top_findings, function(item) {
+        vals <- lapply(item, function(v) {
+            if (length(v) == 0) return(NA_character_)
+            paste(format(v, digits = 3), collapse = ', ')
+        })
+        as.data.frame(vals, stringsAsFactors = FALSE, check.names = FALSE)
+    })
+    dplyr::bind_rows(rows)
+}
+```
+
+## Dataset
+
+```{r dataset, results = 'asis'}
+cat(render_dataset_description(desc))
+```
+
+# Modules {.tabset .tabset-fade}
+
+```{r modules, results = 'asis'}
+for (module_id in module_ids) {
+    interp <- interps[[module_id]]
+    packet <- packets[[module_id]]
+
+    cat('\n\n## ', module_id, ' — ', interp$proposed_label, '\n\n', sep = '')
+    cat('*', interp$one_line_summary, '*\n\n', sep = '')
+
+    cat('### AI narrative\n\n')
+    cat('**Dominant biology.** ', interp$dominant_biology, '\n\n', sep = '')
+
+    if (!is.null(interp$cell_state) && !is.na(interp$cell_state)) {
+        cat('**Cell state.** ', interp$cell_state, '\n\n', sep = '')
+    }
+    if (!is.null(interp$condition_dynamics) && !is.na(interp$condition_dynamics)) {
+        cat('**Condition dynamics.** ', interp$condition_dynamics, '\n\n', sep = '')
+    }
+
+    if (length(interp$supporting_claims) > 0) {
+        cat('**Supporting evidence.**\n\n')
+        for (claim in interp$supporting_claims) {
+            cat('- ', claim$claim,
+                ' (', paste(claim$fragment_ids, collapse = ', '),
+                '; direction: ', claim$direction, ')\n', sep = '')
+        }
+        cat('\n')
+    }
+
+    if (length(interp$metadata_associations) > 0) {
+        cat('**Metadata associations.**\n\n')
+        for (assoc in interp$metadata_associations) {
+            cat('- ', assoc$variable, ': ', assoc$summary,
+                ' (', assoc$fragment_id, ')\n', sep = '')
+        }
+        cat('\n')
+    }
+
+    cat('**Confidence.** ', sprintf('%.2f', interp$confidence$score),
+        ' — ', interp$confidence$rationale, '\n\n', sep = '')
+    if (length(interp$flags) > 0) {
+        cat('**Flags.** ', paste(unlist(interp$flags), collapse = ', '), '\n\n', sep = '')
+    }
+
+    #-----------------------------------------------------------
+    # raw supporting evidence pulled from the paired packet
+    #-----------------------------------------------------------
+
+    cat('### Raw supporting evidence\n\n')
+    if (is.null(packet) || length(packet$fragments) == 0) {
+        cat('*No evidence packet found for this module.*\n\n')
+        next
+    }
+
+    for (frag in packet$fragments) {
+        cat('#### `', frag$fragment_id, '` (', frag$type, ')\n\n', sep = '')
+        cat(frag$compact_summary, '\n\n', sep = '')
+
+        tbl <- findings_table(frag$top_findings)
+        if (!is.null(tbl) && nrow(tbl) > 0) {
+            print(knitr::kable(tbl, format = 'markdown'))
+            cat('\n\n')
+        }
+    }
+}
+```

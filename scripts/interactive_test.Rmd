@@ -192,6 +192,15 @@ interps <- run_synthesis_orchestrator(packets, desc, backend, output_dir = 'outp
 # inspect one interpretation
 interps[['MM1']]
 needs_review(interps[['MM1']])
+
+#---------------------------------------------------------
+# export a combined interpretation + evidence HTML report
+#---------------------------------------------------------
+
+# pair each module's synthesized narrative with its raw evidence packet and
+# compile everything into one browsable HTML file -- open it to eyeball the
+# AI narrative against the underlying tool metrics side by side
+write_interpretation_report(interps, packets, desc, output_file = 'output/dev_report.html')
 ```
 
 ## Importing pre-existing DEGs
