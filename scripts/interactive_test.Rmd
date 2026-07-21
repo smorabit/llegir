@@ -32,7 +32,7 @@ modules_use <- c('MM1', 'MM2', 'MM3')
 # same contract as the package-native tools: it takes a single tool ctx
 # (list(ms, module_id, params), built by run_orchestrator) and returns a
 # validated evidence_fragment. `ms` and `n_hubs` arrive via ctx$ms /
-# ctx$params$n_hubs -- surfaced exactly like hub_genes_tool does it -- so this
+# ctx$params$n_hubs -- surfaced exactly like top_genes_tool does it -- so this
 # slots straight into tool_config with no orchestrator changes.
 
 # small helper: hit the NCBI E-utils gene endpoints for one symbol and return a
@@ -84,7 +84,7 @@ ncbi_gene_summaries <- function(genes){
     unname(live)
 }
 
-# the tool proper -- same shape as hub_genes_tool: rank the module's genes by
+# the tool proper -- same shape as top_genes_tool: rank the module's genes by
 # kME, keep the top n_hubs, and attach an NCBI one-liner to each
 ncbi_gene_summary_tool <- function(ctx){
     n_hubs <- ctx$params$n_hubs %||% 5
@@ -149,7 +149,7 @@ hallmark_gmt <- c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt')
 # ncbi_gene_summary_tool injected right alongside the package-native tools, which
 # is all it takes for the registry/orchestrator to treat it as a first-class tool
 tool_config <- list(
-    list(fn = hub_genes_tool, params = list(n_hubs = 30)),
+    list(fn = top_genes_tool, params = list(n_hubs = 30)),
     list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(
         n_hubs = 25,
@@ -284,4 +284,166 @@ interps_deg <- run_synthesis_orchestrator(packets_deg, desc, backend, output_dir
 # synthesized narrative relative to the core-only run
 interps_deg[['MM1']]
 needs_review(interps_deg[['MM1']])
+```
+
+## Pseudo-bulk Analysis Pipeline
+
+The sections below walk `pseudobulk_ModuleSet()` and its two evidence tools
+(`differential_module_activity_tool`, `pseudobulk_de_limma_tool`) end to end,
+in both usage modes: **standalone** (the pseudo-bulk set runs through
+`run_orchestrator()` on its own) and **attached** (the same pseudo-bulk set
+rides alongside the real cell-level `ms` from earlier via `with_pseudobulk()`,
+so cell- and sample-level tools write into one shared packet per module).
+llegir never builds pseudo-bulk itself -- `AggregatePseudobulk()` below is the
+same aggregation helper used in `sample_code/T-cell_tumor_network_compare.Rmd`
+(sourced from `scripts/pseudobulk_functions.R`; it is not part of the hdWGCNA
+package itself, just a project-local aggregation helper), run here on our own
+real `seurat_obj`.
+
+```{r pseudobulk-setup}
+#---------------------------------------------------------
+# aggregate the real seurat_obj counts into a pseudo-bulk SummarizedExperiment
+#---------------------------------------------------------
+
+source('scripts/pseudobulk_functions.R')
+
+# one pseudobulk unit per sample (replicate_col == group_col collapses the
+# interaction down to sample-level units, same pattern as the sample_code
+# T-cell/tumor aggregation); min_cells = 50 keeps every one of our 15 samples,
+# the smallest of which carries 106 cells
+X <- Seurat::GetAssayData(seurat_obj, layer = 'counts')
+meta <- seurat_obj@meta.data
+se <- AggregatePseudobulk(X, meta, replicate_col = 'sample', group_col = 'sample', min_cells = 50)
+
+# inspect the raw aggregation before subsetting -- genes x samples counts,
+# with per-sample diagnosis/nCells/nUMI riding along in colData
+se
+SummarizedExperiment::colData(se)[, c('sample', 'diagnosis', 'nCells')]
+
+# differential_module_activity_tool/pseudobulk_de_limma_tool below need a
+# clean two-level contrast, so subset down to the same Glioblastoma vs
+# Inflammatory comparison used earlier in the DEG-import section, and
+# droplevels() so the unused diagnosis categories don't leak into the contrast
+se <- se[, SummarizedExperiment::colData(se)$diagnosis %in% c('Glioblastoma', 'Inflammatory')]
+SummarizedExperiment::colData(se)$condition <- droplevels(factor(SummarizedExperiment::colData(se)$diagnosis))
+table(SummarizedExperiment::colData(se)$condition)
+
+# pull each module's real gene membership + kME straight off the cell-level
+# ms -- this is the same module/gene_name/weight shape pseudobulk_ModuleSet()
+# expects, just built from the real network instead of a hand-picked subset
+pb_genes <- do.call(rbind, lapply(modules_use, function(mod){
+    gm <- gene_membership(ms, mod)
+    data.frame(module = mod, gene_name = gm$gene_name, weight = gm$kme)
+}))
+str(pb_genes)
+```
+
+```{r pseudobulk-ingest}
+#---------------------------------------------------------
+# ingest into pseudobulk_ModuleSet() and validate the contract
+#---------------------------------------------------------
+
+# pseudobulk_ModuleSet() reads counts/metadata straight off the
+# SummarizedExperiment (colData becomes metadata) and re-scores every module
+# directly on the real aggregated matrix via decoupleR::run_ulm() -- never by
+# averaging the per-cell scores already sitting on ms -- so pb_ms's
+# module_scores() are freshly computed pseudo-bulk activity, one row per sample
+pb_ms <- pseudobulk_ModuleSet(se, pb_genes, group_col = 'condition', sample_col = 'sample')
+
+# one row per sample, one column per module -- this is the re-scored
+# pseudo-bulk activity every downstream tool below reads from
+module_scores(pb_ms)
+
+# data_level/aggregated/capabilities read back exactly as the contract expects:
+# pseudobulk, already-aggregated, with real counts underneath
+pb_ms$data_level
+pb_ms$aggregated
+capabilities(pb_ms)
+
+# confirms every adapter generic dispatches correctly and the declared
+# capabilities/shapes are internally consistent -- throws loudly otherwise
+validate_moduleset(pb_ms)
+```
+
+```{r pseudobulk-standalone}
+#---------------------------------------------------------
+# mode 1: standalone pseudo-bulk workflow
+#---------------------------------------------------------
+
+# a pseudo-bulk ModuleSet is just another ModuleSet -- hand it straight to
+# run_orchestrator() with the two new pseudo-bulk tools; no attachment needed
+tool_config_pb <- list(
+    list(fn = differential_module_activity_tool, params = list(contrast_col = 'condition')),
+    list(fn = pseudobulk_de_limma_tool, params = list(contrast_col = 'condition'))
+)
+
+packets_pb_standalone <- run_orchestrator(
+    pb_ms, tool_config_pb, output_dir = 'output/evidence_packets_pb_standalone', modules_use = modules_use
+)
+
+# MM1-MM3 each get a real module-level differential-activity fragment
+# (Glioblastoma vs Inflammatory) plus a real per-gene limma-voom hit --
+# compare effect_strength/FDR across the three modules, there is no
+# guaranteed winner now that the signal is real rather than simulated
+packets_pb_standalone[['MM1']]$fragments[[1]]
+packets_pb_standalone[['MM1']]$fragments[[2]]
+packets_pb_standalone[['MM2']]$fragments[[1]]
+```
+
+```{r pseudobulk-attached}
+#---------------------------------------------------------
+# mode 2: attach the pseudo-bulk view to the cell-level ms
+#---------------------------------------------------------
+
+# with_pseudobulk() stores pb_ms on ms and flips ms's own 'pseudobulk'
+# capability to TRUE -- cell-level tools keep reading ms exactly as before,
+# and the two pseudo-bulk tools below resolve pb_ms internally via
+# pseudobulk_view(), never needing ms and pb_ms passed in separately
+ms_with_pb <- with_pseudobulk(ms, pb_ms)
+has_capability(ms_with_pb, 'pseudobulk')
+identical(pseudobulk_view(ms_with_pb), pb_ms)
+
+# one mixed tool_config: top_genes_tool/cluster_dme_tool read ms_with_pb's own
+# cell-level gene_membership/module_scores/metadata; the two pseudo-bulk tools
+# transparently pull pb_ms's sample-level view instead -- run_module() never
+# needs to know the difference
+tool_config_mixed <- list(
+    list(fn = top_genes_tool, params = list(n_hubs = 25)),
+    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+    list(fn = differential_module_activity_tool, params = list(contrast_col = 'condition')),
+    list(fn = pseudobulk_de_limma_tool, params = list(contrast_col = 'condition'))
+)
+
+packets_mixed <- run_orchestrator(
+    ms_with_pb, tool_config_mixed, output_dir = 'output/evidence_packets_pb_mixed', modules_use = modules_use
+)
+
+# one packet, four fragments: cell-level top_genes/cluster_dme sit right next
+# to the pseudo-bulk differential_module_activity/pseudobulk_de_limma
+# fragments -- inspect fragment_id/tool_id across the list to confirm both
+# levels landed in the SAME packet
+packets_mixed[['MM1']]
+vapply(packets_mixed[['MM1']]$fragments, function(f) f$fragment_id, character(1))
+```
+
+```{r pseudobulk-report}
+#---------------------------------------------------------
+# synthesize the mixed packets and export the combined report
+#---------------------------------------------------------
+
+# reuse the same dataset description / backend from the core synthesis block
+# above -- now running over packets that carry cell- and sample-level
+# evidence side by side
+interps_mixed <- run_synthesis_orchestrator(packets_mixed, desc, backend, output_dir = 'output/interpretations_pb_mixed')
+
+# inspect one interpretation -- check whether the pseudo-bulk evidence
+# (differential_module_activity / pseudobulk_de_limma) surfaces in the
+# narrative alongside the cell-level cluster_dme/top_genes evidence
+interps_mixed[['MM1']]
+needs_review(interps_mixed[['MM1']])
+
+# a single browsable HTML file pairing each module's synthesized narrative
+# with its full evidence packet -- open it and confirm the cell-level and
+# pseudo-bulk fragments both render in the same module's evidence table
+write_interpretation_report(interps_mixed, packets_mixed, desc, output_file = 'output/dev_report_pseudobulk.html')
 ```
