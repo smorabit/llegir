@@ -24,7 +24,7 @@ RENDER_TEMPLATE_VERSION <- '0.1'
 #' @return A single character string (Markdown).
 #' @examples
 #' ms <- llegir_example_moduleset()
-#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' interp <- synthesize_interpretation(packet, desc, mock_backend())
 #' cat(render_paragraph(interp))
@@ -107,7 +107,7 @@ describe_flags <- function(flags){
 #' @return A data.frame: `module_id`, `confidence`, `flags`, `reason`.
 #' @examples
 #' ms <- llegir_example_moduleset()
-#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' interp <- synthesize_interpretation(packet, desc, mock_backend())
 #' build_review_queue(list(m1 = interp))
@@ -155,7 +155,7 @@ write_review_queue <- function(interps, path){
 #' @return A list, suitable for [write_synthesis_manifest()].
 #' @examples
 #' ms <- llegir_example_moduleset()
-#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' interp <- synthesize_interpretation(packet, desc, mock_backend())
 #' build_synthesis_manifest(list(m1 = interp), desc)

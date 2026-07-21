@@ -6,13 +6,13 @@
 ## exercised elsewhere (test-synthesis.R, test-confidence.R).
 
 # a packet whose fragment_ids/directions match what mock_backend() cites
-# ('hub_genes'/'na', 'geneset_enrichment'/'up'), so synthesize_module() on it
+# ('top_genes'/'na', 'geneset_enrichment'/'up'), so synthesize_module() on it
 # is faithful without per-test wiring
 make_render_packet <- function(module_id){
-    hub <- evidence_fragment(
-        fragment_id = 'hub_genes', tool_id = 'hub_genes', module_id = module_id, type = 'ranked_genes',
+    top <- evidence_fragment(
+        fragment_id = 'top_genes', tool_id = 'top_genes', module_id = module_id, type = 'ranked_genes',
         result = data.frame(gene_name = c('AIF1', 'CD68', 'C1QA'), kme = c(0.9, 0.8, 0.7)),
-        compact_summary = 'top hub genes', top_findings = list(), effect_strength = 0.9,
+        compact_summary = 'top genes', top_findings = list(), effect_strength = 0.9,
         direction = 'na', provenance = make_provenance('0.1')
     )
     enrich <- evidence_fragment(
@@ -21,7 +21,7 @@ make_render_packet <- function(module_id){
         compact_summary = 'enriched terms', top_findings = list(), effect_strength = 8,
         significance = 0.001, direction = 'up', provenance = make_provenance('0.1')
     )
-    build_evidence_packet(module_id, list(hub, enrich), input_hash = 'render_test')
+    build_evidence_packet(module_id, list(top, enrich), input_hash = 'render_test')
 }
 
 make_render_interpretation <- function(module_id, packet_hash, model_score = 0.9){
@@ -29,7 +29,7 @@ make_render_interpretation <- function(module_id, packet_hash, model_score = 0.9
         module_id = module_id, proposed_label = 'Complement/phagocytic program', one_line_summary = 'x',
         dominant_biology = 'Complement activation and phagocytosis.',
         supporting_claims = list(
-            list(claim = 'Hub genes include complement components.', fragment_ids = 'hub_genes', direction = 'na'),
+            list(claim = 'Top genes include complement components.', fragment_ids = 'top_genes', direction = 'na'),
             list(claim = 'Enriched for complement/phagocytosis terms.', fragment_ids = 'geneset_enrichment', direction = 'up')
         ),
         cell_state = 'microglia', condition_dynamics = 'elevated in glioblastoma',
@@ -51,7 +51,7 @@ test_that('render_paragraph() includes label, summary, claims, and confidence', 
     expect_true(grepl('MM1', txt, fixed = TRUE))
     expect_true(grepl('Primarily expressed in: microglia', txt, fixed = TRUE))
     expect_true(grepl('Condition dynamics: elevated in glioblastoma', txt, fixed = TRUE))
-    expect_true(grepl('Hub genes include complement components', txt, fixed = TRUE))
+    expect_true(grepl('Top genes include complement components', txt, fixed = TRUE))
     expect_true(grepl('Metadata associations:', txt, fixed = TRUE))
     expect_true(grepl(sprintf('Confidence: %.2f', interp$confidence$score), txt))
 })

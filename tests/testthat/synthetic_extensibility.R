@@ -146,7 +146,7 @@ if (go_data_available) {
     # shared tool_config for full-pipeline tests, mirroring csf_tool_config in setup.R
     go_tool_config <- function(db_files = go_test_db_files){
         list(
-            list(fn = hub_genes_tool, params = list(n_hubs = 6)),
+            list(fn = top_genes_tool, params = list(n_hubs = 6)),
             list(fn = cluster_dme_tool, params = list(group_by = 'cell_type')),
             list(fn = geneset_enrichment_tool, params = list(n_hubs = 6, db_files = db_files))
         )

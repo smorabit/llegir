@@ -6,7 +6,7 @@ make_faithful_interpretation <- function(packet){
         module_id = packet$module_id,
         proposed_label = 'x', one_line_summary = 'x', dominant_biology = 'x',
         supporting_claims = list(
-            list(claim = 'hub genes claim', fragment_ids = 'hub_genes', direction = 'na'),
+            list(claim = 'top genes claim', fragment_ids = 'top_genes', direction = 'na'),
             list(claim = 'enrichment claim', fragment_ids = 'geneset_enrichment', direction = 'up')
         ),
         metadata_associations = list(

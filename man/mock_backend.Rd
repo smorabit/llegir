@@ -14,8 +14,8 @@ suitable for \code{\link[=synthesize_interpretation]{synthesize_interpretation()
 \description{
 A canned, fixed-response backend: the first-class offline backend used by
 tests and CI, and never touches the network. It cites fragment_ids
-(\code{'hub_genes'}, \code{'geneset_enrichment'}) and directions (\code{'na'}, \code{'up'})
-that hold on every packet produced by the core tools (\code{hub_genes} is
+(\code{'top_genes'}, \code{'geneset_enrichment'}) and directions (\code{'na'}, \code{'up'})
+that hold on every packet produced by the core tools (\code{top_genes} is
 always direction \code{'na'}, \code{geneset_enrichment} is always direction
 \code{'up'}), so it passes \code{\link[=check_faithfulness]{check_faithfulness()}} against any real evidence
 packet without per-module logic.

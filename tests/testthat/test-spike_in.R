@@ -26,7 +26,7 @@ test_that('positive control: cluster_dme picks the pDC cluster', {
 test_that('positive control: hub genes are drawn from the pDC marker set', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(n_hubs = 10))
-    frag <- hub_genes_tool(ctx)
+    frag <- top_genes_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
     expect_true(all(frag$result$gene_name %in% pdc_genes))
 })

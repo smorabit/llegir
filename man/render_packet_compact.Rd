@@ -24,6 +24,6 @@ only sees pre-summarized evidence.
 }
 \examples{
 ms <- llegir_example_moduleset()
-packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 cat(render_packet_compact(packet))
 }

@@ -34,7 +34,7 @@ hallmark_gmt <- c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt')
 
 # define the list of tools to run
 tool_config <- list(
-    list(fn = hub_genes_tool, params = list(n_hubs = 30)),
+    list(fn = top_genes_tool, params = list(n_hubs = 30)),
     list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(
         n_hubs = 25,

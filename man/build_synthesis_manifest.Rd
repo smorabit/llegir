@@ -30,7 +30,7 @@ to produce this batch of outputs.
 }
 \examples{
 ms <- llegir_example_moduleset()
-packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 interp <- synthesize_interpretation(packet, desc, mock_backend())
 build_synthesis_manifest(list(m1 = interp), desc)

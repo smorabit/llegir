@@ -56,7 +56,7 @@ test_schema_path <- system.file('schemas', 'interpretation.schema.json', package
 # scripts/run_csf.R, for prompt/synthesis tests that need a real packet
 # without depending on the gitignored output/evidence_packets/ directory
 csf_tool_config <- list(
-    list(fn = hub_genes_tool, params = list(n_hubs = 25)),
+    list(fn = top_genes_tool, params = list(n_hubs = 25)),
     list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(n_hubs = 25, db_files = test_db_files))
 )
@@ -70,12 +70,12 @@ if (csf_data_available) {
     negative_ms <- synthetic_ModuleSet(ms_test, list(random_module = random_control_genes(so_test)))
 }
 
-# a full evidence packet (hub_genes, cluster_dme, geneset_enrichment) for a
+# a full evidence packet (top_genes, cluster_dme, geneset_enrichment) for a
 # spike-in module -- confidence/faithfulness tests need a multi-fragment
 # packet, not just a single tool's output
 build_spike_in_packet <- function(ms, module_id, n_hubs){
     tool_config <- list(
-        list(fn = hub_genes_tool, params = list(n_hubs = n_hubs)),
+        list(fn = top_genes_tool, params = list(n_hubs = n_hubs)),
         list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
         list(fn = geneset_enrichment_tool, params = list(n_hubs = n_hubs, db_files = test_db_files))
     )

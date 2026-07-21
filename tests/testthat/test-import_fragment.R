@@ -63,7 +63,7 @@ test_that('import_fragment_tool() flows through the orchestrator unchanged', {
         fdr = c(0.01, 0.8)
     )
     tool_config <- list(
-        list(fn = hub_genes_tool, params = list(n_hubs = 5)),
+        list(fn = top_genes_tool, params = list(n_hubs = 5)),
         list(fn = import_fragment_tool, params = list(type = 'geneset_enrichment', result = user_table))
     )
     packet <- run_module(ms_test, mod_test, tool_config)

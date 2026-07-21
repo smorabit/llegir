@@ -1,10 +1,10 @@
 ## core tools: each must return a fragment that passes validate_evidence_fragment
 ## and carries the right `type`, run against a real module from the CSF object.
 
-test_that('hub_genes_tool() returns a valid ranked_genes fragment', {
+test_that('top_genes_tool() returns a valid ranked_genes fragment', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 10))
-    frag <- hub_genes_tool(ctx)
+    frag <- top_genes_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
     expect_equal(frag$type, 'ranked_genes')
     expect_equal(nrow(frag$result), 10)

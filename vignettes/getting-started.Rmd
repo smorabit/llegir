@@ -82,19 +82,19 @@ Each module is characterized by running a set of analysis tools. Every tool take
 # set up the context (ctx) for the tool
 ctx <- list(ms = ms, module_id = 'MM1', params = list(n_hubs = 10))
 
-# run the hub genes tool to get the top 10 hub genes
-hub_frag <- hub_genes_tool(ctx)
+# run the top genes tool to get the top 10 genes by membership
+top_frag <- top_genes_tool(ctx)
 
 # sanity check:
-validate_evidence_fragment(hub_frag)
+validate_evidence_fragment(top_frag)
 
 # show the result
-hub_frag$compact_summary
+top_frag$compact_summary
 ```
 
 **llegir** ships several pre-built analysis tools:
 
-- `hub_genes_tool()`: top hub genes by kME
+- `top_genes_tool()`: top genes by kME
 - `cluster_dme_tool()`: differential module expression across clusters
 - `geneset_enrichment_tool()`: GO/pathway enrichment
 - `signature_correlation_tool()`: co-variation with a signature library
@@ -107,7 +107,7 @@ We run a chain of tools over the module set using `run_orchestrator()`, which th
 modules_use <- c('MM1', 'MM2', 'MM3')
 
 tool_config <- list(
-    list(fn = hub_genes_tool, params = list(n_hubs = 25)),
+    list(fn = top_genes_tool, params = list(n_hubs = 25)),
     list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(
         n_hubs = 25,

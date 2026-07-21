@@ -53,5 +53,5 @@ result table (via \code{\link[=write_fragment_tables]{write_fragment_tables()}})
 }
 \examples{
 ms <- llegir_example_moduleset()
-run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
+run_orchestrator(ms, list(list(fn = top_genes_tool, params = list())), output_dir = tempfile())
 }

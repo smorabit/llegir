@@ -16,5 +16,5 @@ A \code{tool_spec} object: \code{list(id, fn, type, description, requires)}.
 Look up a registered tool spec by id
 }
 \examples{
-get_tool('hub_genes')
+get_tool('top_genes')
 }

@@ -53,6 +53,6 @@ loudly the same way, via \code{\link[=validate_evidence_fragment]{validate_evide
 }
 \examples{
 ms <- llegir_example_moduleset()
-run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
-run_module(ms, modules(ms)[1], list(list(id = 'hub_genes', params = list())))
+run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
+run_module(ms, modules(ms)[1], list(list(id = 'top_genes', params = list())))
 }

@@ -55,7 +55,7 @@ reference:
 - title: Evidence tools
   desc: Core deterministic evidence tools; each returns one evidence_fragment.
   contents:
-  - hub_genes_tool
+  - top_genes_tool
   - cluster_dme_tool
   - module_by_metadata_tool
   - geneset_enrichment_tool

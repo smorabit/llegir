@@ -51,7 +51,7 @@ and recorded as \code{NULL}, mirroring \code{\link[=run_orchestrator]{run_orches
 }
 \examples{
 ms <- llegir_example_moduleset()
-packets <- run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
+packets <- run_orchestrator(ms, list(list(fn = top_genes_tool, params = list())), output_dir = tempfile())
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 run_synthesis_orchestrator(packets, desc, mock_backend(), output_dir = tempfile())
 }

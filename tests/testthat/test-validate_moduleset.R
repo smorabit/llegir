@@ -69,12 +69,12 @@ test_that('validate_moduleset() fails loudly when aggregated is not a length-1 l
 test_that('run_orchestrator() validates ms by default and can skip validation', {
     bad_ms <- structure(list(), class = 'not_a_moduleset')
     expect_error(
-        run_orchestrator(bad_ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile()),
+        run_orchestrator(bad_ms, list(list(fn = top_genes_tool, params = list())), output_dir = tempfile()),
         'validate_moduleset'
     )
     # with validate = FALSE, it instead fails later, inside modules(ms) itself
     expect_error(
-        run_orchestrator(bad_ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile(), validate = FALSE),
+        run_orchestrator(bad_ms, list(list(fn = top_genes_tool, params = list())), output_dir = tempfile(), validate = FALSE),
         'no applicable method'
     )
 })

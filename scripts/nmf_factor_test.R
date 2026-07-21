@@ -41,7 +41,7 @@ factor_names <- paste0('Fact', seq_len(n_factors))
 
 # loadings: factors x genes, non-negative like a real NMF gene-spectra matrix.
 # each factor gets 10 "characteristic" genes with a strong loading and every
-# other gene a small background loading, so hub_genes_tool has real signal
+# other gene a small background loading, so top_genes_tool has real signal
 # to rank instead of ties
 loadings <- matrix(
     abs(stats::rnorm(n_factors * n_genes, mean = 0.05, sd = 0.02)),
@@ -67,7 +67,7 @@ for (f in factor_names) {
 
 # reconstruct each factor's contribution to expression (t(loadings) %*% usage
 # is genes x cells, the classic NMF V ~= W H shape) and add it on top of the
-# background noise -- this is what makes hub_genes_tool's top genes per
+# background noise -- this is what makes top_genes_tool's top genes per
 # factor actually correlate with that factor's usage, same as a real cNMF run
 expr <- expr + t(loadings) %*% usage
 
@@ -135,7 +135,7 @@ desc <- dataset_description(
 )
 
 tool_config <- list(
-    list(fn = hub_genes_tool, params = list(n_hubs = 10)),
+    list(fn = top_genes_tool, params = list(n_hubs = 10)),
     list(fn = cluster_dme_tool, params = list(group_by = 'cell_state'))
 )
 
@@ -144,7 +144,7 @@ packets <- run_orchestrator(
     module_method = desc$module_method
 )
 
-# inspect Fact1's packet: hub_genes should surface exactly the 10 genes this
+# inspect Fact1's packet: top_genes should surface exactly the 10 genes this
 # script gave Fact1 a strong loading for, and cluster_dme should call state_a
 # the strongest cell_state (Fact1's usage was boosted in state_a cells)
 packets[['Fact1']]$fragments[[1]]$compact_summary

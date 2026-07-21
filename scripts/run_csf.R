@@ -9,7 +9,7 @@ source('R/moduleset_components.R')
 source('R/moduleset_hdwgcna.R')
 source('R/fragment.R')
 source('R/stats_utils.R')
-source('R/tool_hub_genes.R')
+source('R/tool_top_genes.R')
 source('R/tool_cluster_dme.R')
 source('R/tool_geneset_enrichment.R')
 source('R/moduleset_gene_list.R')  # .score_gene_sets(), reused by tool_signature_correlation.R below
@@ -28,12 +28,12 @@ tables_dir <- 'output/tables'
 # Hallmark once they are.
 hallmark_gmt <- c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt')
 
-# core tools for the CSF dataset (docs/milestone_1.md): hub genes, which cell
+# core tools for the CSF dataset (docs/milestone_1.md): top genes, which cell
 # state expresses the module (lv2_annot), offline GO enrichment (GeneOverlap
-# against local GMTs) over hub genes, and Hallmark signature co-variation
+# against local GMTs) over top genes, and Hallmark signature co-variation
 # over the module's own activity.
 tool_config <- list(
-    list(fn = hub_genes_tool, params = list(n_hubs = 25)),
+    list(fn = top_genes_tool, params = list(n_hubs = 25)),
     list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(
         n_hubs = 25,

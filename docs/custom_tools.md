@@ -80,7 +80,7 @@ Reference it from `tool_config` by id, exactly like a core tool:
 
 ```r
 tool_config <- list(
-    list(id = 'hub_genes', params = list(n_hubs = 25)),
+    list(id = 'top_genes', params = list(n_hubs = 25)),
     list(id = 'my_tool', params = list())
 )
 run_module(ms, module_id, tool_config)

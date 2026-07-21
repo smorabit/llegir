@@ -80,7 +80,7 @@ test_that('the evidence pipeline runs end to end on a components_ModuleSet and p
     for (frag in packet$fragments) expect_true(validate_evidence_fragment(frag))
 
     ids <- vapply(packet$fragments, function(f) f$fragment_id, character(1))
-    expect_setequal(ids, c('hub_genes', 'cluster_dme', 'geneset_enrichment'))
+    expect_setequal(ids, c('top_genes', 'cluster_dme', 'geneset_enrichment'))
 
     # module_a's hub genes are exactly its own real GO BP term's genes, so
     # that term should come back as (one of) the top enrichment hit(s)

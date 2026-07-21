@@ -50,8 +50,8 @@ test_that('run_module() omits skipped tools from the packet instead of failing t
     skip_if_not(go_data_available, 'GO Biological Process data not available')
     packet <- suppressMessages(run_module(go_gene_list_ms_nocap, 'module_a', go_tool_config(), input_hash = 'go_nocap_test'))
     ids <- vapply(packet$fragments, function(f) f$fragment_id, character(1))
-    # cluster_dme needs a capability this ModuleSet lacks; hub_genes and
+    # cluster_dme needs a capability this ModuleSet lacks; top_genes and
     # geneset_enrichment only need gene_membership()/expression(), always present
-    expect_setequal(ids, c('hub_genes', 'geneset_enrichment'))
+    expect_setequal(ids, c('top_genes', 'geneset_enrichment'))
     for (frag in packet$fragments) expect_true(validate_evidence_fragment(frag))
 })

@@ -27,7 +27,7 @@ A **tool** is `function(ctx) -> evidence_fragment`. `ctx` carries: the `ModuleSe
 
 | Tool | Returns |
 |---|---|
-| `hub_genes` | ranked genes by kME |
+| `top_genes` | ranked genes by kME |
 | `module_by_metadata` | ME vs. a declared metadata column: categorical → group enrichment; continuous → correlation; paired → Δ |
 | `cluster_dme` | `FindAllDMEs` across a grouping (which cell states express the module) |
 | `geneset_enrichment` | GO / Enrichr / MSigDB over hub genes |
