@@ -34,6 +34,13 @@ cluster_dme_tool <- function(ctx){
     keep <- !is.na(groups)
     test <- categorical_group_test(scores[keep], groups[keep])
     result <- test$table
+    # markers must reflect upregulation only; a state where the module scores
+    # lower than the rest is not a positive marker for that state
+    result <- result[result$rank_biserial > 0, ]
+    if (nrow(result) == 0) {
+        message('cluster_dme: skipped, no state shows positive module enrichment')
+        return(NULL)
+    }
     top <- result[1, ]
 
     top_findings <- lapply(seq_len(min(5, nrow(result))), function(i){
