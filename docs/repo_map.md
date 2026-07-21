@@ -10,6 +10,7 @@
 ├── docs
 │   ├── 2026-07-10.md
 │   ├── 2026-07-13.md
+│   ├── 2026-07-21.md
 │   ├── custom_tools.md
 │   ├── dev_economy.md
 │   ├── implementation_guide.md
@@ -74,7 +75,6 @@
 │   ├── get_tool.Rd
 │   ├── has_capability.Rd
 │   ├── hdWGCNA_ModuleSet.Rd
-│   ├── hub_genes_tool.Rd
 │   ├── import_enrichr.Rd
 │   ├── import_fragment_tool.Rd
 │   ├── import_fragment.Rd
@@ -118,6 +118,7 @@
 │   ├── synthesize_interpretation.Rd
 │   ├── synthesize_module.Rd
 │   ├── synthetic_ModuleSet.Rd
+│   ├── top_genes_tool.Rd
 │   ├── validate_dataset_description.Rd
 │   ├── validate_evidence_fragment.Rd
 │   ├── validate_interpretation.Rd
@@ -136,15 +137,24 @@
 │   │   ├── 0e687097cd09776cbdb31aa22c29b5862663bb894429165265eebba9f7f73cb0.rds
 │   │   ├── 1015b77398b6919441426aafc0d20601a6b5663f48f01d967bcbf1e76c50a4ed.rds
 │   │   ├── 200d397836b6d8ccaf08ef2834034ac29829806a2870587791c84ca10b98e291.rds
+│   │   ├── 208a7413314299e996ea39b57700b9ce1413b53a5d25813b63ae15e5433f31e1.rds
 │   │   ├── 2c0dfb8d5c26d59ee35c4665f9003e5a164dc27fbc942371e8f2b03324f48aa4.rds
+│   │   ├── 43277a3278fa42dd0ad34bcc846ad47240a67dbf15916b6922322073c3f16d02.rds
+│   │   ├── 45cc4e9c146477252d8b2c153481f834ee5b83d8cbe88cef6fde0e6fdea2e6a4.rds
 │   │   ├── 4b49ae991414e8d1192eebfc82b1a40c7f20290b7f70329dc1d41a477f99b3bf.rds
 │   │   ├── 5e22b2ca1345d6add78fcb8232379c2e6413148865e60ffb31e8321f259294ed.rds
 │   │   ├── 669f4d0799c69e511e0e994da1a79e99c9c43d553b9c407c9b3a631d72ba841e.rds
 │   │   ├── 7db8711381f73d00d7bff9f590dc9c8ac9e8f6e9a502fcc23368d157fec65474.rds
+│   │   ├── 85c364816e6af239b4bf8a7376fdcff0227c3d1abf1209e479155e57d6fc867d.rds
+│   │   ├── 86ba3d2a869ba82de6b68947f29e173953952977d3bebd19c1394b298a8a44d3.rds
 │   │   ├── 91cce207e7129f7707db4f8157ddd04051a6ca58d802956eeb6319a9d99fc6d3.rds
 │   │   ├── 9be6081354a3b91fad47b6b79da6463d5e0ce57715b237824a42ded0abc5184b.rds
+│   │   ├── a94a65590db71f1676a6c3b161c4a67834731c9b71d4323b0af807d079a12947.rds
 │   │   ├── bec484bb4d8b45b23719924a181d73e9c6f72e11b0a725f871ec7e4c59fa5519.rds
+│   │   ├── c753f141e2ac0c739a87429baa3976f8c44343e085caabf742a8453ab75cdee4.rds
+│   │   ├── ca7237bd8c3d1916c75c6f0ad9940eee6097095172e5280aed0bc4200aed9ce3.rds
 │   │   ├── da022940ced7cad00d90d72b2161f3e29f03eb4bd8ca54e2b8149a84ae4b7397.rds
+│   │   ├── da4809520ca03d862b8cba2137bb8d117439fe595075a1e56f1f383c9d1c0985.rds
 │   │   ├── e1dc871c4796673611038145ae1350aa4ae59ad98a66c8d86b5954708c7f5500.rds
 │   │   ├── e42868506259fe8d214767f0e630a8a4cb7aeeaf39408b18e8ee1d535dd3fa32.rds
 │   │   ├── f001d2669b078055995ad0e570443b2ef1b498b3f84f9e384c60aff42dbc99e7.rds
@@ -498,22 +508,24 @@
 │   ├── tool_cluster_dme.R
 │   ├── tool_differential_module_activity.R
 │   ├── tool_geneset_enrichment.R
-│   ├── tool_hub_genes.R
 │   ├── tool_pseudobulk_de_limma.R
 │   ├── tool_signature_correlation.R
+│   ├── tool_top_genes.R
 │   └── utils.R
 ├── README.md
 ├── README.Rmd
+├── sample_code
+│   └── T-cell_tumor_network_compare.Rmd
 ├── scripts
 │   ├── interactive_test.R
 │   ├── interactive_test.Rmd
 │   ├── nmf_factor_test.R
+│   ├── pseudobulk_functions.R
 │   ├── run_csf.R
 │   └── run_synthesis_csf.R
 ├── STYLE.md
 ├── tests
 │   └── testthat
-│       ├── _snaps
 │       ├── setup.R
 │       ├── synthetic_extensibility.R
 │       ├── synthetic_moduleset.R
@@ -540,4 +552,4 @@
 └── vignettes
     └── getting-started.Rmd
 
-52 directories, 489 files
+52 directories, 501 files
