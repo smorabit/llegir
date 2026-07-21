@@ -192,6 +192,49 @@ interps <- run_synthesis_orchestrator(packets, desc, backend, output_dir = 'outp
 # inspect one interpretation
 interps[['MM1']]
 needs_review(interps[['MM1']])
+```
+
+```{r user-weights-demo}
+#---------------------------------------------------------
+# demonstrate tool importance overrides via user_weights (docs/milestones/
+# milestone_fused_confidence.md S4) -- budget: stays to the one already-run
+# MM1 packet/module, no extra synthesis calls beyond this single re-run
+#---------------------------------------------------------
+
+# MM1's packet carries the three core fragments (top_genes, cluster_dme,
+# geneset_enrichment) plus the script-local ncbi_gene_summary_tool fragment;
+# this is calculate_fusion_score() with the default structural tiers -- the
+# same E_pool/E_evidence already baked into interps[['MM1']]$confidence
+mm1_packet <- packets[['MM1']]
+default_fusion <- calculate_fusion_score(mm1_packet$fragments)
+default_fusion$matrix
+
+# mute the script-local ncbi_gene_summary tool entirely (u = 0 -- it isn't
+# registered via register_tool(), so it would otherwise fall back to the
+# medium tier by default) and boost geneset_enrichment, structurally the
+# low tier, up toward high -- e.g. a user who trusts GO overlap heavily for
+# this dataset and doesn't want the NCBI gene-summary tool voting at all
+custom_weights <- list(ncbi_gene_summary = 0, geneset_enrichment = 3)
+custom_fusion <- calculate_fusion_score(mm1_packet$fragments, user_weights = custom_weights)
+custom_fusion$matrix
+
+# side-by-side comparison -- muting one tool and boosting another shifts
+# E_pool/E_evidence without touching the per-fragment magnitude/reliability
+# math (.magnitude_score()/.reliability_score() are untouched by tier weight)
+data.frame(
+    weighting = c('default_tiers', 'custom_user_weights'),
+    e_pool = c(default_fusion$e_pool, custom_fusion$e_pool),
+    c_dir = c(default_fusion$c_dir, custom_fusion$c_dir),
+    e_evidence = c(default_fusion$e_evidence, custom_fusion$e_evidence)
+)
+
+# run the same custom_weights through the full synthesis pipeline on this one
+# module -- confidence.score and the fusion-string rationale should reflect
+# the reweighted E_evidence, and the EVIDENCE CONFIDENCE MATRIX injected into
+# the prompt reflects the same custom weights the model was shown
+interp_custom_weights <- synthesize_module(mm1_packet, desc, backend, user_weights = custom_weights)
+interp_custom_weights$confidence$score
+interp_custom_weights$confidence$rationale
 
 #---------------------------------------------------------
 # export a combined interpretation + evidence HTML report

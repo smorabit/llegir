@@ -26,7 +26,7 @@
 #' they're unmet, rather than the tool having to self-skip. See
 #' `docs/custom_tools.md` for a worked template.
 #'
-#' @param id A unique tool id, e.g. `'hub_genes'` or `'my_custom_tool'`.
+#' @param id A unique tool id, e.g. `'top_genes'` or `'my_custom_tool'`.
 #' @param fn A `function(ctx) -> evidence_fragment`, where `ctx` is
 #'   `list(ms, module_id, params)` (see [run_module()]).
 #' @param type One or more of the `evidence_fragment` controlled vocabulary
@@ -40,22 +40,26 @@
 #'   either a character vector (e.g. `c('grouping', 'module_scores')`), or a
 #'   `function(params) -> character vector` for a tool whose requirement
 #'   depends on how it's called. Default `character(0)` (no requirement).
+#' @param tier Structural importance tier consulted by
+#'   [calculate_fusion_score()] to weight this tool's fragments: one of
+#'   `'high'`, `'medium'`, `'low'`. Default `'medium'`.
 #' @return `id`, invisibly.
 #' @examples
-#' my_tool <- function(ctx) hub_genes_tool(ctx)
+#' my_tool <- function(ctx) top_genes_tool(ctx)
 #' register_tool(
 #'     'my_tool', my_tool, type = 'ranked_genes',
 #'     description = 'demo', requires = character(0)
 #' )
 #' @export
-register_tool <- function(id, fn, type, description, requires = character(0)){
+register_tool <- function(id, fn, type, description, requires = character(0), tier = 'medium'){
     if (!is.character(id) || length(id) != 1) stop('id must be a single string')
     if (!is.function(fn)) stop('fn must be a function')
     if (!all(type %in% .fragment_types)) stop('invalid type: ', paste(setdiff(type, .fragment_types), collapse = ', '))
     if (!is.function(requires) && !is.character(requires)) stop('requires must be a character vector or a function(params)')
+    if (!(tier %in% c('high', 'medium', 'low'))) stop("tier must be one of 'high', 'medium', 'low'")
 
     spec <- structure(
-        list(id = id, fn = fn, type = type, description = description, requires = requires),
+        list(id = id, fn = fn, type = type, description = description, requires = requires, tier = tier),
         class = 'tool_spec'
     )
     assign(id, spec, envir = .tool_registry)
@@ -67,7 +71,7 @@ register_tool <- function(id, fn, type, description, requires = character(0)){
 #' @param id A tool id, as passed to [register_tool()].
 #' @return A `tool_spec` object: `list(id, fn, type, description, requires)`.
 #' @examples
-#' get_tool('hub_genes')
+#' get_tool('top_genes')
 #' @export
 get_tool <- function(id){
     if (!exists(id, envir = .tool_registry, inherits = FALSE)) stop('tool not registered: ', id)
@@ -92,35 +96,35 @@ list_tools <- function(){
 
 .onLoad <- function(libname, pkgname){
     register_tool(
-        'hub_genes', hub_genes_tool, type = 'ranked_genes',
+        'top_genes', top_genes_tool, type = 'ranked_genes',
         description = 'Top module genes ranked by membership (kME)',
-        requires = character(0)
+        requires = character(0), tier = 'medium'
     )
     register_tool(
         'cluster_dme', cluster_dme_tool, type = 'state_expression',
         description = 'Which cell states express this module',
-        requires = c('grouping', 'module_scores')
+        requires = c('grouping', 'module_scores'), tier = 'high'
     )
     register_tool(
         'geneset_enrichment', geneset_enrichment_tool, type = 'geneset_enrichment',
         description = "Gene-set overlap enrichment among a module's hub genes",
-        requires = 'expression'
+        requires = 'expression', tier = 'low'
     )
     register_tool(
         'signature_correlation', signature_correlation_tool, type = 'signature_correlation',
         description = "Correlate a module's activity with a signature library",
-        requires = c('module_scores', 'expression')
+        requires = c('module_scores', 'expression'), tier = 'medium'
     )
     register_tool(
         'differential_module_activity', differential_module_activity_tool,
         type = c('cross_condition_delta', 'categorical_association'),
         description = "Module-level differential activity across a condition, on pseudo-bulk samples",
-        requires = 'module_scores'
+        requires = 'module_scores', tier = 'high'
     )
     register_tool(
         'pseudobulk_de_limma', pseudobulk_de_limma_tool,
         type = 'cross_condition_delta',
         description = "Gene-level differential expression (limma-voom) within a module, on pseudo-bulk counts",
-        requires = character(0)
+        requires = character(0), tier = 'high'
     )
 }

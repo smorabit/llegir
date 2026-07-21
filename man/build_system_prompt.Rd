@@ -12,8 +12,10 @@ A single character string.
 \description{
 A fixed set of rules governing how a backend must fill the model-facing
 interpretation schema: evidence-only claims, citation requirements,
-direction consistency, controlled vocabularies, and the empty-literature
-constraint.
+direction consistency, controlled vocabularies, the empty-literature
+constraint, and how \code{confidence.score} must relate to the deterministic
+EVIDENCE CONFIDENCE MATRIX (\code{\link[=calculate_fusion_score]{calculate_fusion_score()}}) injected into the
+user prompt by \code{\link[=build_user_prompt]{build_user_prompt()}}.
 }
 \examples{
 cat(build_system_prompt())

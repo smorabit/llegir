@@ -3,8 +3,6 @@ title: 'llegir module interpretation report'
 date: '`r format(Sys.time(), "%Y-%m-%d %H:%M")`'
 output:
   html_document:
-    toc: true
-    toc_float: true
     theme: cosmo
 params:
   interps: !r NULL
@@ -23,6 +21,16 @@ desc <- params$desc
 # interpretation is skipped rather than rendered evidence-only
 module_ids <- names(interps)
 
+# fragment types whose compact_summary is just a truncated preview of the
+# exact same rows the top_findings table already shows in full (a plain
+# name/term list with no aggregate statistic beyond the table, e.g. 'top 30
+# genes by kME: FCGBP, A2M, ...') -- redundant once the table renders, so
+# skipped for these types when a table is available (see the modules loop
+# below); state_expression/categorical_association/cross_condition_delta
+# summaries carry an omnibus stat or contrast label the table doesn't repeat,
+# so they're always kept
+redundant_summary_types <- c('ranked_genes', 'geneset_enrichment', 'signature_correlation')
+
 # flatten one fragment's top_findings (a list of named lists, one per salient
 # item) into a character data.frame for a clean kable, coercing every cell to a
 # scalar string so ragged / nested entries never break the table
@@ -37,12 +45,33 @@ findings_table <- function(top_findings) {
     })
     dplyr::bind_rows(rows)
 }
+
+# report-only rendering of a dataset_description: one labeled line per
+# attribute, since the compact bullet text from render_dataset_description()
+# is built for the LLM prompt and bunches together when emitted as raw asis
+desc_line <- function(label, value) {
+    if (is.null(value) || length(value) == 0 || all(is.na(value)) || !any(nzchar(trimws(value)))) return(NULL)
+    paste0('<div><strong>', label, ':</strong> ', paste(value, collapse = ', '), '</div>')
+}
+
+render_desc_html <- function(desc) {
+    lines <- c(
+        desc_line('Species', desc$species),
+        desc_line('Tissue', desc$tissue),
+        desc_line('Cell Compartment', desc$cell_compartment),
+        desc_line('Assay', desc$assay),
+        desc_line('Conditions', desc$conditions),
+        desc_line('Module Method', desc$module_method),
+        desc_line('Notes', desc$notes)
+    )
+    paste(lines, collapse = '\n')
+}
 ```
 
 ## Dataset
 
 ```{r dataset, results = 'asis'}
-cat(render_dataset_description(desc))
+cat(render_desc_html(desc))
 ```
 
 # Modules {.tabset .tabset-fade}
@@ -55,7 +84,7 @@ for (module_id in module_ids) {
     cat('\n\n## ', module_id, ' — ', interp$proposed_label, '\n\n', sep = '')
     cat('*', interp$one_line_summary, '*\n\n', sep = '')
 
-    cat('### AI narrative\n\n')
+    cat('### Synthesized Biological Interpretation\n\n')
     cat('**Dominant biology.** ', interp$dominant_biology, '\n\n', sep = '')
 
     if (!is.null(interp$cell_state) && !is.na(interp$cell_state)) {
@@ -91,6 +120,30 @@ for (module_id in module_ids) {
     }
 
     #-----------------------------------------------------------
+    # deterministic evidence confidence matrix, recomputed straight from the
+    # paired packet -- the same calculate_fusion_score() call that produced
+    # the E_pool/P_agree/C_dir terms quoted in the rationale above, rendered
+    # as a table rather than the fixed-width text block used in the prompt
+    #-----------------------------------------------------------
+
+    if (!is.null(packet) && length(packet$fragments) > 0) {
+        fusion <- calculate_fusion_score(packet$fragments)
+        cat('### Evidence Confidence Matrix\n\n')
+        print(knitr::kable(fusion$matrix, format = 'markdown'))
+        cat('\n\n')
+        cat(
+            '<div>',
+            '<strong>E_pool:</strong> ', sprintf('%.2f', fusion$e_pool), ' &nbsp; ',
+            '<strong>C_dir:</strong> ', sprintf('%.2f', fusion$c_dir), ' &nbsp; ',
+            '<strong>P_agree:</strong> ', sprintf('%.2f', fusion$p_agree), ' &nbsp; ',
+            '<strong>E_evidence:</strong> ', sprintf('%.2f', fusion$e_evidence), ' &nbsp; ',
+            '<strong>lambda:</strong> ', sprintf('%.2f', fusion$lambda),
+            '</div>\n\n',
+            sep = ''
+        )
+    }
+
+    #-----------------------------------------------------------
     # raw supporting evidence pulled from the paired packet
     #-----------------------------------------------------------
 
@@ -102,12 +155,15 @@ for (module_id in module_ids) {
 
     for (frag in packet$fragments) {
         cat('#### `', frag$fragment_id, '` (', frag$type, ')\n\n', sep = '')
-        cat(frag$compact_summary, '\n\n', sep = '')
 
         tbl <- findings_table(frag$top_findings)
+        show_summary <- is.null(tbl) || nrow(tbl) == 0 || !(frag$type %in% redundant_summary_types)
+        if (show_summary) cat(frag$compact_summary, '\n\n', sep = '')
+
         if (!is.null(tbl) && nrow(tbl) > 0) {
+            cat('<div style="max-height: 250px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; margin-bottom: 15px;">\n\n')
             print(knitr::kable(tbl, format = 'markdown'))
-            cat('\n\n')
+            cat('\n\n</div>\n\n')
         }
     }
 }

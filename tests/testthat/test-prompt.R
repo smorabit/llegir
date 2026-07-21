@@ -27,7 +27,7 @@ test_that('render_dataset_description() includes every required field', {
 test_that('render_packet_compact() includes compact_summary but caps top_findings instead of dumping the full result table', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 25))
-    frag <- hub_genes_tool(ctx)
+    frag <- top_genes_tool(ctx)
     packet <- build_evidence_packet(mod_test, list(frag), input_hash = 'abc')
     txt <- render_packet_compact(packet, max_findings = 8)
     expect_true(grepl(frag$fragment_id, txt, fixed = TRUE))
@@ -48,10 +48,45 @@ test_that('build_system_prompt() states the faithfulness rule and controlled voc
 test_that('build_user_prompt() prepends the dataset description before the packet', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 10))
-    frag <- hub_genes_tool(ctx)
+    frag <- top_genes_tool(ctx)
     packet <- build_evidence_packet(mod_test, list(frag), input_hash = 'abc')
     desc <- csf_dataset_description()
     txt <- build_user_prompt(packet, desc)
     expect_true(which(grepl('Dataset context', strsplit(txt, '\n')[[1]])) <
                     which(grepl('evidence packet', strsplit(txt, '\n')[[1]])))
+})
+
+## EVIDENCE CONFIDENCE MATRIX (docs/milestones/milestone_fused_confidence.md S6)
+
+test_that('build_user_prompt() appends the deterministic EVIDENCE CONFIDENCE MATRIX after the packet', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
+    ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 10))
+    frag <- top_genes_tool(ctx)
+    packet <- build_evidence_packet(mod_test, list(frag), input_hash = 'abc')
+    desc <- csf_dataset_description()
+    txt <- build_user_prompt(packet, desc)
+    lines <- strsplit(txt, '\n')[[1]]
+    expect_true(any(grepl('EVIDENCE CONFIDENCE MATRIX', lines)))
+    expect_true(which(grepl('evidence packet', lines))[1] < which(grepl('EVIDENCE CONFIDENCE MATRIX', lines))[1])
+    expect_true(any(grepl(frag$fragment_id, lines, fixed = TRUE)))
+    expect_true(any(grepl('E_evidence', lines)))
+    expect_true(any(grepl('CONSTRAINTS', lines)))
+})
+
+test_that('build_user_prompt() reuses a pre-computed fusion object instead of recomputing it', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
+    ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 10))
+    frag <- top_genes_tool(ctx)
+    packet <- build_evidence_packet(mod_test, list(frag), input_hash = 'abc')
+    desc <- csf_dataset_description()
+
+    fusion <- calculate_fusion_score(packet$fragments, user_weights = list(top_genes = 0.2))
+    txt <- build_user_prompt(packet, desc, fusion = fusion)
+    expect_true(grepl(sprintf('E_evidence      = %.2f', fusion$e_evidence), txt, fixed = TRUE))
+})
+
+test_that('build_system_prompt() states the confidence-matrix grounding rules', {
+    txt <- build_system_prompt()
+    expect_true(grepl('EVIDENCE CONFIDENCE MATRIX', txt))
+    expect_true(grepl('E_evidence', txt))
 })

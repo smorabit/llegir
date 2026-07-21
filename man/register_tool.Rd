@@ -4,10 +4,17 @@
 \alias{register_tool}
 \title{Register a tool (core or custom) in the tool registry}
 \usage{
-register_tool(id, fn, type, description, requires = character(0))
+register_tool(
+  id,
+  fn,
+  type,
+  description,
+  requires = character(0),
+  tier = "medium"
+)
 }
 \arguments{
-\item{id}{A unique tool id, e.g. \code{'hub_genes'} or \code{'my_custom_tool'}.}
+\item{id}{A unique tool id, e.g. \code{'top_genes'} or \code{'my_custom_tool'}.}
 
 \item{fn}{A \verb{function(ctx) -> evidence_fragment}, where \code{ctx} is
 \code{list(ms, module_id, params)} (see \code{\link[=run_module]{run_module()}}).}
@@ -25,6 +32,10 @@ than one.}
 either a character vector (e.g. \code{c('grouping', 'module_scores')}), or a
 \verb{function(params) -> character vector} for a tool whose requirement
 depends on how it's called. Default \code{character(0)} (no requirement).}
+
+\item{tier}{Structural importance tier consulted by
+\code{\link[=calculate_fusion_score]{calculate_fusion_score()}} to weight this tool's fragments: one of
+\code{'high'}, \code{'medium'}, \code{'low'}. Default \code{'medium'}.}
 }
 \value{
 \code{id}, invisibly.
@@ -39,7 +50,7 @@ they're unmet, rather than the tool having to self-skip. See
 \code{docs/custom_tools.md} for a worked template.
 }
 \examples{
-my_tool <- function(ctx) hub_genes_tool(ctx)
+my_tool <- function(ctx) top_genes_tool(ctx)
 register_tool(
     'my_tool', my_tool, type = 'ranked_genes',
     description = 'demo', requires = character(0)

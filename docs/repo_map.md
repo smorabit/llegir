@@ -20,6 +20,7 @@
 │   │   ├── milestone_2.md
 │   │   ├── milestone_abstract_moduleset.md
 │   │   ├── milestone_extensibility.md
+│   │   ├── milestone_fused_confidence.md
 │   │   ├── milestone_packaging.md
 │   │   ├── milestone_pseudobulk.md
 │   │   └── milestone2_verification.md
@@ -28,6 +29,7 @@
 │   │   ├── handoff_prompt_dev_economy.md
 │   │   ├── handoff_prompt_extensibility_1.md
 │   │   ├── handoff_prompt_extensibility_2.md
+│   │   ├── handoff_prompt_fused_confidence.md
 │   │   ├── handoff_prompt_hdwgcna_equivalence.md
 │   │   ├── handoff_prompt_m1_5.md
 │   │   ├── handoff_prompt_m2_run.md
@@ -52,6 +54,7 @@
 │   ├── build_system_prompt.Rd
 │   ├── build_user_prompt.Rd
 │   ├── cached_backend.Rd
+│   ├── calculate_fusion_score.Rd
 │   ├── capabilities.Rd
 │   ├── categorical_group_test.Rd
 │   ├── check_faithfulness.Rd
@@ -136,6 +139,7 @@
 │   ├── cache
 │   │   ├── 0e687097cd09776cbdb31aa22c29b5862663bb894429165265eebba9f7f73cb0.rds
 │   │   ├── 1015b77398b6919441426aafc0d20601a6b5663f48f01d967bcbf1e76c50a4ed.rds
+│   │   ├── 1f60bdd93cc605bde43004eae98d49cef353b63b4f1633617f9f79c5a7577b39.rds
 │   │   ├── 200d397836b6d8ccaf08ef2834034ac29829806a2870587791c84ca10b98e291.rds
 │   │   ├── 208a7413314299e996ea39b57700b9ce1413b53a5d25813b63ae15e5433f31e1.rds
 │   │   ├── 2c0dfb8d5c26d59ee35c4665f9003e5a164dc27fbc942371e8f2b03324f48aa4.rds
@@ -145,19 +149,24 @@
 │   │   ├── 5e22b2ca1345d6add78fcb8232379c2e6413148865e60ffb31e8321f259294ed.rds
 │   │   ├── 669f4d0799c69e511e0e994da1a79e99c9c43d553b9c407c9b3a631d72ba841e.rds
 │   │   ├── 7db8711381f73d00d7bff9f590dc9c8ac9e8f6e9a502fcc23368d157fec65474.rds
+│   │   ├── 854c4d8757696594dcdec2fa69f72c520f45de0066fc018d172b09ac09f725ab.rds
 │   │   ├── 85c364816e6af239b4bf8a7376fdcff0227c3d1abf1209e479155e57d6fc867d.rds
 │   │   ├── 86ba3d2a869ba82de6b68947f29e173953952977d3bebd19c1394b298a8a44d3.rds
 │   │   ├── 91cce207e7129f7707db4f8157ddd04051a6ca58d802956eeb6319a9d99fc6d3.rds
 │   │   ├── 9be6081354a3b91fad47b6b79da6463d5e0ce57715b237824a42ded0abc5184b.rds
 │   │   ├── a94a65590db71f1676a6c3b161c4a67834731c9b71d4323b0af807d079a12947.rds
+│   │   ├── ae6a4b336bc477cef3c148650605e2a7820d722c846cea173286a461bc82cbdd.rds
 │   │   ├── bec484bb4d8b45b23719924a181d73e9c6f72e11b0a725f871ec7e4c59fa5519.rds
 │   │   ├── c753f141e2ac0c739a87429baa3976f8c44343e085caabf742a8453ab75cdee4.rds
+│   │   ├── c7abf9cbacf2bfb4d621437b048d1e4068e59fd62430819fce1dbe6d323f082a.rds
 │   │   ├── ca7237bd8c3d1916c75c6f0ad9940eee6097095172e5280aed0bc4200aed9ce3.rds
 │   │   ├── da022940ced7cad00d90d72b2161f3e29f03eb4bd8ca54e2b8149a84ae4b7397.rds
 │   │   ├── da4809520ca03d862b8cba2137bb8d117439fe595075a1e56f1f383c9d1c0985.rds
 │   │   ├── e1dc871c4796673611038145ae1350aa4ae59ad98a66c8d86b5954708c7f5500.rds
 │   │   ├── e42868506259fe8d214767f0e630a8a4cb7aeeaf39408b18e8ee1d535dd3fa32.rds
+│   │   ├── e6883e4538b16bf9ff8f2b35d277ed3f2e0f6b2e93bf95e84db7eb7699a8cbf1.rds
 │   │   ├── f001d2669b078055995ad0e570443b2ef1b498b3f84f9e384c60aff42dbc99e7.rds
+│   │   ├── f9abe0bdacd91306298929d2ab2ec265ca4fd00952af405b55b6b438ac93e441.rds
 │   │   └── fc066d152a2d129ba0bb8fb0b962b965aa0768c9643f115732c8ef5bbacb795b.rds
 │   ├── dev_report.html
 │   ├── evidence_packets
@@ -318,7 +327,6 @@
 │           ├── metadata__diagnosis.tsv
 │           ├── metadata__sample.tsv
 │           └── signature_correlation.tsv
-├── outputs
 ├── pkgdown_site
 │   ├── 2026-07-10.html
 │   ├── 2026-07-13.html
@@ -552,4 +560,4 @@
 └── vignettes
     └── getting-started.Rmd
 
-52 directories, 501 files
+51 directories, 510 files

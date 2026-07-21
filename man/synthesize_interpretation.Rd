@@ -11,7 +11,9 @@ synthesize_interpretation(
   temperature = 0,
   seed = NA_real_,
   prompt_template_version = PROMPT_TEMPLATE_VERSION,
-  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir")
+  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir"),
+  user_weights = list(),
+  fusion = NULL
 )
 }
 \arguments{
@@ -31,6 +33,16 @@ interpretation's provenance.}
 
 \item{schema_path}{Path to the interpretation JSON schema; defaults to the
 schema shipped with the package.}
+
+\item{user_weights}{Named list of per-\code{tool_id} weight multipliers passed
+to \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} for the EVIDENCE CONFIDENCE MATRIX injected
+into the user prompt (see \code{\link[=build_user_prompt]{build_user_prompt()}}). Default \code{list()}.}
+
+\item{fusion}{An optional pre-computed \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} result to
+inject into the user prompt; \code{NULL} (default) computes it from
+\code{packet$fragments} and \code{user_weights}. \code{\link[=synthesize_module]{synthesize_module()}} computes it
+once and passes the same object here and to \code{\link[=fuse_confidence]{fuse_confidence()}}, so the
+prompt and the final fused score are guaranteed to agree.}
 }
 \value{
 An \code{interpretation} object (not yet faithfulness-checked or
@@ -47,7 +59,7 @@ regardless of what a backend returns).
 }
 \examples{
 ms <- llegir_example_moduleset()
-packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 synthesize_interpretation(packet, desc, mock_backend())
 }

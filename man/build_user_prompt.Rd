@@ -4,29 +4,47 @@
 \alias{build_user_prompt}
 \title{Build the synthesis user prompt for one module}
 \usage{
-build_user_prompt(packet, desc, data_level = "cell", aggregated = FALSE)
+build_user_prompt(
+  packet,
+  desc,
+  fusion = NULL,
+  data_level = "cell",
+  aggregated = FALSE,
+  user_weights = list()
+)
 }
 \arguments{
 \item{packet}{An evidence packet, as built by \code{\link[=build_evidence_packet]{build_evidence_packet()}}.}
 
 \item{desc}{A \code{dataset_description}; see \code{\link[=dataset_description]{dataset_description()}}.}
 
+\item{fusion}{An optional pre-computed \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} result;
+\code{NULL} (default) computes it from \code{packet$fragments} and \code{user_weights}.
+Pass the same object used later by \code{\link[=fuse_confidence]{fuse_confidence()}} so the prompt and
+the final score are guaranteed to agree.}
+
 \item{data_level}{Observation-unit descriptor of the \code{ModuleSet} the
 packet was built from; see \code{\link[=render_dataset_description]{render_dataset_description()}}. Default \code{'cell'}.}
 
 \item{aggregated}{Whether that \code{ModuleSet}'s expression/scores are already
 aggregated across cells; see \code{\link[=render_dataset_description]{render_dataset_description()}}. Default \code{FALSE}.}
+
+\item{user_weights}{Named list of per-\code{tool_id} weight multipliers passed
+to \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} when \code{fusion} is \code{NULL}. Default \code{list()}.}
 }
 \value{
 A single character string.
 }
 \description{
-Concatenates the rendered \code{\link[=dataset_description]{dataset_description()}} with the compact
-evidence packet (\code{\link[=render_packet_compact]{render_packet_compact()}}).
+Concatenates the rendered \code{\link[=dataset_description]{dataset_description()}}, the compact evidence
+packet (\code{\link[=render_packet_compact]{render_packet_compact()}}), and the deterministic EVIDENCE
+CONFIDENCE MATRIX (\code{\link[=calculate_fusion_score]{calculate_fusion_score()}}) that grounds the model's
+\code{confidence.score} in the same numbers \code{\link[=fuse_confidence]{fuse_confidence()}} later
+re-derives the final fused score from.
 }
 \examples{
 ms <- llegir_example_moduleset()
-packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 cat(build_user_prompt(packet, desc))
 }

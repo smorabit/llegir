@@ -3,7 +3,7 @@
 ##
 ## `tool_config` is a list of `list(fn, params)` specs, e.g.:
 ##   list(
-##       list(fn = hub_genes_tool, params = list(n_hubs = 25)),
+##       list(fn = top_genes_tool, params = list(n_hubs = 25)),
 ##       list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot'))
 ##   )
 ## `fn` is any function(ctx) -> evidence_fragment; core tools today, custom
@@ -42,8 +42,8 @@
 #' @return An evidence packet; see [build_evidence_packet()].
 #' @examples
 #' ms <- llegir_example_moduleset()
-#' run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
-#' run_module(ms, modules(ms)[1], list(list(id = 'hub_genes', params = list())))
+#' run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
+#' run_module(ms, modules(ms)[1], list(list(id = 'top_genes', params = list())))
 #' @export
 run_module <- function(ms, module_id, tool_config, input_hash = NA_character_, module_method = NA_character_){
     results <- lapply(tool_config, function(spec){
@@ -96,7 +96,7 @@ run_module <- function(ms, module_id, tool_config, input_hash = NA_character_, m
 #'   for any module that failed).
 #' @examples
 #' ms <- llegir_example_moduleset()
-#' run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
+#' run_orchestrator(ms, list(list(fn = top_genes_tool, params = list())), output_dir = tempfile())
 #' @export
 run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, modules_use = NULL,
                               input_hash = NA_character_, module_method = NA_character_, validate = TRUE){
@@ -148,22 +148,30 @@ run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, mod
 #'   interpretation's provenance.
 #' @param schema_path Path to the interpretation JSON schema; defaults to the
 #'   schema shipped with the package.
+#' @param user_weights Named list of per-`tool_id` weight multipliers for
+#'   [calculate_fusion_score()]. Computed once here and shared between the
+#'   prompt's EVIDENCE CONFIDENCE MATRIX and [fuse_confidence()], so the
+#'   printed fusion string can never drift from what the model was shown.
+#'   Default `list()`.
 #' @return A validated `interpretation` object.
 #' @examples
 #' ms <- llegir_example_moduleset()
-#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' synthesize_module(packet, desc, mock_backend())
 #' @export
 synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                prompt_template_version = PROMPT_TEMPLATE_VERSION,
-                               schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir')){
+                               schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
+                               user_weights = list()){
+    fusion <- calculate_fusion_score(packet$fragments, user_weights = user_weights)
     interp <- synthesize_interpretation(
         packet, desc, backend, temperature = temperature, seed = seed,
-        prompt_template_version = prompt_template_version, schema_path = schema_path
+        prompt_template_version = prompt_template_version, schema_path = schema_path,
+        user_weights = user_weights, fusion = fusion
     )
     interp <- enforce_faithfulness(interp, packet)
-    interp <- fuse_confidence(interp, packet)
+    interp <- fuse_confidence(interp, packet, user_weights = user_weights, fusion = fusion)
     validate_interpretation(interp)
     interp
 }
@@ -194,7 +202,7 @@ synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_
 #'   `NULL` for any module whose synthesis failed).
 #' @examples
 #' ms <- llegir_example_moduleset()
-#' packets <- run_orchestrator(ms, list(list(fn = hub_genes_tool, params = list())), output_dir = tempfile())
+#' packets <- run_orchestrator(ms, list(list(fn = top_genes_tool, params = list())), output_dir = tempfile())
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' run_synthesis_orchestrator(packets, desc, mock_backend(), output_dir = tempfile())
 #' @export

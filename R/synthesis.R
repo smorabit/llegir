@@ -73,8 +73,8 @@ model_output_schema_json <- function(schema_path = system.file('schemas', 'inter
 #'
 #' A canned, fixed-response backend: the first-class offline backend used by
 #' tests and CI, and never touches the network. It cites fragment_ids
-#' (`'hub_genes'`, `'geneset_enrichment'`) and directions (`'na'`, `'up'`)
-#' that hold on every packet produced by the core tools (`hub_genes` is
+#' (`'top_genes'`, `'geneset_enrichment'`) and directions (`'na'`, `'up'`)
+#' that hold on every packet produced by the core tools (`top_genes` is
 #' always direction `'na'`, `geneset_enrichment` is always direction
 #' `'up'`), so it passes [check_faithfulness()] against any real evidence
 #' packet without per-module logic.
@@ -95,7 +95,7 @@ mock_backend <- function(){
                 one_line_summary = 'Mock synthesis output for offline testing; not derived from the evidence packet.',
                 dominant_biology = 'Not evaluated by the mock backend.',
                 supporting_claims = list(
-                    list(claim = 'Hub genes were computed by the deterministic core.', fragment_ids = list('hub_genes'), direction = 'na'),
+                    list(claim = 'Top genes were computed by the deterministic core.', fragment_ids = list('top_genes'), direction = 'na'),
                     list(claim = 'The module has enriched gene-set terms.', fragment_ids = list('geneset_enrichment'), direction = 'up')
                 ),
                 cell_state = NA_character_,
@@ -277,21 +277,31 @@ cached_backend <- function(backend, provider, model, prompt_template_version,
 #'   interpretation's provenance.
 #' @param schema_path Path to the interpretation JSON schema; defaults to the
 #'   schema shipped with the package.
+#' @param user_weights Named list of per-`tool_id` weight multipliers passed
+#'   to [calculate_fusion_score()] for the EVIDENCE CONFIDENCE MATRIX injected
+#'   into the user prompt (see [build_user_prompt()]). Default `list()`.
+#' @param fusion An optional pre-computed [calculate_fusion_score()] result to
+#'   inject into the user prompt; `NULL` (default) computes it from
+#'   `packet$fragments` and `user_weights`. [synthesize_module()] computes it
+#'   once and passes the same object here and to [fuse_confidence()], so the
+#'   prompt and the final fused score are guaranteed to agree.
 #' @return An `interpretation` object (not yet faithfulness-checked or
 #'   confidence-fused; see [synthesize_module()] for the full pipeline).
 #' @examples
 #' ms <- llegir_example_moduleset()
-#' packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 #' desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 #' synthesize_interpretation(packet, desc, mock_backend())
 #' @export
 synthesize_interpretation <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                        prompt_template_version = PROMPT_TEMPLATE_VERSION,
-                                       schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir')){
+                                       schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
+                                       user_weights = list(), fusion = NULL){
     validate_dataset_description(desc)
+    fusion <- fusion %||% calculate_fusion_score(packet$fragments, user_weights = user_weights)
 
     system_prompt <- build_system_prompt()
-    user_prompt <- build_user_prompt(packet, desc)
+    user_prompt <- build_user_prompt(packet, desc, fusion = fusion)
     schema_json <- model_output_schema_json(schema_path)
 
     result <- backend(system_prompt, user_prompt, schema_json, packet_hash = packet$packet_hash)

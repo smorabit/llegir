@@ -8,7 +8,7 @@
 ## tool, including the same graceful-skip and schema-validation machinery.
 
 test_that('core tools are registered via the same register_tool() mechanism', {
-    expect_true(all(c('hub_genes', 'cluster_dme', 'geneset_enrichment', 'signature_correlation') %in% list_tools()))
+    expect_true(all(c('top_genes', 'cluster_dme', 'geneset_enrichment', 'signature_correlation') %in% list_tools()))
     spec <- get_tool('cluster_dme')
     expect_s3_class(spec, 'tool_spec')
     expect_equal(spec$requires, c('grouping', 'module_scores'))
@@ -16,17 +16,30 @@ test_that('core tools are registered via the same register_tool() mechanism', {
 })
 
 test_that('register_tool() validates its arguments', {
-    expect_error(register_tool(id = 1, fn = hub_genes_tool, type = 'ranked_genes', description = 'x'), 'id must be')
+    expect_error(register_tool(id = 1, fn = top_genes_tool, type = 'ranked_genes', description = 'x'), 'id must be')
     expect_error(register_tool(id = 'x', fn = 'not_a_function', type = 'ranked_genes', description = 'x'), 'fn must be')
-    expect_error(register_tool(id = 'x', fn = hub_genes_tool, type = 'not_a_type', description = 'x'), 'invalid type')
-    expect_error(register_tool(id = 'x', fn = hub_genes_tool, type = 'ranked_genes', description = 'x', requires = 1), 'requires must be')
+    expect_error(register_tool(id = 'x', fn = top_genes_tool, type = 'not_a_type', description = 'x'), 'invalid type')
+    expect_error(register_tool(id = 'x', fn = top_genes_tool, type = 'ranked_genes', description = 'x', requires = 1), 'requires must be')
+    expect_error(register_tool(id = 'x', fn = top_genes_tool, type = 'ranked_genes', description = 'x', tier = 'critical'), 'tier must be')
+})
+
+test_that('register_tool() defaults tier to medium and core tools carry the tiers milestone_fused_confidence.md S4 specifies', {
+    register_tool('untiered_tool', top_genes_tool, type = 'ranked_genes', description = 'x')
+    expect_equal(get_tool('untiered_tool')$tier, 'medium')
+
+    expect_equal(get_tool('cluster_dme')$tier, 'high')
+    expect_equal(get_tool('differential_module_activity')$tier, 'high')
+    expect_equal(get_tool('pseudobulk_de_limma')$tier, 'high')
+    expect_equal(get_tool('top_genes')$tier, 'medium')
+    expect_equal(get_tool('signature_correlation')$tier, 'medium')
+    expect_equal(get_tool('geneset_enrichment')$tier, 'low')
 })
 
 test_that('register_tool() accepts a param-dependent requires (function form)', {
     requires_fn <- function(params){
         if ((params$column_type %||% 'categorical') == 'continuous') 'module_scores' else c('module_scores', 'sample_ids')
     }
-    register_tool('param_dependent_tool', hub_genes_tool, type = 'ranked_genes', description = 'x', requires = requires_fn)
+    register_tool('param_dependent_tool', top_genes_tool, type = 'ranked_genes', description = 'x', requires = requires_fn)
     spec <- get_tool('param_dependent_tool')
     expect_true(is.function(spec$requires))
     expect_setequal(.tool_spec_requires(spec, list(column_type = 'categorical')), c('module_scores', 'sample_ids'))
@@ -81,12 +94,12 @@ test_that('run_module() skips a capability-mismatched tool (referenced by id) an
     packet <- suppressMessages(run_module(
         go_gene_list_ms_nocap, 'module_a',
         list(
-            list(id = 'hub_genes', params = list(n_hubs = 5)),
+            list(id = 'top_genes', params = list(n_hubs = 5)),
             list(id = 'cluster_dme', params = list(group_by = 'cell_type'))
         )
     ))
     ids <- vapply(packet$fragments, function(f) f$fragment_id, character(1))
-    expect_setequal(ids, 'hub_genes')
+    expect_setequal(ids, 'top_genes')
     expect_equal(length(packet$provenance$skipped), 1)
     expect_equal(packet$provenance$skipped[[1]]$tool_id, 'cluster_dme')
     expect_match(packet$provenance$skipped[[1]]$reason, 'grouping')

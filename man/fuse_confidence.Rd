@@ -8,7 +8,9 @@ fuse_confidence(
   interp,
   packet,
   low_threshold = 0.35,
-  disagreement_threshold = 0.35
+  disagreement_threshold = 0.35,
+  user_weights = list(),
+  fusion = NULL
 )
 }
 \arguments{
@@ -17,11 +19,18 @@ fuse_confidence(
 
 \item{packet}{The evidence packet \code{interp} was synthesized from.}
 
-\item{low_threshold}{Evidence-score floor below which the fused score is
+\item{low_threshold}{\code{e_evidence} floor below which the fused score is
 capped and \code{'insufficient_evidence'} is flagged.}
 
-\item{disagreement_threshold}{Minimum \verb{|model_score - evidence_score|} gap
+\item{disagreement_threshold}{Minimum \verb{|model_score - e_evidence|} gap
 that flags \code{'needs_human_review'}.}
+
+\item{user_weights}{Named list of per-\code{tool_id} weight multipliers passed
+to \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} when \code{fusion} is \code{NULL}. Default \code{list()}.}
+
+\item{fusion}{An optional pre-computed \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} result
+(the same one shown to the model in the prompt); \code{NULL} (default)
+recomputes it from \code{packet} and \code{user_weights}.}
 }
 \value{
 \code{interp}, with \code{confidence$score}, \code{confidence$rationale}, and
@@ -29,16 +38,22 @@ that flags \code{'needs_human_review'}.}
 }
 \description{
 The model's self-reported confidence (\code{interp$confidence$model_score}) is
-never trusted alone. It's blended with \code{\link[=compute_evidence_signals]{compute_evidence_signals()}}, and
-the blend is what can trigger review flags -- so a fluent, confident label
-over weak evidence gets caught even if the model never flags itself.
-Mutates and returns \code{interp}: \code{confidence$score} is overwritten
-(\code{model_score} is preserved for audit), and \code{flags} are unioned with
-whatever the model or \code{\link[=enforce_faithfulness]{enforce_faithfulness()}} already set.
+never trusted alone. It's blended with \code{\link[=calculate_fusion_score]{calculate_fusion_score()}}'s
+deterministic \code{e_evidence} via a weighted geometric blend
+(\code{model_score^lambda * e_evidence^(1 - lambda)}), and the blend is what can
+trigger review flags -- so a fluent, confident label over weak evidence
+gets caught even if the model never flags itself. \code{fusion} should be the
+same \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} result already injected into the
+synthesis prompt (see \code{R/prompt.R}), so the printed fusion string can
+never drift from what the model was shown; passing \code{NULL} recomputes it
+from \code{packet} and \code{user_weights}. Mutates and returns \code{interp}:
+\code{confidence$score} is overwritten (\code{model_score} is preserved for audit),
+and \code{flags} are unioned with whatever the model or
+\code{\link[=enforce_faithfulness]{enforce_faithfulness()}} already set.
 }
 \examples{
 ms <- llegir_example_moduleset()
-packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 interp <- synthesize_interpretation(packet, desc, mock_backend())
 fuse_confidence(interp, packet)

@@ -11,7 +11,8 @@ synthesize_module(
   temperature = 0,
   seed = NA_real_,
   prompt_template_version = PROMPT_TEMPLATE_VERSION,
-  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir")
+  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir"),
+  user_weights = list()
 )
 }
 \arguments{
@@ -32,6 +33,12 @@ interpretation's provenance.}
 
 \item{schema_path}{Path to the interpretation JSON schema; defaults to the
 schema shipped with the package.}
+
+\item{user_weights}{Named list of per-\code{tool_id} weight multipliers for
+\code{\link[=calculate_fusion_score]{calculate_fusion_score()}}. Computed once here and shared between the
+prompt's EVIDENCE CONFIDENCE MATRIX and \code{\link[=fuse_confidence]{fuse_confidence()}}, so the
+printed fusion string can never drift from what the model was shown.
+Default \code{list()}.}
 }
 \value{
 A validated \code{interpretation} object.
@@ -46,7 +53,7 @@ or fusion isn't one this engine should emit.
 }
 \examples{
 ms <- llegir_example_moduleset()
-packet <- run_module(ms, modules(ms)[1], list(list(fn = hub_genes_tool, params = list())))
+packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq')
 synthesize_module(packet, desc, mock_backend())
 }
