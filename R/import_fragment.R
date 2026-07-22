@@ -276,6 +276,205 @@ import_enrichr <- function(module_id, result, column_map = list(), source_file =
     )
 }
 
+## import_dataset_fragment: dataset-scope analog of import_fragment() above
+## (docs/milestones/milestone_dataset_tools.md Part 4). Lets a user inject an
+## already-computed compositional / differential-abundance result (miloR,
+## propeller, sccomp, ...) as a validated dataset_fragment instead of
+## computing it via dataset_composition_tool(). provenance$source is
+## 'user_supplied', same distinction as import_fragment().
+
+.import_dataset_normalizers <- list(
+    # a group x condition differential-abundance result, one row per unit
+    # tested (a miloR neighborhood, or already one row per cluster for
+    # propeller/sccomp-style tables); aggregates per group_col so the
+    # fragment's result is a small per-cell-state summary, never the raw
+    # per-neighborhood table
+    composition_summary = function(result, params){
+        group_col <- params$group_col %||% 'celltype'
+        effect_col <- params$effect_col %||% 'logFC'
+        p_col <- params$significance_col %||% 'SpatialFDR'
+        alpha <- params$alpha %||% 0.05
+        required <- c(group_col, effect_col, p_col)
+        missing_cols <- setdiff(required, colnames(result))
+        if (length(missing_cols) > 0) {
+            stop('import_dataset_fragment(composition_summary) missing columns: ', paste(missing_cols, collapse = ', '))
+        }
+
+        groups <- droplevels(as.factor(result[[group_col]]))
+        summary_df <- do.call(rbind, lapply(levels(groups), function(g){
+            rows <- result[groups == g, ]
+            sig <- rows[[p_col]] < alpha
+            n_sig <- sum(sig, na.rm = TRUE)
+            mean_effect <- if (n_sig > 0) mean(rows[[effect_col]][sig], na.rm = TRUE) else mean(rows[[effect_col]], na.rm = TRUE)
+            data.frame(
+                group = g,
+                n_tested = nrow(rows),
+                n_sig = n_sig,
+                mean_effect = mean_effect,
+                direction = if (is.na(mean_effect)) 'na' else if (mean_effect > 0) 'up' else 'down'
+            )
+        }))
+        summary_df <- summary_df[order(-summary_df$n_sig, -abs(summary_df$mean_effect)), ]
+        rownames(summary_df) <- NULL
+
+        top_findings <- lapply(seq_len(min(5, nrow(summary_df))), function(i){
+            list(
+                group = summary_df$group[i], n_sig = summary_df$n_sig[i],
+                n_tested = summary_df$n_tested[i], effect = round(summary_df$mean_effect[i], 3),
+                direction = summary_df$direction[i]
+            )
+        })
+
+        shifted <- summary_df[summary_df$n_sig > 0, ]
+        shift_desc <- if (nrow(shifted) > 0) paste(paste0(shifted$group, ' (', shifted$direction, ')'), collapse = '; ') else 'none'
+        compact_summary <- paste0(
+            'user-supplied differential abundance: ', nrow(shifted), ' of ', nrow(summary_df),
+            ' cell states shift significantly (', p_col, '<', alpha, '): ', shift_desc
+        )
+
+        # a differential-abundance test with no significant hits anywhere is
+        # as likely to reflect an underpowered contrast as a true null; flag
+        # it rather than silently reporting "nothing shifted"
+        caveats <- list()
+        total_sig <- sum(summary_df$n_sig)
+        if (total_sig == 0) {
+            caveats[[length(caveats) + 1]] <- 'underpowered_contrast'
+        } else if (max(summary_df$n_sig) / total_sig > 0.6) {
+            caveats[[length(caveats) + 1]] <- 'cell_state_imbalanced_across_condition'
+        }
+
+        list(result = summary_df, compact_summary = compact_summary, top_findings = top_findings, caveats = caveats)
+    }
+)
+
+#' Import a user-supplied result table as a dataset fragment
+#'
+#' Dataset-scope analog of [import_fragment()]: lets a user inject an
+#' already-computed compositional / differential-abundance result as a
+#' validated [dataset_fragment()] instead of computing it via a core dataset
+#' tool (e.g. [dataset_composition_tool()]). `provenance$source` is set to
+#' `'user_supplied'`, same distinction `import_fragment()` makes for
+#' evidence fragments.
+#'
+#' @param type One of the supported `dataset_fragment` types: currently
+#'   `'composition_summary'`.
+#' @param result A tidy data.frame with the user's result table.
+#' @param fragment_id Unique id within the `dataset_context`. Defaults to
+#'   `paste0('imported::', type)`.
+#' @param tool_id Tool id recorded in provenance. Default
+#'   `'import_dataset_fragment'`.
+#' @param params Named list of column-name overrides (e.g. `group_col`,
+#'   `effect_col`, `significance_col`, `alpha`), since a user-supplied table
+#'   won't share this repo's exact column names.
+#' @param source_file Optional path to the file `result` was originally read
+#'   from. Recorded in `provenance$params$source_file`, and content-hashed
+#'   into `provenance$input_hashes$source_file` if the file still exists.
+#' @return A `dataset_fragment` object.
+#' @export
+import_dataset_fragment <- function(type, result, fragment_id = NULL,
+                                     tool_id = 'import_dataset_fragment', params = list(),
+                                     source_file = NULL){
+    if (!is.data.frame(result)) stop('import_dataset_fragment requires result to be a data.frame')
+    normalizer <- .import_dataset_normalizers[[type]]
+    if (is.null(normalizer)) {
+        stop(
+            'import_dataset_fragment has no normalizer for type: ', type,
+            ' (supported: ', paste(names(.import_dataset_normalizers), collapse = ', '), ')'
+        )
+    }
+    norm <- normalizer(result, params)
+    if (is.null(fragment_id)) fragment_id <- paste0('imported::', type)
+
+    input_hashes <- list()
+    if (!is.null(source_file)) {
+        params$source_file <- source_file
+        if (file.exists(source_file)) {
+            input_hashes$source_file <- digest::digest(file = source_file, algo = 'sha256')
+        }
+    }
+
+    dataset_fragment(
+        fragment_id = fragment_id,
+        tool_id = tool_id,
+        type = type,
+        result = norm$result,
+        compact_summary = norm$compact_summary,
+        top_findings = norm$top_findings,
+        caveats = norm$caveats,
+        provenance = make_provenance(
+            tool_version = NA_character_,
+            params = params,
+            input_hashes = input_hashes,
+            pkg_versions = list(),
+            source = 'user_supplied'
+        )
+    )
+}
+
+#' Import a miloR differential-abundance neighborhood table
+#'
+#' Sensible defaults for `miloR::testNhoods()` output merged with
+#' `miloR::annotateNhoods()` (`logFC`, `SpatialFDR`, and a majority-vote
+#' cell-type annotation column defaulting to `celltype`). Neighborhoods are
+#' aggregated per annotation group into a `'composition_summary'`
+#' [dataset_fragment()]: how many neighborhoods per cell state shift
+#' significantly and in which direction -- never the raw per-neighborhood
+#' table.
+#'
+#' @param result A tidy miloR DA neighborhood result data.frame (one row per
+#'   neighborhood).
+#' @param column_map Named list of column overrides: `group_col` (default
+#'   `'celltype'`), `effect_col` (default `'logFC'`), `significance_col`
+#'   (default `'SpatialFDR'`).
+#' @param alpha Significance threshold for a neighborhood to count as
+#'   shifted. Default `0.05`.
+#' @param source_file Optional path `result` was read from; see
+#'   [import_dataset_fragment()].
+#' @param ... Passed to [import_dataset_fragment()] (e.g. `fragment_id`, `tool_id`).
+#' @return A `dataset_fragment` object.
+#' @export
+import_milo_da <- function(result, column_map = list(), alpha = 0.05, source_file = NULL, ...){
+    defaults <- list(group_col = 'celltype', effect_col = 'logFC', significance_col = 'SpatialFDR')
+    params <- utils::modifyList(defaults, column_map)
+    params$alpha <- alpha
+    import_dataset_fragment(
+        type = 'composition_summary', result = result,
+        params = params, source_file = source_file, ...
+    )
+}
+
+#' `ctx`-compatible tool wrapper around [import_dataset_fragment()]
+#'
+#' Slots [import_dataset_fragment()] into a `dataset_tool_config` list
+#' exactly like any other dataset tool (see [run_dataset_context()]). Reads
+#' `ctx$params$result` (a data.frame) or `ctx$params$result_path` (a
+#' delimited file) plus `ctx$params$type`.
+#'
+#' @param ctx A dataset tool context list: `list(ms, params, module_method)`,
+#'   as built by [run_dataset_context()].
+#' @return A `dataset_fragment` object.
+#' @export
+import_dataset_fragment_tool <- function(ctx){
+    type <- ctx$params$type
+    if (is.null(type)) stop('import_dataset_fragment_tool requires params$type')
+
+    result <- ctx$params$result
+    if (is.null(result)) {
+        result_path <- ctx$params$result_path
+        if (is.null(result_path)) stop('import_dataset_fragment_tool requires params$result or params$result_path')
+        result <- utils::read.delim(result_path, stringsAsFactors = FALSE)
+    }
+
+    import_dataset_fragment(
+        type = type,
+        result = result,
+        fragment_id = ctx$params$fragment_id,
+        tool_id = ctx$params$tool_id %||% 'import_dataset_fragment',
+        params = ctx$params,
+        source_file = ctx$params$result_path %||% ctx$params$source_file
+    )
+}
+
 #' `ctx`-compatible tool wrapper around [import_fragment()]
 #'
 #' Slots [import_fragment()] into an orchestrator's `tool_config` list exactly
