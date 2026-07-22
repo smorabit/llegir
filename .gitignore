@@ -53,5 +53,8 @@ pkgdown_site/CLAUDE_old.html
 pkgdown_site/STYLE.html
 pkgdown_site/2026-*.html
 
-# --- Obsidian editor UI state, not project content ---
-.obsidian/workspace.json
+# --- Obsidian vault config/state, not project content ---
+.obsidian/
+
+# --- Claude Code local config (commands, settings), not public-facing ---
+.claude/
