@@ -63,64 +63,22 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="module-interpretation-engine">Module Interpretation Engine<a class="anchor" aria-label="anchor" href="#module-interpretation-engine"></a>
+<div class="page-header"><h1 id="llegir">llegir<a class="anchor" aria-label="anchor" href="#llegir"></a>
 </h1></div>
-<p>A tool that loads a gene co-expression module object (starting with hdWGCNA), systematically gathers a standardized bundle of evidence for each module, and produces a short, evidence-backed interpretation paragraph — with confidence-gated human review and a full reproducibility log. Deterministic evidence core in R; model-agnostic synthesis layer.</p>
-<p><em>Status: design → Milestone 1 (deterministic core). Started 2026-07.</em> <em>Originated as an offshoot of the SERPENTINE project; now a standalone, general tool.</em></p>
-<hr>
+<p><strong>llegir</strong> is a package for LLM-enabled gene-program interpretations in R. In transcriptomics data analysis, we often work with groups of genes that are somehow related to one another, and <strong>llegir</strong> aims to automate the interpretation of these interrelated groups of genes, which we refer to as “<em>gene modules</em>”. <strong>llegir</strong> is completely agnostic to the sequencing technology (e.g. bulk RNA-seq, single-cell RNA-seq, sequencing or imaging based spatial transcriptomics, etc), and it is agnostic to the method used to group genes into modules (e.g. WGCNA, matrix factorization, literature-derived gene lists, etc).</p>
+<p><strong>llegir</strong> takes as input a gene expression matrix and a set of <em>gene modules</em>, for instance coming from our other tool <img src="https://smorabit.github.io/hdWGCNA/" alt="hdWGCNA">. Next, <strong>llegir</strong> compiles a set of “evidence” for each module by running a user-defined chain of analysis tools, flexibly defined to suit the specific needs of each dataset. The results of these analysis tools are then assembled into an “evidence packet” that is given to an LLM of the user’s choice for synthesis, summarization, and interpretation. Finally, <strong>llegir</strong> compiles an .html report for the interpretation of all modules.</p>
+<p><strong>llegir</strong> means “to read” in the Catalan language.</p>
 <div class="section level2">
-<h2 id="start-here">Start here<a class="anchor" aria-label="anchor" href="#start-here"></a>
+<h2 id="development-stage">Development stage<a class="anchor" aria-label="anchor" href="#development-stage"></a>
 </h2>
-<ul>
-<li>
-<strong>Building it (Claude Code):</strong> read <a href="CLAUDE.html"><code>CLAUDE.md</code></a>, then the current task in <a href="docs/milestone_1.html"><code>docs/milestone_1.md</code></a>.</li>
-<li>
-<strong>Concept:</strong> <a href="docs/overview.html"><code>docs/overview.md</code></a>
-</li>
-<li>
-<strong>Architecture:</strong> <a href="docs/implementation_guide.html"><code>docs/implementation_guide.md</code></a>
-</li>
-<li>
-<strong>Data contracts (schemas):</strong> <a href="docs/schemas.html"><code>docs/schemas.md</code></a>
-</li>
-<li>
-<strong>R code style:</strong> <a href="STYLE.html"><code>STYLE.md</code></a>
-</li>
-</ul>
-<hr>
+<p><strong>llegir</strong> is in an experimental development stage, and at this point it is subject to major changes until we have pushed a more stable release, proceed with caution!</p>
 </div>
 <div class="section level2">
-<h2 id="development-dataset">Development dataset<a class="anchor" aria-label="anchor" href="#development-dataset"></a>
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p><code>data/CSF_Myeloid_hdWGCNA.rds</code> — an hdWGCNA Seurat object of <strong>myeloid cells from cerebrospinal fluid (CSF)</strong> across patients with different brain diseases. Used as the test object for the deterministic core.</p>
-<p>Metadata columns of interest:</p>
-<table class="table">
-<thead><tr class="header">
-<th>Column</th>
-<th>Role</th>
-<th>Type</th>
-</tr></thead>
-<tbody>
-<tr class="odd">
-<td><code>diagnosis</code></td>
-<td>disease / condition</td>
-<td>categorical</td>
-</tr>
-<tr class="even">
-<td><code>Sample.ID</code></td>
-<td>individual sample</td>
-<td>categorical (grouping)</td>
-</tr>
-<tr class="odd">
-<td><code>lv2_annot</code></td>
-<td>cell cluster / state</td>
-<td>categorical (grouping for DME)</td>
-</tr>
-</tbody>
-</table>
-<p>Because this dataset has none of SERPENTINE’s bespoke tools (CancerSEA, cross-lineage T-cell coordination), it is an ideal test that the <strong>core is genuinely dataset-agnostic</strong>.</p>
-<hr>
-<p><em>Last updated: 2026-07-10</em></p>
+<div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">remotes</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">"smorabit/llegir"</span><span class="op">)</span></span></code></pre></div>
+<p>See the <a href="vignettes/getting-started.Rmd">Getting Started</a> vignette for a full quick start walkthrough.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

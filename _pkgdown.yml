@@ -49,19 +49,39 @@ reference:
   - hdWGCNA_ModuleSet
   - components_ModuleSet
   - gene_list_ModuleSet
+  - pseudobulk_ModuleSet
   - synthetic_ModuleSet
   - llegir_example_moduleset
+  - counts
+  - validate_moduleset
+  - with_pseudobulk
+  - pseudobulk
+  - pseudobulk_view
 
 - title: Evidence tools
   desc: Core deterministic evidence tools; each returns one evidence_fragment.
   contents:
   - top_genes_tool
   - cluster_dme_tool
-  - module_by_metadata_tool
   - geneset_enrichment_tool
   - signature_correlation_tool
+  - differential_module_activity_tool
+  - pseudobulk_de_limma_tool
   - import_fragment
   - import_fragment_tool
+  - import_seurat_markers
+  - import_hdwgcna_dme
+  - import_enrichr
+
+- title: Dataset tools
+  desc: >
+    Global, once-per-dataset tools; each returns one dataset_fragment,
+    bundled into a dataset_context via run_dataset_context() and injected as
+    shared framing into every module's synthesis prompt.
+  contents:
+  - dataset_composition_tool
+  - dataset_variance_structure_tool
+  - dataset_baseline_expression_tool
 
 - title: Tool registry
   desc: >
@@ -86,11 +106,31 @@ reference:
   - write_fragment_tables
   - make_provenance
 
+- title: Dataset fragments and context
+  desc: >
+    The dataset_fragment / dataset_context data contract -- the dataset-tool
+    sibling of an evidence_fragment / evidence packet, scoped to the whole
+    experiment rather than one module.
+  contents:
+  - dataset_fragment
+  - validate_dataset_fragment
+  - dataset_fragment_to_json
+  - dataset_fragment_from_json
+  - build_dataset_context
+  - dataset_context_to_json
+  - write_dataset_context
+  - read_dataset_context
+  - render_dataset_context_compact
+  - import_dataset_fragment
+  - import_dataset_fragment_tool
+  - import_milo_da
+
 - title: Orchestration
   desc: Run tools/synthesis over a module set and write results to disk.
   contents:
   - run_module
   - run_orchestrator
+  - run_dataset_context
   - synthesize_module
   - run_synthesis_orchestrator
 
@@ -122,6 +162,7 @@ reference:
   - assert_faithfulness
   - enforce_faithfulness
   - compute_evidence_signals
+  - calculate_fusion_score
   - fuse_confidence
   - needs_review
 
@@ -145,10 +186,8 @@ reference:
   - write_review_queue
   - build_synthesis_manifest
   - write_synthesis_manifest
+  - write_interpretation_report
 
 - title: Statistical helpers
   contents:
   - categorical_group_test
-  - continuous_correlation_test
-  - aggregate_by_sample
-  - is_sample_constant

@@ -67,7 +67,12 @@ a simple, backend-agnostic stand-in for a real module eigengene / kME.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">synthetic_ModuleSet</span><span class="op">(</span><span class="va">base_ms</span>, <span class="va">gene_sets</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">synthetic_ModuleSet</span><span class="op">(</span></span>
+<span>  <span class="va">base_ms</span>,</span>
+<span>  <span class="va">gene_sets</span>,</span>
+<span>  data_level <span class="op">=</span> <span class="st">"cell"</span>,</span>
+<span>  aggregated <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'synthetic_ModuleSet'</span></span>
 <span><span class="fu"><a href="modules.html">modules</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">...</span><span class="op">)</span></span>
@@ -80,6 +85,9 @@ a simple, backend-agnostic stand-in for a real module eigengene / kME.</p>
 <span></span>
 <span><span class="co"># S3 method for class 'synthetic_ModuleSet'</span></span>
 <span><span class="fu"><a href="expression.html">expression</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'synthetic_ModuleSet'</span></span>
+<span><span class="fu"><a href="counts.html">counts</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'synthetic_ModuleSet'</span></span>
 <span><span class="fu"><a href="metadata.html">metadata</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">...</span><span class="op">)</span></span>
@@ -105,10 +113,20 @@ a simple, backend-agnostic stand-in for a real module eigengene / kME.</p>
 module, e.g. <code>list(module_a = c('GENE1', 'GENE2'))</code>.</p></dd>
 
 
+<dt id="arg-data-level">data_level<a class="anchor" aria-label="anchor" href="#arg-data-level"></a></dt>
+<dd><p>Observation-unit descriptor, e.g. <code>'cell'</code> or <code>'sample'</code>.
+Default <code>'cell'</code>.</p></dd>
+
+
+<dt id="arg-aggregated">aggregated<a class="anchor" aria-label="anchor" href="#arg-aggregated"></a></dt>
+<dd><p>Whether <code><a href="expression.html">expression()</a></code> is already aggregated across
+cells (e.g. pseudobulk) rather than per-cell. Default <code>FALSE</code>.</p></dd>
+
+
 <dt id="arg-ms">ms<a class="anchor" aria-label="anchor" href="#arg-ms"></a></dt>
 <dd><p>A <code>ModuleSet</code> object; the dispatch target for the generic
 methods below (<code><a href="modules.html">modules()</a></code>, <code><a href="gene_membership.html">gene_membership()</a></code>, <code><a href="module_scores.html">module_scores()</a></code>,
-<code><a href="expression.html">expression()</a></code>, <code><a href="metadata.html">metadata()</a></code>, <code><a href="pkg_versions.html">pkg_versions()</a></code>, <code><a href="capabilities.html">capabilities()</a></code>).</p></dd>
+<code><a href="expression.html">expression()</a></code>, <code><a href="counts.html">counts()</a></code>, <code><a href="metadata.html">metadata()</a></code>, <code><a href="pkg_versions.html">pkg_versions()</a></code>, <code><a href="capabilities.html">capabilities()</a></code>).</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

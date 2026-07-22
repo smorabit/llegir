@@ -72,7 +72,8 @@ and recorded as <code>NULL</code>, mirroring <code><a href="run_orchestrator.htm
 <span>  temperature <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NA_real_</span>,</span>
 <span>  prompt_template_version <span class="op">=</span> <span class="va">PROMPT_TEMPLATE_VERSION</span>,</span>
-<span>  schema_path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"schemas"</span>, <span class="st">"interpretation.schema.json"</span>, package <span class="op">=</span> <span class="st">"llegir"</span><span class="op">)</span></span>
+<span>  schema_path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"schemas"</span>, <span class="st">"interpretation.schema.json"</span>, package <span class="op">=</span> <span class="st">"llegir"</span><span class="op">)</span>,</span>
+<span>  dataset_context <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -116,6 +117,13 @@ interpretation's provenance.</p></dd>
 <dd><p>Path to the interpretation JSON schema; defaults to the
 schema shipped with the package.</p></dd>
 
+
+<dt id="arg-dataset-context">dataset_context<a class="anchor" aria-label="anchor" href="#arg-dataset-context"></a></dt>
+<dd><p>An optional dataset context, as built by
+<code><a href="build_dataset_context.html">build_dataset_context()</a></code> / <code><a href="run_dataset_context.html">run_dataset_context()</a></code>. Computed once and
+passed to every module's <code><a href="synthesize_module.html">synthesize_module()</a></code> call, exactly like
+<code>desc</code>. <code>NULL</code> (default) omits the DATASET CONTEXT block.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -126,7 +134,7 @@ schema shipped with the package.</p></dd>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="llegir_example_moduleset.html">llegir_example_moduleset</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">packets</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_orchestrator.html">run_orchestrator</a></span><span class="op">(</span><span class="va">ms</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">hub_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, output_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">packets</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_orchestrator.html">run_orchestrator</a></span><span class="op">(</span><span class="va">ms</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">top_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span>, output_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="dataset_description.html">dataset_description</a></span><span class="op">(</span><span class="st">'human'</span>, <span class="st">'CSF'</span>, <span class="st">'myeloid'</span>, <span class="st">'scRNA-seq'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">run_synthesis_orchestrator</span><span class="op">(</span><span class="va">packets</span>, <span class="va">desc</span>, <span class="fu"><a href="mock_backend.html">mock_backend</a></span><span class="op">(</span><span class="op">)</span>, output_dir <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/tempfile.html" class="external-link">tempfile</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 </code></pre></div>

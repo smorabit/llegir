@@ -67,7 +67,15 @@ they're unmet, rather than the tool having to self-skip. See
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">register_tool</span><span class="op">(</span><span class="va">id</span>, <span class="va">fn</span>, <span class="va">type</span>, <span class="va">description</span>, requires <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">register_tool</span><span class="op">(</span></span>
+<span>  <span class="va">id</span>,</span>
+<span>  <span class="va">fn</span>,</span>
+<span>  <span class="va">type</span>,</span>
+<span>  <span class="va">description</span>,</span>
+<span>  requires <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
+<span>  tier <span class="op">=</span> <span class="st">"medium"</span>,</span>
+<span>  scope <span class="op">=</span> <span class="st">"module"</span></span>
+<span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -75,7 +83,7 @@ they're unmet, rather than the tool having to self-skip. See
 
 
 <dl><dt id="arg-id">id<a class="anchor" aria-label="anchor" href="#arg-id"></a></dt>
-<dd><p>A unique tool id, e.g. <code>'hub_genes'</code> or <code>'my_custom_tool'</code>.</p></dd>
+<dd><p>A unique tool id, e.g. <code>'top_genes'</code> or <code>'my_custom_tool'</code>.</p></dd>
 
 
 <dt id="arg-fn">fn<a class="anchor" aria-label="anchor" href="#arg-fn"></a></dt>
@@ -88,8 +96,8 @@ they're unmet, rather than the tool having to self-skip. See
 (see <code><a href="evidence_fragment.html">evidence_fragment()</a></code>) this tool may emit. Descriptive only – the
 fragment a tool actually returns is always checked against the full
 contract by <code><a href="validate_evidence_fragment.html">validate_evidence_fragment()</a></code> regardless of what's declared
-here. A tool whose emitted type depends on its params (e.g.
-<code><a href="module_by_metadata_tool.html">module_by_metadata_tool()</a></code>) can declare more than one.</p></dd>
+here. A tool whose emitted type depends on its params can declare more
+than one.</p></dd>
 
 
 <dt id="arg-description">description<a class="anchor" aria-label="anchor" href="#arg-description"></a></dt>
@@ -98,11 +106,24 @@ here. A tool whose emitted type depends on its params (e.g.
 
 <dt id="arg-requires">requires<a class="anchor" aria-label="anchor" href="#arg-requires"></a></dt>
 <dd><p>The <code>ModuleSet</code> <code><a href="capabilities.html">capabilities()</a></code> this tool needs to run:
-either a character vector (e.g. <code>c('clusters', 'module_scores')</code>), or a
+either a character vector (e.g. <code>c('grouping', 'module_scores')</code>), or a
 <code>function(params) -&gt; character vector</code> for a tool whose requirement
-depends on how it's called (e.g. <code><a href="module_by_metadata_tool.html">module_by_metadata_tool()</a></code> only needs
-<code>sample_ids</code> for categorical columns). Default <code>character(0)</code> (no
-requirement).</p></dd>
+depends on how it's called. Default <code>character(0)</code> (no requirement).</p></dd>
+
+
+<dt id="arg-tier">tier<a class="anchor" aria-label="anchor" href="#arg-tier"></a></dt>
+<dd><p>Structural importance tier consulted by
+<code><a href="calculate_fusion_score.html">calculate_fusion_score()</a></code> to weight this tool's fragments: one of
+<code>'high'</code>, <code>'medium'</code>, <code>'low'</code>. Default <code>'medium'</code>. Ignored when
+<code>scope == 'dataset'</code> – dataset fragments never enter fusion.</p></dd>
+
+
+<dt id="arg-scope">scope<a class="anchor" aria-label="anchor" href="#arg-scope"></a></dt>
+<dd><p>Whether this tool runs per module (default) or once per
+dataset: one of <code>'module'</code>, <code>'dataset'</code>. A <code>'module'</code> tool's <code>type</code> is
+checked against the <code><a href="evidence_fragment.html">evidence_fragment()</a></code> vocabulary; a <code>'dataset'</code>
+tool's <code>type</code> against the <code><a href="dataset_fragment.html">dataset_fragment()</a></code> vocabulary. Default
+<code>'module'</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -112,7 +133,7 @@ requirement).</p></dd>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">my_tool</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">ctx</span><span class="op">)</span> <span class="fu"><a href="hub_genes_tool.html">hub_genes_tool</a></span><span class="op">(</span><span class="va">ctx</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">my_tool</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">ctx</span><span class="op">)</span> <span class="fu"><a href="top_genes_tool.html">top_genes_tool</a></span><span class="op">(</span><span class="va">ctx</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">register_tool</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="st">'my_tool'</span>, <span class="va">my_tool</span>, type <span class="op">=</span> <span class="st">'ranked_genes'</span>,</span></span>
 <span class="r-in"><span>    description <span class="op">=</span> <span class="st">'demo'</span>, requires <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span></span></span>

@@ -74,7 +74,10 @@ regardless of what a backend returns).</p>
 <span>  temperature <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NA_real_</span>,</span>
 <span>  prompt_template_version <span class="op">=</span> <span class="va">PROMPT_TEMPLATE_VERSION</span>,</span>
-<span>  schema_path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"schemas"</span>, <span class="st">"interpretation.schema.json"</span>, package <span class="op">=</span> <span class="st">"llegir"</span><span class="op">)</span></span>
+<span>  schema_path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"schemas"</span>, <span class="st">"interpretation.schema.json"</span>, package <span class="op">=</span> <span class="st">"llegir"</span><span class="op">)</span>,</span>
+<span>  user_weights <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  fusion <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  dataset_context <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -112,6 +115,26 @@ interpretation's provenance.</p></dd>
 <dd><p>Path to the interpretation JSON schema; defaults to the
 schema shipped with the package.</p></dd>
 
+
+<dt id="arg-user-weights">user_weights<a class="anchor" aria-label="anchor" href="#arg-user-weights"></a></dt>
+<dd><p>Named list of per-<code>tool_id</code> weight multipliers passed
+to <code><a href="calculate_fusion_score.html">calculate_fusion_score()</a></code> for the EVIDENCE CONFIDENCE MATRIX injected
+into the user prompt (see <code><a href="build_user_prompt.html">build_user_prompt()</a></code>). Default <code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code>.</p></dd>
+
+
+<dt id="arg-fusion">fusion<a class="anchor" aria-label="anchor" href="#arg-fusion"></a></dt>
+<dd><p>An optional pre-computed <code><a href="calculate_fusion_score.html">calculate_fusion_score()</a></code> result to
+inject into the user prompt; <code>NULL</code> (default) computes it from
+<code>packet$fragments</code> and <code>user_weights</code>. <code><a href="synthesize_module.html">synthesize_module()</a></code> computes it
+once and passes the same object here and to <code><a href="fuse_confidence.html">fuse_confidence()</a></code>, so the
+prompt and the final fused score are guaranteed to agree.</p></dd>
+
+
+<dt id="arg-dataset-context">dataset_context<a class="anchor" aria-label="anchor" href="#arg-dataset-context"></a></dt>
+<dd><p>An optional dataset context, as built by
+<code><a href="build_dataset_context.html">build_dataset_context()</a></code> / <code><a href="run_dataset_context.html">run_dataset_context()</a></code>, threaded into
+<code><a href="build_user_prompt.html">build_user_prompt()</a></code>. <code>NULL</code> (default) omits the DATASET CONTEXT block.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -122,7 +145,7 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="llegir_example_moduleset.html">llegir_example_moduleset</a></span><span class="op">(</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">packet</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_module.html">run_module</a></span><span class="op">(</span><span class="va">ms</span>, <span class="fu"><a href="modules.html">modules</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">hub_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">packet</span> <span class="op">&lt;-</span> <span class="fu"><a href="run_module.html">run_module</a></span><span class="op">(</span><span class="va">ms</span>, <span class="fu"><a href="modules.html">modules</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">top_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="dataset_description.html">dataset_description</a></span><span class="op">(</span><span class="st">'human'</span>, <span class="st">'CSF'</span>, <span class="st">'myeloid'</span>, <span class="st">'scRNA-seq'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu">synthesize_interpretation</span><span class="op">(</span><span class="va">packet</span>, <span class="va">desc</span>, <span class="fu"><a href="mock_backend.html">mock_backend</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $module_id</span>
@@ -140,10 +163,10 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims[[1]]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims[[1]]$claim</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Hub genes were computed by the deterministic core."</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Top genes were computed by the deterministic core."</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims[[1]]$fragment_ids</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "hub_genes"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "top_genes"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims[[1]]$direction</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "na"</span>
@@ -201,7 +224,7 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "mock-0.1"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$prompt_template_version</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "0.2"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "0.4"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$temperature</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
@@ -210,7 +233,7 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$input_packet_hash</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "d26f64519b3a3a8e27afd679cd7b2bd13553b516c68ed83f4ff1ac778045693f"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "3fabd360e3ff8c1850cd7e5e68dbbcbc71a1855149c08586a371fd2071f8c10f"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$ellmer_call</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$ellmer_call$backend</span>
@@ -218,7 +241,7 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$timestamp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2026-07-16T14:50:52+0200"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2026-07-22T15:23:35+0200"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $schema_version</span>

@@ -67,9 +67,9 @@
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">get_tool</span><span class="op">(</span><span class="st">'hub_genes'</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu">get_tool</span><span class="op">(</span><span class="st">'top_genes'</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $id</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "hub_genes"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "top_genes"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $fn</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> function (ctx) </span>
@@ -80,20 +80,21 @@
 <span class="r-out co"><span class="r-pr">#&gt;</span>     top_findings &lt;- lapply(seq_len(nrow(top)), function(i) {</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         list(gene = top$gene_name[i], kme = top$kme[i])</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     })</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     compact_summary &lt;- paste0("top ", nrow(top), " hub genes by kME: ", </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     compact_summary &lt;- paste0("top ", nrow(top), " genes by kME: ", </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         paste(utils::head(top$gene_name, 10), collapse = ", "), </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         if (nrow(top) &gt; 10) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>             ", ..."</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         else "")</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     evidence_fragment(fragment_id = "hub_genes", tool_id = "hub_genes", </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     evidence_fragment(fragment_id = "top_genes", tool_id = "top_genes", </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         module_id = ctx$module_id, type = "ranked_genes", result = top, </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         compact_summary = compact_summary, top_findings = top_findings, </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         effect_strength = if (nrow(top) &gt; 0) </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>             max(top$kme)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>         else 0, direction = "na", provenance = make_provenance(tool_version = "0.1", </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>             params = list(n_hubs = n_hubs), pkg_versions = pkg_versions(ctx$ms)))</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             params = list(n_hubs = n_hubs), pkg_versions = pkg_versions(ctx$ms), </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             module_method = ctx$module_method %||% NA_character_))</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> }</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x7fd23db012e8&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> &lt;bytecode: 0x7fe1a71e5c48&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> &lt;environment: namespace:llegir&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $type</span>
@@ -104,6 +105,12 @@
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $requires</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> character(0)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $tier</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "medium"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $scope</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "module"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "tool_spec"</span>

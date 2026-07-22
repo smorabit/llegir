@@ -138,6 +138,44 @@ ncbi_demo_frag <- ncbi_gene_summary_tool(list(ms = ms, module_id = 'MM1', params
 ncbi_demo_frag$result
 ncbi_demo_frag$top_findings
 validate_evidence_fragment(ncbi_demo_frag)
+```
+
+## Global Dataset-Level Grounding
+
+Dataset tools mirror the per-module tools above but run once against the
+whole `ModuleSet`, via `run_dataset_context()`, before any per-module tool
+call -- the global framing every module's synthesis prompt should see
+before it interprets a module as biology rather than, say, cell-type
+imbalance or a batch effect.
+
+```{r dataset-context}
+#---------------------------------------------------------
+# global dataset-level grounding (runs once, before the per-module loop)
+#---------------------------------------------------------
+
+# dataset_composition_tool checks cell-state balance against a condition
+# covariate; dataset_variance_structure_tool regresses each pseudo-bulk PC
+# against declared covariates so synthesis can tell real biology from a
+# technical (batch/depth) axis riding the same PC. variance_structure needs
+# a pseudo-bulk view (see pseudobulk_view()), which ms doesn't carry yet at
+# this point in the script, so it skips gracefully here -- it is re-run
+# below once with_pseudobulk() attaches one
+dataset_tool_config <- list(
+    list(fn = dataset_composition_tool, params = list(group_col = 'lv2_annot', condition_col = 'diagnosis')),
+    list(fn = dataset_variance_structure_tool, params = list(
+        covariates = c('diagnosis', 'nUMI'), condition_col = 'diagnosis'
+    ))
+)
+
+dataset_ctx <- run_dataset_context(ms, dataset_tool_config)
+
+# inspect which fragments actually landed -- only composition_summary at this
+# point, since variance_structure had nothing to compute against yet
+vapply(dataset_ctx$dataset_fragments, function(f) f$tool_id, character(1))
+dataset_ctx$dataset_fragments[[1]]$compact_summary
+```
+
+```{r core-tools}
 
 #---------------------------------------------------------
 # run core evidence tools over MM1-MM3 only
@@ -187,7 +225,9 @@ backend <- cached_backend(
     prompt_template_version = PROMPT_TEMPLATE_VERSION
 )
 
-interps <- run_synthesis_orchestrator(packets, desc, backend, output_dir = 'output/interpretations')
+interps <- run_synthesis_orchestrator(
+    packets, desc, backend, output_dir = 'output/interpretations', dataset_context = dataset_ctx
+)
 
 # inspect one interpretation
 interps[['MM1']]
@@ -232,7 +272,9 @@ data.frame(
 # module -- confidence.score and the fusion-string rationale should reflect
 # the reweighted E_evidence, and the EVIDENCE CONFIDENCE MATRIX injected into
 # the prompt reflects the same custom weights the model was shown
-interp_custom_weights <- synthesize_module(mm1_packet, desc, backend, user_weights = custom_weights)
+interp_custom_weights <- synthesize_module(
+    mm1_packet, desc, backend, user_weights = custom_weights, dataset_context = dataset_ctx
+)
 interp_custom_weights$confidence$score
 interp_custom_weights$confidence$rationale
 
@@ -321,7 +363,9 @@ packets_deg[['MM1']]
 
 # reuse the same desc / backend from the core synthesis block above, now
 # running over the packets that carry the imported DEG fragment
-interps_deg <- run_synthesis_orchestrator(packets_deg, desc, backend, output_dir = 'output/interpretations_deg')
+interps_deg <- run_synthesis_orchestrator(
+    packets_deg, desc, backend, output_dir = 'output/interpretations_deg', dataset_context = dataset_ctx
+)
 
 # inspect one interpretation -- check whether the DEG evidence surfaces in the
 # synthesized narrative relative to the core-only run
@@ -469,6 +513,20 @@ packets_mixed[['MM1']]
 vapply(packets_mixed[['MM1']]$fragments, function(f) f$fragment_id, character(1))
 ```
 
+```{r dataset-context-pb}
+#---------------------------------------------------------
+# re-run global dataset-level grounding now that a pseudo-bulk view exists
+#---------------------------------------------------------
+
+# same dataset_tool_config from the "Global Dataset-Level Grounding" section
+# above, now run against ms_with_pb -- dataset_variance_structure_tool can
+# resolve pseudobulk_view(ms_with_pb) this time, so both dataset fragments
+# land in the context instead of just composition_summary
+dataset_ctx_pb <- run_dataset_context(ms_with_pb, dataset_tool_config)
+vapply(dataset_ctx_pb$dataset_fragments, function(f) f$tool_id, character(1))
+dataset_ctx_pb$dataset_fragments[[2]]$compact_summary
+```
+
 ```{r pseudobulk-report}
 #---------------------------------------------------------
 # synthesize the mixed packets and export the combined report
@@ -476,8 +534,11 @@ vapply(packets_mixed[['MM1']]$fragments, function(f) f$fragment_id, character(1)
 
 # reuse the same dataset description / backend from the core synthesis block
 # above -- now running over packets that carry cell- and sample-level
-# evidence side by side
-interps_mixed <- run_synthesis_orchestrator(packets_mixed, desc, backend, output_dir = 'output/interpretations_pb_mixed')
+# evidence side by side, grounded by the fuller dataset_ctx_pb (composition
+# AND variance_structure) computed just above
+interps_mixed <- run_synthesis_orchestrator(
+    packets_mixed, desc, backend, output_dir = 'output/interpretations_pb_mixed', dataset_context = dataset_ctx_pb
+)
 
 # inspect one interpretation -- check whether the pseudo-bulk evidence
 # (differential_module_activity / pseudobulk_de_limma) surfaces in the

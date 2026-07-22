@@ -67,7 +67,8 @@ microglia vs. macrophage.</p>
 <span>  <span class="va">cell_compartment</span>,</span>
 <span>  <span class="va">assay</span>,</span>
 <span>  conditions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">character</a></span><span class="op">(</span><span class="fl">0</span><span class="op">)</span>,</span>
-<span>  notes <span class="op">=</span> <span class="cn">NA_character_</span></span>
+<span>  notes <span class="op">=</span> <span class="cn">NA_character_</span>,</span>
+<span>  module_method <span class="op">=</span> <span class="cn">NA_character_</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -99,6 +100,14 @@ in the dataset.</p></dd>
 <dt id="arg-notes">notes<a class="anchor" aria-label="anchor" href="#arg-notes"></a></dt>
 <dd><p>Optional free-text notes.</p></dd>
 
+
+<dt id="arg-module-method">module_method<a class="anchor" aria-label="anchor" href="#arg-module-method"></a></dt>
+<dd><p>Optional free-form description of how the modules
+themselves were generated, e.g. <code>'hdWGCNA co-expression modules'</code> or
+<code>'cNMF factors, k=20'</code> – disambiguates what a "module" means for this
+run (a co-expression program vs. a factorization component) since that
+changes how the model should interpret gene weights/usages.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -124,6 +133,9 @@ in the dataset.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "MS"      "control"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $notes</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $module_method</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>

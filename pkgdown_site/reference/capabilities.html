@@ -3,25 +3,39 @@
 gene_weights (real per-gene membership weights, e.g. kME, not a uniform
 placeholder), module_scores (per-cell/sample module scores are
 available), expression (the backing expression matrix is available),
-clusters (a cell/sample-state grouping column was declared to the
-adapter), and sample_ids (a sample-id column was declared). Capabilities
-are declared by the adapter, not inferred from probing metadata() –
-declaring clusters/sample_ids is how a source advertises that it
-supports that concept at all, independent of which particular metadata
-column a tool is asked to use. Core tools consult this (has_capability())
-before running so they can skip gracefully instead of erroring when a
-capability the source doesn't support is required."><meta property="og:description" content="Reports which of a fixed vocabulary this module set supports:
+counts (a raw counts matrix is available, see counts()), grouping (a
+cell/sample-state grouping column was declared to the adapter),
+sample_ids (a sample-id column was declared), and pseudobulk (a
+pseudo-bulk view is resolvable via pseudobulk_view() – TRUE for a
+pseudobulk_ModuleSet()'s own attached-view wrapper produced by
+with_pseudobulk(), FALSE otherwise, including for a standalone
+pseudobulk_ModuleSet itself, which resolves via data_level/aggregated
+rather than an attachment). Capabilities are declared by the adapter, not inferred from
+probing metadata() – declaring grouping/sample_ids is how a source
+advertises that it supports that concept at all, independent of which
+particular metadata column a tool is asked to use. Core tools consult this
+(has_capability()) before running so they can skip gracefully instead of
+erroring when a capability the source doesn't support is required. See
+validate_moduleset() for the full contract check, including that this
+vector covers the whole vocabulary."><meta property="og:description" content="Reports which of a fixed vocabulary this module set supports:
 gene_weights (real per-gene membership weights, e.g. kME, not a uniform
 placeholder), module_scores (per-cell/sample module scores are
 available), expression (the backing expression matrix is available),
-clusters (a cell/sample-state grouping column was declared to the
-adapter), and sample_ids (a sample-id column was declared). Capabilities
-are declared by the adapter, not inferred from probing metadata() –
-declaring clusters/sample_ids is how a source advertises that it
-supports that concept at all, independent of which particular metadata
-column a tool is asked to use. Core tools consult this (has_capability())
-before running so they can skip gracefully instead of erroring when a
-capability the source doesn't support is required."></head><body>
+counts (a raw counts matrix is available, see counts()), grouping (a
+cell/sample-state grouping column was declared to the adapter),
+sample_ids (a sample-id column was declared), and pseudobulk (a
+pseudo-bulk view is resolvable via pseudobulk_view() – TRUE for a
+pseudobulk_ModuleSet()'s own attached-view wrapper produced by
+with_pseudobulk(), FALSE otherwise, including for a standalone
+pseudobulk_ModuleSet itself, which resolves via data_level/aggregated
+rather than an attachment). Capabilities are declared by the adapter, not inferred from
+probing metadata() – declaring grouping/sample_ids is how a source
+advertises that it supports that concept at all, independent of which
+particular metadata column a tool is asked to use. Core tools consult this
+(has_capability()) before running so they can skip gracefully instead of
+erroring when a capability the source doesn't support is required. See
+validate_moduleset() for the full contract check, including that this
+vector covers the whole vocabulary."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -70,14 +84,21 @@ capability the source doesn't support is required."></head><body>
 <code>gene_weights</code> (real per-gene membership weights, e.g. kME, not a uniform
 placeholder), <code>module_scores</code> (per-cell/sample module scores are
 available), <code>expression</code> (the backing expression matrix is available),
-<code>clusters</code> (a cell/sample-state grouping column was declared to the
-adapter), and <code>sample_ids</code> (a sample-id column was declared). Capabilities
-are declared by the adapter, not inferred from probing <code><a href="metadata.html">metadata()</a></code> –
-declaring <code>clusters</code>/<code>sample_ids</code> is how a source advertises that it
-supports that concept at all, independent of which particular metadata
-column a tool is asked to use. Core tools consult this (<code><a href="has_capability.html">has_capability()</a></code>)
-before running so they can skip gracefully instead of erroring when a
-capability the source doesn't support is required.</p>
+<code>counts</code> (a raw counts matrix is available, see <code><a href="counts.html">counts()</a></code>), <code>grouping</code> (a
+cell/sample-state grouping column was declared to the adapter),
+<code>sample_ids</code> (a sample-id column was declared), and <code>pseudobulk</code> (a
+pseudo-bulk view is resolvable via <code><a href="pseudobulk_view.html">pseudobulk_view()</a></code> – <code>TRUE</code> for a
+<code><a href="pseudobulk_ModuleSet.html">pseudobulk_ModuleSet()</a></code>'s own attached-view wrapper produced by
+<code><a href="with_pseudobulk.html">with_pseudobulk()</a></code>, <code>FALSE</code> otherwise, including for a standalone
+<code>pseudobulk_ModuleSet</code> itself, which resolves via <code>data_level</code>/<code>aggregated</code>
+rather than an attachment). Capabilities are declared by the adapter, not inferred from
+probing <code><a href="metadata.html">metadata()</a></code> – declaring <code>grouping</code>/<code>sample_ids</code> is how a source
+advertises that it supports that concept at all, independent of which
+particular metadata column a tool is asked to use. Core tools consult this
+(<code><a href="has_capability.html">has_capability()</a></code>) before running so they can skip gracefully instead of
+erroring when a capability the source doesn't support is required. See
+<code><a href="validate_moduleset.html">validate_moduleset()</a></code> for the full contract check, including that this
+vector covers the whole vocabulary.</p>
     </div>
 
     <div class="section level2">
@@ -99,7 +120,7 @@ capability the source doesn't support is required.</p>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A named logical vector over <code>c('gene_weights', 'module_scores', 'expression', 'clusters', 'sample_ids')</code>.</p>
+    <p>A named logical vector over <code>c('gene_weights', 'module_scores', 'expression', 'counts', 'grouping', 'sample_ids', 'pseudobulk')</code>.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

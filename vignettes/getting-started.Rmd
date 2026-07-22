@@ -73,6 +73,26 @@ head(gene_membership(ms, 'MM1'))
 head(metadata(ms))
 ```
 
+## Global experiment grounding
+
+Before diving into individual modules, **llegir** first gathers global context about the whole experiment, once, via a small toolbox of **dataset tools** -- the same kind of standardized, evidence-emitting functions as the per-module tools below, just scoped to the whole `ModuleSet` instead of one module. `dataset_composition_tool()` summarizes cell-state census and covariate balance (e.g. is one cell state skewed across diagnosis groups?), and `dataset_variance_structure_tool()` regresses each principal component of the pseudo-bulk expression matrix against declared metadata covariates, so synthesis can tell whether a module's cross-condition signal reflects real biology or a technical axis (batch, sequencing depth) riding the same PC.
+
+`run_dataset_context()` mirrors `run_orchestrator()` below, but runs its tool list once against the whole `ModuleSet` rather than once per module:
+
+```{r, purl = FALSE}
+dataset_tool_config <- list(
+    list(fn = dataset_composition_tool, params = list(group_col = 'lv2_annot', condition_col = 'diagnosis')),
+    list(fn = dataset_variance_structure_tool, params = list(
+        covariates = c('diagnosis', 'nUMI'), condition_col = 'diagnosis'
+    ))
+)
+
+dataset_ctx <- run_dataset_context(ms, dataset_tool_config)
+dataset_ctx$dataset_fragments[[1]]$compact_summary
+```
+
+`dataset_variance_structure_tool()` needs a pseudo-bulk view of the data (see `pseudobulk_ModuleSet()` / `with_pseudobulk()`) to regress against, so it skips gracefully -- rather than erroring -- when `ms` doesn't carry one, as here. The resulting `dataset_ctx` is passed into `run_synthesis_orchestrator()` (or `synthesize_module()`) alongside `desc`, via `dataset_context = dataset_ctx`, injecting a DATASET CONTEXT block into every module's synthesis prompt (see the `## Interpreting evidence` section below).
+
 ## Orchestrating a chain of analysis tools
 
 Each module is characterized by running a set of analysis tools. Every tool takes the same inputs (the `ModuleSet`, a module, and some parameters, bundled together as `ctx`) and returns one `evidence_fragment`: a standardized summary of what that tool found. To demonstrate this, we run a single tool on its own to see what it produces:
@@ -170,7 +190,9 @@ backend <- cached_backend(
     prompt_template_version = PROMPT_TEMPLATE_VERSION
 )
 
-interps <- run_synthesis_orchestrator(packets, desc, backend = backend, output_dir = 'output/interpretations')
+interps <- run_synthesis_orchestrator(
+    packets, desc, backend = backend, output_dir = 'output/interpretations', dataset_context = dataset_ctx
+)
 ```
 
 Inspect one interpretation: its proposed label, fused confidence, and the

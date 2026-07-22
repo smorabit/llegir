@@ -66,8 +66,11 @@ extracting their own data into these same shapes and delegating.</p>
 <span>  <span class="va">expression</span>,</span>
 <span>  <span class="va">metadata</span>,</span>
 <span>  scores <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  cluster_col <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  sample_col <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  counts <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  group_col <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  sample_col <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  data_level <span class="op">=</span> <span class="st">"cell"</span>,</span>
+<span>  aggregated <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'components_ModuleSet'</span></span>
@@ -81,6 +84,9 @@ extracting their own data into these same shapes and delegating.</p>
 <span></span>
 <span><span class="co"># S3 method for class 'components_ModuleSet'</span></span>
 <span><span class="fu"><a href="expression.html">expression</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">...</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># S3 method for class 'components_ModuleSet'</span></span>
+<span><span class="fu"><a href="counts.html">counts</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># S3 method for class 'components_ModuleSet'</span></span>
 <span><span class="fu"><a href="metadata.html">metadata</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">...</span><span class="op">)</span></span>
@@ -119,24 +125,40 @@ per module – the same shape <code><a href="module_scores.html">module_scores()
 <code>FALSE</code>.</p></dd>
 
 
-<dt id="arg-cluster-col">cluster_col<a class="anchor" aria-label="anchor" href="#arg-cluster-col"></a></dt>
+<dt id="arg-counts">counts<a class="anchor" aria-label="anchor" href="#arg-counts"></a></dt>
+<dd><p>Optional genes-by-cells (or genes-by-samples) raw counts
+matrix, same dimensions as <code>expression</code>. If omitted, <code><a href="counts.html">counts()</a></code> returns
+<code>NULL</code> and <code><a href="capabilities.html">capabilities()</a></code><code>$counts</code> is <code>FALSE</code>.</p></dd>
+
+
+<dt id="arg-group-col">group_col<a class="anchor" aria-label="anchor" href="#arg-group-col"></a></dt>
 <dd><p>Optional name of a <code>metadata</code> column declared as the
 cell/sample-state grouping. This only drives
-<code><a href="capabilities.html">capabilities()</a></code><code>$clusters</code> – core tools still take the grouping column
+<code><a href="capabilities.html">capabilities()</a></code><code>$grouping</code> – core tools still take the grouping column
 name as a parameter (e.g. <code>cluster_dme_tool</code>'s <code>group_by</code>); declaring
-<code>cluster_col</code> is how this ModuleSet advertises that it supports the
+<code>group_col</code> is how this ModuleSet advertises that it supports the
 concept at all.</p></dd>
 
 
 <dt id="arg-sample-col">sample_col<a class="anchor" aria-label="anchor" href="#arg-sample-col"></a></dt>
 <dd><p>Optional name of a <code>metadata</code> column declared as the
-sample id, analogous to <code>cluster_col</code> for <code><a href="capabilities.html">capabilities()</a></code><code>$sample_ids</code>.</p></dd>
+sample id, analogous to <code>group_col</code> for <code><a href="capabilities.html">capabilities()</a></code><code>$sample_ids</code>.</p></dd>
+
+
+<dt id="arg-data-level">data_level<a class="anchor" aria-label="anchor" href="#arg-data-level"></a></dt>
+<dd><p>Observation-unit descriptor, e.g. <code>'cell'</code> or <code>'sample'</code>.
+Default <code>'cell'</code>.</p></dd>
+
+
+<dt id="arg-aggregated">aggregated<a class="anchor" aria-label="anchor" href="#arg-aggregated"></a></dt>
+<dd><p>Whether <code>expression</code>/<code>scores</code> are already aggregated
+across cells (e.g. pseudobulk) rather than per-cell. Default <code>FALSE</code>.</p></dd>
 
 
 <dt id="arg-ms">ms<a class="anchor" aria-label="anchor" href="#arg-ms"></a></dt>
 <dd><p>A <code>ModuleSet</code> object; the dispatch target for the generic
 methods below (<code><a href="modules.html">modules()</a></code>, <code><a href="gene_membership.html">gene_membership()</a></code>, <code><a href="module_scores.html">module_scores()</a></code>,
-<code><a href="expression.html">expression()</a></code>, <code><a href="metadata.html">metadata()</a></code>, <code><a href="pkg_versions.html">pkg_versions()</a></code>, <code><a href="capabilities.html">capabilities()</a></code>).</p></dd>
+<code><a href="expression.html">expression()</a></code>, <code><a href="counts.html">counts()</a></code>, <code><a href="metadata.html">metadata()</a></code>, <code><a href="pkg_versions.html">pkg_versions()</a></code>, <code><a href="capabilities.html">capabilities()</a></code>).</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
@@ -157,7 +179,7 @@ methods below (<code><a href="modules.html">modules()</a></code>, <code><a href=
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">gene_table</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>module <span class="op">=</span> <span class="st">'m1'</span>, gene_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'G1'</span>, <span class="st">'G2'</span><span class="op">)</span>, weight <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.9</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">expr</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">20</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">2</span>, dimnames <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'G1'</span>, <span class="st">'G2'</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">'c'</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">meta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>cell_type <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'a'</span>, <span class="st">'b'</span><span class="op">)</span>, <span class="fl">5</span><span class="op">)</span>, row.names <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">expr</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">ms</span> <span class="op">&lt;-</span> <span class="fu">components_ModuleSet</span><span class="op">(</span><span class="va">gene_table</span>, <span class="va">expr</span>, <span class="va">meta</span>, cluster_col <span class="op">=</span> <span class="st">'cell_type'</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">ms</span> <span class="op">&lt;-</span> <span class="fu">components_ModuleSet</span><span class="op">(</span><span class="va">gene_table</span>, <span class="va">expr</span>, <span class="va">meta</span>, group_col <span class="op">=</span> <span class="st">'cell_type'</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="modules.html">modules</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "m1"</span>
 </code></pre></div>

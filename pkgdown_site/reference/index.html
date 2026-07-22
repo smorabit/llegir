@@ -102,13 +102,13 @@
         <dd>Check whether a ModuleSet has a given capability</dd>
       </dl><dl><dt>
 
-          <code><a href="hdWGCNA_ModuleSet.html">hdWGCNA_ModuleSet()</a></code> <code><a href="hdWGCNA_ModuleSet.html">modules(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">gene_membership(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">module_scores(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">expression(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">metadata(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">pkg_versions(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">capabilities(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code>
+          <code><a href="hdWGCNA_ModuleSet.html">hdWGCNA_ModuleSet()</a></code> <code><a href="hdWGCNA_ModuleSet.html">modules(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">gene_membership(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">module_scores(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">expression(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">counts(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">metadata(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">pkg_versions(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code> <code><a href="hdWGCNA_ModuleSet.html">capabilities(<i>&lt;hdWGCNA_ModuleSet&gt;</i>)</a></code>
 
         </dt>
         <dd>Build a ModuleSet from a Seurat object with an hdWGCNA experiment</dd>
       </dl><dl><dt>
 
-          <code><a href="components_ModuleSet.html">components_ModuleSet()</a></code> <code><a href="components_ModuleSet.html">modules(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">gene_membership(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">module_scores(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">expression(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">metadata(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">pkg_versions(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">capabilities(<i>&lt;components_ModuleSet&gt;</i>)</a></code>
+          <code><a href="components_ModuleSet.html">components_ModuleSet()</a></code> <code><a href="components_ModuleSet.html">modules(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">gene_membership(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">module_scores(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">expression(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">counts(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">metadata(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">pkg_versions(<i>&lt;components_ModuleSet&gt;</i>)</a></code> <code><a href="components_ModuleSet.html">capabilities(<i>&lt;components_ModuleSet&gt;</i>)</a></code>
 
         </dt>
         <dd>Build a ModuleSet from tidy components</dd>
@@ -120,7 +120,13 @@
         <dd>Build a ModuleSet from named gene lists, scoring on the fly</dd>
       </dl><dl><dt>
 
-          <code><a href="synthetic_ModuleSet.html">synthetic_ModuleSet()</a></code> <code><a href="synthetic_ModuleSet.html">modules(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">module_scores(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">gene_membership(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">expression(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">metadata(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">pkg_versions(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">capabilities(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code>
+          <code><a href="pseudobulk_ModuleSet.html">pseudobulk_ModuleSet()</a></code> <code><a href="pseudobulk_ModuleSet.html">pkg_versions(<i>&lt;pseudobulk_ModuleSet&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Build a ModuleSet from pseudo-bulk counts, re-scoring modules with decoupleR</dd>
+      </dl><dl><dt>
+
+          <code><a href="synthetic_ModuleSet.html">synthetic_ModuleSet()</a></code> <code><a href="synthetic_ModuleSet.html">modules(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">module_scores(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">gene_membership(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">expression(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">counts(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">metadata(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">pkg_versions(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code> <code><a href="synthetic_ModuleSet.html">capabilities(<i>&lt;synthetic_ModuleSet&gt;</i>)</a></code>
 
         </dt>
         <dd>Wrap a ModuleSet with hand-picked gene sets as synthetic modules</dd>
@@ -130,6 +136,36 @@
 
         </dt>
         <dd>A small, self-contained synthetic ModuleSet for examples and the vignette</dd>
+      </dl><dl><dt>
+
+          <code><a href="counts.html">counts()</a></code>
+
+        </dt>
+        <dd>Underlying raw counts matrix backing a module set</dd>
+      </dl><dl><dt>
+
+          <code><a href="validate_moduleset.html">validate_moduleset()</a></code>
+
+        </dt>
+        <dd>Validate that a ModuleSet satisfies the full adapter contract</dd>
+      </dl><dl><dt>
+
+          <code><a href="with_pseudobulk.html">with_pseudobulk()</a></code> <code><a href="with_pseudobulk.html">capabilities(<i>&lt;with_pseudobulk_ModuleSet&gt;</i>)</a></code>
+
+        </dt>
+        <dd>Attach a pseudo-bulk ModuleSet view to a cell-level ModuleSet</dd>
+      </dl><dl><dt>
+
+          <code><a href="pseudobulk.html">pseudobulk()</a></code>
+
+        </dt>
+        <dd>Attached pseudo-bulk view for a ModuleSet</dd>
+      </dl><dl><dt>
+
+          <code><a href="pseudobulk_view.html">pseudobulk_view()</a></code>
+
+        </dt>
+        <dd>Resolve the pseudo-bulk view for a ModuleSet</dd>
       </dl></div><div class="section level2">
       <h2 id="evidence-tools">Evidence tools<a class="anchor" aria-label="anchor" href="#evidence-tools"></a></h2>
 
@@ -143,7 +179,7 @@
 
       <dl><dt>
 
-          <code><a href="hub_genes_tool.html">hub_genes_tool()</a></code>
+          <code><a href="top_genes_tool.html">top_genes_tool()</a></code>
 
         </dt>
         <dd>Evidence tool: top module genes ranked by membership (kME)</dd>
@@ -153,12 +189,6 @@
 
         </dt>
         <dd>Evidence tool: which cell states express this module</dd>
-      </dl><dl><dt>
-
-          <code><a href="module_by_metadata_tool.html">module_by_metadata_tool()</a></code>
-
-        </dt>
-        <dd>Evidence tool: module score vs. a declared metadata column</dd>
       </dl><dl><dt>
 
           <code><a href="geneset_enrichment_tool.html">geneset_enrichment_tool()</a></code>
@@ -173,6 +203,18 @@
         <dd>Evidence tool: correlate module activity with a signature library</dd>
       </dl><dl><dt>
 
+          <code><a href="differential_module_activity_tool.html">differential_module_activity_tool()</a></code>
+
+        </dt>
+        <dd>Evidence tool: does a module's pseudo-bulk activity differ across a condition</dd>
+      </dl><dl><dt>
+
+          <code><a href="pseudobulk_de_limma_tool.html">pseudobulk_de_limma_tool()</a></code>
+
+        </dt>
+        <dd>Evidence tool: gene-level pseudo-bulk differential expression (limma-voom)</dd>
+      </dl><dl><dt>
+
           <code><a href="import_fragment.html">import_fragment()</a></code>
 
         </dt>
@@ -183,6 +225,53 @@
 
         </dt>
         <dd><code>ctx</code>-compatible tool wrapper around <code><a href="../reference/import_fragment.html">import_fragment()</a></code></dd>
+      </dl><dl><dt>
+
+          <code><a href="import_seurat_markers.html">import_seurat_markers()</a></code>
+
+        </dt>
+        <dd>Import a Seurat / DESeq2 / edgeR differential-expression table</dd>
+      </dl><dl><dt>
+
+          <code><a href="import_hdwgcna_dme.html">import_hdwgcna_dme()</a></code>
+
+        </dt>
+        <dd>Import an hdWGCNA differential module eigengene (DME) table</dd>
+      </dl><dl><dt>
+
+          <code><a href="import_enrichr.html">import_enrichr()</a></code>
+
+        </dt>
+        <dd>Import an EnrichR / GeneOverlap enrichment table</dd>
+      </dl></div><div class="section level2">
+      <h2 id="dataset-tools">Dataset tools<a class="anchor" aria-label="anchor" href="#dataset-tools"></a></h2>
+
+      <div class="section-desc"><p>Global, once-per-dataset tools; each returns one dataset_fragment, bundled into a dataset_context via run_dataset_context() and injected as shared framing into every module’s synthesis prompt.</p></div>
+
+
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="dataset_composition_tool.html">dataset_composition_tool()</a></code>
+
+        </dt>
+        <dd>Dataset tool: cell-state census and condition covariate balance</dd>
+      </dl><dl><dt>
+
+          <code><a href="dataset_variance_structure_tool.html">dataset_variance_structure_tool()</a></code>
+
+        </dt>
+        <dd>Dataset tool: how much dataset variance aligns with each metadata covariate</dd>
+      </dl><dl><dt>
+
+          <code><a href="dataset_baseline_expression_tool.html">dataset_baseline_expression_tool()</a></code>
+
+        </dt>
+        <dd>Dataset tool: dataset-wide baseline expression and housekeeping signal</dd>
       </dl></div><div class="section level2">
       <h2 id="tool-registry">Tool registry<a class="anchor" aria-label="anchor" href="#tool-registry"></a></h2>
 
@@ -284,6 +373,89 @@
         </dt>
         <dd>Build a fragment's provenance record</dd>
       </dl></div><div class="section level2">
+      <h2 id="dataset-fragments-and-context">Dataset fragments and context<a class="anchor" aria-label="anchor" href="#dataset-fragments-and-context"></a></h2>
+
+      <div class="section-desc"><p>The dataset_fragment / dataset_context data contract – the dataset-tool sibling of an evidence_fragment / evidence packet, scoped to the whole experiment rather than one module.</p></div>
+
+
+    </div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="dataset_fragment.html">dataset_fragment()</a></code>
+
+        </dt>
+        <dd>Construct a dataset fragment</dd>
+      </dl><dl><dt>
+
+          <code><a href="validate_dataset_fragment.html">validate_dataset_fragment()</a></code>
+
+        </dt>
+        <dd>Validate a dataset fragment</dd>
+      </dl><dl><dt>
+
+          <code><a href="dataset_fragment_to_json.html">dataset_fragment_to_json()</a></code>
+
+        </dt>
+        <dd>Serialize a dataset fragment to JSON</dd>
+      </dl><dl><dt>
+
+          <code><a href="dataset_fragment_from_json.html">dataset_fragment_from_json()</a></code>
+
+        </dt>
+        <dd>Parse a dataset fragment from JSON</dd>
+      </dl><dl><dt>
+
+          <code><a href="build_dataset_context.html">build_dataset_context()</a></code>
+
+        </dt>
+        <dd>Assemble and hash a dataset context</dd>
+      </dl><dl><dt>
+
+          <code><a href="dataset_context_to_json.html">dataset_context_to_json()</a></code>
+
+        </dt>
+        <dd>Serialize a dataset context to JSON</dd>
+      </dl><dl><dt>
+
+          <code><a href="write_dataset_context.html">write_dataset_context()</a></code>
+
+        </dt>
+        <dd>Write a dataset context to a JSON file</dd>
+      </dl><dl><dt>
+
+          <code><a href="read_dataset_context.html">read_dataset_context()</a></code>
+
+        </dt>
+        <dd>Read a dataset context from a JSON file</dd>
+      </dl><dl><dt>
+
+          <code><a href="render_dataset_context_compact.html">render_dataset_context_compact()</a></code>
+
+        </dt>
+        <dd>Render a dataset context as a compact model-facing text block</dd>
+      </dl><dl><dt>
+
+          <code><a href="import_dataset_fragment.html">import_dataset_fragment()</a></code>
+
+        </dt>
+        <dd>Import a user-supplied result table as a dataset fragment</dd>
+      </dl><dl><dt>
+
+          <code><a href="import_dataset_fragment_tool.html">import_dataset_fragment_tool()</a></code>
+
+        </dt>
+        <dd><code>ctx</code>-compatible tool wrapper around <code><a href="../reference/import_dataset_fragment.html">import_dataset_fragment()</a></code></dd>
+      </dl><dl><dt>
+
+          <code><a href="import_milo_da.html">import_milo_da()</a></code>
+
+        </dt>
+        <dd>Import a miloR differential-abundance neighborhood table</dd>
+      </dl></div><div class="section level2">
       <h2 id="orchestration">Orchestration<a class="anchor" aria-label="anchor" href="#orchestration"></a></h2>
 
       <div class="section-desc"><p>Run tools/synthesis over a module set and write results to disk.</p></div>
@@ -306,6 +478,12 @@
 
         </dt>
         <dd>Run a configured set of evidence tools over every module in a ModuleSet</dd>
+      </dl><dl><dt>
+
+          <code><a href="run_dataset_context.html">run_dataset_context()</a></code>
+
+        </dt>
+        <dd>Build a dataset context once per dataset</dd>
       </dl><dl><dt>
 
           <code><a href="synthesize_module.html">synthesize_module()</a></code>
@@ -461,6 +639,12 @@
         <dd>Compute deterministic evidence signals from a packet</dd>
       </dl><dl><dt>
 
+          <code><a href="calculate_fusion_score.html">calculate_fusion_score()</a></code>
+
+        </dt>
+        <dd>Calculate the deterministic fused evidence confidence for a packet</dd>
+      </dl><dl><dt>
+
           <code><a href="fuse_confidence.html">fuse_confidence()</a></code>
 
         </dt>
@@ -583,6 +767,12 @@
 
         </dt>
         <dd>Write a synthesis manifest to a JSON file</dd>
+      </dl><dl><dt>
+
+          <code><a href="write_interpretation_report.html">write_interpretation_report()</a></code>
+
+        </dt>
+        <dd>Write a combined interpretation + evidence HTML report</dd>
       </dl></div><div class="section level2">
       <h2 id="statistical-helpers">Statistical helpers<a class="anchor" aria-label="anchor" href="#statistical-helpers"></a></h2>
 
@@ -600,24 +790,6 @@
 
         </dt>
         <dd>One-vs-rest categorical group test with an omnibus Kruskal-Wallis test</dd>
-      </dl><dl><dt>
-
-          <code><a href="continuous_correlation_test.html">continuous_correlation_test()</a></code>
-
-        </dt>
-        <dd>Pearson and Spearman correlation of module scores against a continuous variable</dd>
-      </dl><dl><dt>
-
-          <code><a href="aggregate_by_sample.html">aggregate_by_sample()</a></code>
-
-        </dt>
-        <dd>Aggregate module scores to the sample level</dd>
-      </dl><dl><dt>
-
-          <code><a href="is_sample_constant.html">is_sample_constant()</a></code>
-
-        </dt>
-        <dd>Check whether a variable is constant within every sample</dd>
       </dl></div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>

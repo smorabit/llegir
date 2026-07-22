@@ -54,7 +54,8 @@
 <span>  params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  input_hashes <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  pkg_versions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  source <span class="op">=</span> <span class="st">"computed"</span></span>
+<span>  source <span class="op">=</span> <span class="st">"computed"</span>,</span>
+<span>  module_method <span class="op">=</span> <span class="cn">NA_character_</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -82,6 +83,13 @@ the <code>ModuleSet</code>'s own <code><a href="pkg_versions.html">pkg_versions(
 <dt id="arg-source">source<a class="anchor" aria-label="anchor" href="#arg-source"></a></dt>
 <dd><p><code>'computed'</code> (default, tool-produced) or <code>'user_supplied'</code>
 (set automatically by <code><a href="import_fragment.html">import_fragment()</a></code>).</p></dd>
+
+
+<dt id="arg-module-method">module_method<a class="anchor" aria-label="anchor" href="#arg-module-method"></a></dt>
+<dd><p>Optional free-form description of how the modules
+themselves were generated, e.g. <code>'cNMF factors, k=20'</code>; see
+<code><a href="dataset_description.html">dataset_description()</a></code>. Threaded through from <code><a href="run_module.html">run_module()</a></code> /
+<code><a href="run_orchestrator.html">run_orchestrator()</a></code>'s <code>module_method</code> argument, when given. Default <code>NA</code>.</p></dd>
 
 </dl></div>
     <div class="section level2">

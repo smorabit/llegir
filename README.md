@@ -1,36 +1,19 @@
-# Module Interpretation Engine
+# llegir
 
-A tool that loads a gene co-expression module object (starting with hdWGCNA), systematically gathers a standardized bundle of evidence for each module, and produces a short, evidence-backed interpretation paragraph — with confidence-gated human review and a full reproducibility log. Deterministic evidence core in R; model-agnostic synthesis layer.
+**llegir** is a package for LLM-enabled gene-program interpretations in R. In transcriptomics data analysis, we often work with groups of genes that are somehow related to one another, and **llegir** aims to automate the interpretation of these interrelated groups of genes, which we refer to as "*gene modules*". **llegir** is completely agnostic to the sequencing technology (e.g. bulk RNA-seq, single-cell RNA-seq, sequencing or imaging based spatial transcriptomics, etc), and it is agnostic to the method used to group genes into modules (e.g. WGCNA, matrix factorization, literature-derived gene lists, etc).
 
-*Status: design → Milestone 1 (deterministic core). Started 2026-07.*
-*Originated as an offshoot of the SERPENTINE project; now a standalone, general tool.*
+**llegir** takes as input a gene expression matrix and a set of *gene modules*, for instance coming from our other tool ![hdWGCNA](https://smorabit.github.io/hdWGCNA/). Next, **llegir** compiles a set of "evidence" for each module by running a user-defined chain of analysis tools, flexibly defined to suit the specific needs of each dataset. The results of these analysis tools are then assembled into an "evidence packet" that is given to an LLM of the user's choice for synthesis, summarization, and interpretation. Finally, **llegir** compiles an .html report for the interpretation of all modules.   
 
----
+**llegir** means "to read" in the Catalan language.
 
-## Start here
+## Development stage
 
-- **Building it (Claude Code):** read [`CLAUDE.md`](CLAUDE.md), then the current task in [`docs/milestone_1.md`](docs/milestone_1.md).
-- **Concept:** [`docs/overview.md`](docs/overview.md)
-- **Architecture:** [`docs/implementation_guide.md`](docs/implementation_guide.md)
-- **Data contracts (schemas):** [`docs/schemas.md`](docs/schemas.md)
-- **R code style:** [`STYLE.md`](STYLE.md)
+**llegir** is in an experimental development stage, and at this point it is subject to major changes until we have pushed a more stable release, proceed with caution! 
 
----
+## Installation
 
-## Development dataset
+```r
+remotes::install_github("smorabit/llegir")
+```
 
-`data/CSF_Myeloid_hdWGCNA.rds` — an hdWGCNA Seurat object of **myeloid cells from cerebrospinal fluid (CSF)** across patients with different brain diseases. Used as the test object for the deterministic core.
-
-Metadata columns of interest:
-
-| Column | Role | Type |
-|---|---|---|
-| `diagnosis` | disease / condition | categorical |
-| `Sample.ID` | individual sample | categorical (grouping) |
-| `lv2_annot` | cell cluster / state | categorical (grouping for DME) |
-
-Because this dataset has none of SERPENTINE's bespoke tools (CancerSEA, cross-lineage T-cell coordination), it is an ideal test that the **core is genuinely dataset-agnostic**.
-
----
-
-*Last updated: 2026-07-10*
+See the [Getting Started](vignettes/getting-started.Rmd) vignette for a full quick start walkthrough.

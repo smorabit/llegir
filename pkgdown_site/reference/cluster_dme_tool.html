@@ -71,7 +71,7 @@ naming the cell-state grouping (e.g. <code>'lv2_annot'</code>).</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An <code>evidence_fragment</code> of type <code>'state_expression'</code>, or <code>NULL</code> if
-<code>ctx$ms</code> lacks the <code>clusters</code> or <code>module_scores</code> capability (see
+<code>ctx$ms</code> lacks the <code>grouping</code> or <code>module_scores</code> capability (see
 <code><a href="capabilities.html">capabilities()</a></code>) – a graceful skip, not an error.</p>
     </div>
 
@@ -92,42 +92,26 @@ naming the cell-state grouping (e.g. <code>'lv2_annot'</code>).</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "state_expression"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $result</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       group   n  mean_score median_score rank_biserial   p_value       fdr</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 myeloid_b 101 -0.04253907  -0.40461283   -0.06950695 0.3962589 0.3962589</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 myeloid_a  99  0.04339845  -0.07218409    0.06950695 0.3962589 0.3962589</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       group  n mean_score median_score rank_biserial   p_value       fdr</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 myeloid_a 99 0.04339845  -0.07218409    0.06950695 0.3962589 0.3962589</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   direction</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1      down</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2        up</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $compact_summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "strongest state: myeloid_b (r=-0.07, FDR=0.4); omnibus Kruskal p=0.4"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "strongest state: myeloid_a (r=0.07, FDR=0.4); omnibus Kruskal p=0.4"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[1]]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[1]]$cluster</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "myeloid_b"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[1]]$mean_score</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -0.04253907</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[1]]$rank_biserial</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] -0.06950695</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[1]]$fdr</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.3962589</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[2]]</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[2]]$cluster</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "myeloid_a"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[2]]$mean_score</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[1]]$mean_score</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.04339845</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[2]]$rank_biserial</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[1]]$rank_biserial</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.06950695</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[2]]$fdr</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $top_findings[[1]]$fdr</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.3962589</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -139,7 +123,7 @@ naming the cell-state grouping (e.g. <code>'lv2_annot'</code>).</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.3955787</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $direction</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "down"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "up"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$tool_version</span>
@@ -164,8 +148,11 @@ naming the cell-state grouping (e.g. <code>'lv2_annot'</code>).</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$source</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "computed"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$module_method</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$timestamp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2026-07-16T14:50:06+0200"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2026-07-22T15:22:34+0200"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>

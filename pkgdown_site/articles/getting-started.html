@@ -73,6 +73,7 @@
 
     
     
+<p><em>This vignette’s code chunks require a local <code>data/CSF_Myeloid_hdWGCNA.rds</code> dev fixture (gitignored and build-ignored, not shipped with the package) and are skipped here. The prose below still walks through the full workflow.</em></p>
 <p><strong>llegir</strong> is an R package to automate the interpretation of gene modules in a specific context. From an input gene expression dataset (single-cell, spatial transcriptomics, or bulk RNA-seq) and a set of gene modules, <strong>llegir</strong> gathers a standardized bundle of evidence per module using a pre-built toolbox of analysis functions, and drafts an evidence-backed interpretation via a LLM-enabled synthesis layer.</p>
 <p><em>NOTE</em> this package is at an experimental development stage, and much of the interface is subject to change.</p>
 <div class="section level2">
@@ -92,84 +93,63 @@
 <span><span class="co"># initialize the ModuleSet </span></span>
 <span><span class="va">ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hdWGCNA_ModuleSet.html">hdWGCNA_ModuleSet</a></span><span class="op">(</span><span class="va">seurat_obj</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/modules.html">modules</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span></span></code></pre></div>
-<pre><code> [1] "MM1"  "MM2"  "MM3"  "MM4"  "MM5"  "MM6"  "MM7"  "MM8"  "MM9"  "MM10"
-[11] "MM11" "MM12" "MM13" "MM14"</code></pre>
 <p>A quick look at the two attributes most tools lean on: the ranked gene membership of a module and the cell-level metadata.</p>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/gene_membership.html">gene_membership</a></span><span class="op">(</span><span class="va">ms</span>, <span class="st">'MM1'</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code>    gene_name module       kme
-237     FCGBP    MM1 0.8274590
-89        A2M    MM1 0.7623179
-65      DOCK4    MM1 0.7402873
-5        C1QB    MM1 0.7244926
-4        C1QC    MM1 0.7211557
-3        C1QA    MM1 0.7155457</code></pre>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="fu"><a href="../reference/metadata.html">metadata</a></span><span class="op">(</span><span class="va">ms</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code>                             nCount_RNA nFeature_RNA percent.mt project sample
-CSF_01_4608_AAAGATGAGTGAAGAG       2229         1207   8.209960  CSF_01    S01
-CSF_01_4608_AAAGCAAGTGCAGACA       1884         1037   6.475584  CSF_01    S01
-CSF_01_4608_AAATGCCTCACGATGT       7446         2561   1.960784  CSF_01    S01
-CSF_01_4608_AACACGTGTGCTTCTC       3612         1562   5.841639  CSF_01    S01
-CSF_01_4608_AACCATGGTAAACGCG       8805         2361   2.759796  CSF_01    S01
-CSF_01_4608_AACCATGGTACCGCTG       5416         1947   3.637371  CSF_01    S01
-                             patient general_annot   lv1_annot
-CSF_01_4608_AAAGATGAGTGAAGAG     P01       Myeloid          DC
-CSF_01_4608_AAAGCAAGTGCAGACA     P01       Myeloid          DC
-CSF_01_4608_AAATGCCTCACGATGT     P01       Myeloid          DC
-CSF_01_4608_AACACGTGTGCTTCTC     P01       Myeloid Macrophages
-CSF_01_4608_AACCATGGTAAACGCG     P01       Myeloid          DC
-CSF_01_4608_AACCATGGTACCGCTG     P01       Myeloid          DC
-                                            lv2_annot            diagnosis
-CSF_01_4608_AAAGATGAGTGAAGAG DC non-inflammatory CD1C Primary CNS lymphoma
-CSF_01_4608_AAAGCAAGTGCAGACA DC non-inflammatory CD1C Primary CNS lymphoma
-CSF_01_4608_AAATGCCTCACGATGT DC non-inflammatory CD1C Primary CNS lymphoma
-CSF_01_4608_AACACGTGTGCTTCTC                     BAMs Primary CNS lymphoma
-CSF_01_4608_AACCATGGTAAACGCG               DC1 CLEC9A Primary CNS lymphoma
-CSF_01_4608_AACCATGGTACCGCTG DC non-inflammatory CD1C Primary CNS lymphoma
-                             CSF_collection_site metacell_grouping
-CSF_01_4608_AAAGATGAGTGAAGAG              lumbar    S01#P01#CSF_01
-CSF_01_4608_AAAGCAAGTGCAGACA              lumbar    S01#P01#CSF_01
-CSF_01_4608_AAATGCCTCACGATGT              lumbar    S01#P01#CSF_01
-CSF_01_4608_AACACGTGTGCTTCTC              lumbar    S01#P01#CSF_01
-CSF_01_4608_AACCATGGTAAACGCG              lumbar    S01#P01#CSF_01
-CSF_01_4608_AACCATGGTACCGCTG              lumbar    S01#P01#CSF_01</code></pre>
+</div>
+<div class="section level2">
+<h2 id="global-experiment-grounding">Global experiment grounding<a class="anchor" aria-label="anchor" href="#global-experiment-grounding"></a>
+</h2>
+<p>Before diving into individual modules, <strong>llegir</strong> first gathers global context about the whole experiment, once, via a small toolbox of <strong>dataset tools</strong> – the same kind of standardized, evidence-emitting functions as the per-module tools below, just scoped to the whole <code>ModuleSet</code> instead of one module. <code><a href="../reference/dataset_composition_tool.html">dataset_composition_tool()</a></code> summarizes cell-state census and covariate balance (e.g. is one cell state skewed across diagnosis groups?), and <code><a href="../reference/dataset_variance_structure_tool.html">dataset_variance_structure_tool()</a></code> regresses each principal component of the pseudo-bulk expression matrix against declared metadata covariates, so synthesis can tell whether a module’s cross-condition signal reflects real biology or a technical axis (batch, sequencing depth) riding the same PC.</p>
+<p><code><a href="../reference/run_dataset_context.html">run_dataset_context()</a></code> mirrors <code><a href="../reference/run_orchestrator.html">run_orchestrator()</a></code> below, but runs its tool list once against the whole <code>ModuleSet</code> rather than once per module:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">dataset_tool_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">dataset_composition_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group_col <span class="op">=</span> <span class="st">'lv2_annot'</span>, condition_col <span class="op">=</span> <span class="st">'diagnosis'</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">dataset_variance_structure_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'diagnosis'</span>, <span class="st">'nUMI'</span><span class="op">)</span>, condition_col <span class="op">=</span> <span class="st">'diagnosis'</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">dataset_ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset_context.html">run_dataset_context</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">dataset_tool_config</span><span class="op">)</span></span>
+<span><span class="va">dataset_ctx</span><span class="op">$</span><span class="va">dataset_fragments</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">compact_summary</span></span></code></pre></div>
+<p><code><a href="../reference/dataset_variance_structure_tool.html">dataset_variance_structure_tool()</a></code> needs a pseudo-bulk view of the data (see <code><a href="../reference/pseudobulk_ModuleSet.html">pseudobulk_ModuleSet()</a></code> / <code><a href="../reference/with_pseudobulk.html">with_pseudobulk()</a></code>) to regress against, so it skips gracefully – rather than erroring – when <code>ms</code> doesn’t carry one, as here. The resulting <code>dataset_ctx</code> is passed into <code><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator()</a></code> (or <code><a href="../reference/synthesize_module.html">synthesize_module()</a></code>) alongside <code>desc</code>, via <code>dataset_context = dataset_ctx</code>, injecting a DATASET CONTEXT block into every module’s synthesis prompt (see the <code>## Interpreting evidence</code> section below).</p>
 </div>
 <div class="section level2">
 <h2 id="orchestrating-a-chain-of-analysis-tools">Orchestrating a chain of analysis tools<a class="anchor" aria-label="anchor" href="#orchestrating-a-chain-of-analysis-tools"></a>
 </h2>
 <p>Each module is characterized by running a set of analysis tools. Every tool takes the same inputs (the <code>ModuleSet</code>, a module, and some parameters, bundled together as <code>ctx</code>) and returns one <code>evidence_fragment</code>: a standardized summary of what that tool found. To demonstrate this, we run a single tool on its own to see what it produces:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># set up the context (ctx) for the tool</span></span>
 <span><span class="va">ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>ms <span class="op">=</span> <span class="va">ms</span>, module_id <span class="op">=</span> <span class="st">'MM1'</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_hubs <span class="op">=</span> <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
-<span><span class="co"># run the hub genes tool to get the top 10 hub genes</span></span>
-<span><span class="va">hub_frag</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hub_genes_tool.html">hub_genes_tool</a></span><span class="op">(</span><span class="va">ctx</span><span class="op">)</span></span>
+<span><span class="co"># run the top genes tool to get the top 10 genes by membership</span></span>
+<span><span class="va">top_frag</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/top_genes_tool.html">top_genes_tool</a></span><span class="op">(</span><span class="va">ctx</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># sanity check:</span></span>
-<span><span class="fu"><a href="../reference/validate_evidence_fragment.html">validate_evidence_fragment</a></span><span class="op">(</span><span class="va">hub_frag</span><span class="op">)</span></span>
+<span><span class="fu"><a href="../reference/validate_evidence_fragment.html">validate_evidence_fragment</a></span><span class="op">(</span><span class="va">top_frag</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># show the result</span></span>
-<span><span class="va">hub_frag</span><span class="op">$</span><span class="va">compact_summary</span></span></code></pre></div>
-<pre><code>[1] "top 10 hub genes by kME: FCGBP, A2M, DOCK4, C1QB, C1QC, C1QA, TREM2, MSR1, EPB41L3, C5AR1"</code></pre>
+<span><span class="va">top_frag</span><span class="op">$</span><span class="va">compact_summary</span></span></code></pre></div>
 <p><strong>llegir</strong> ships several pre-built analysis tools:</p>
 <ul>
 <li>
-<code><a href="../reference/hub_genes_tool.html">hub_genes_tool()</a></code>: top hub genes by kME</li>
-<li>
-<code><a href="../reference/module_by_metadata_tool.html">module_by_metadata_tool()</a></code>: association with a metadata column</li>
+<code><a href="../reference/top_genes_tool.html">top_genes_tool()</a></code>: top genes by kME</li>
 <li>
 <code><a href="../reference/cluster_dme_tool.html">cluster_dme_tool()</a></code>: differential module expression across clusters</li>
 <li>
 <code><a href="../reference/geneset_enrichment_tool.html">geneset_enrichment_tool()</a></code>: GO/pathway enrichment</li>
+<li>
+<code><a href="../reference/signature_correlation_tool.html">signature_correlation_tool()</a></code>: co-variation with a signature library</li>
 </ul>
 <p>Additionally, external results you have already computed elsewhere can be leveraged the same way via <code><a href="../reference/import_fragment.html">import_fragment()</a></code>.</p>
 <p>We run a chain of tools over the module set using <code><a href="../reference/run_orchestrator.html">run_orchestrator()</a></code>, which then collects the results into one <strong>evidence packet</strong> per module, saved as a JSON file. The tool list pairs each tool (<code>fn</code>) with its parameters, and <code>modules_use</code> limits the run to three modules for this example:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">modules_use</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'MM1'</span>, <span class="st">'MM2'</span>, <span class="st">'MM3'</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">tool_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">hub_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_hubs <span class="op">=</span> <span class="fl">25</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">top_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_hubs <span class="op">=</span> <span class="fl">25</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">cluster_dme_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group_by <span class="op">=</span> <span class="st">'lv2_annot'</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">geneset_enrichment_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
 <span>        n_hubs <span class="op">=</span> <span class="fl">25</span>,</span>
@@ -181,26 +161,17 @@ CSF_01_4608_AACCATGGTACCGCTG              lumbar    S01#P01#CSF_01</code></pre>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">packets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_orchestrator.html">run_orchestrator</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">tool_config</span>, output_dir <span class="op">=</span> <span class="st">'output/evidence_packets'</span>, modules_use <span class="op">=</span> <span class="va">modules_use</span><span class="op">)</span></span></code></pre></div>
-<pre><code>Warning in readLines(gmt.file): incomplete final line found on
-'data/GO_Biological_Process_2026.txt'
-Warning in readLines(gmt.file): incomplete final line found on
-'data/GO_Biological_Process_2026.txt'
-Warning in readLines(gmt.file): incomplete final line found on
-'data/GO_Biological_Process_2026.txt'</code></pre>
 <p>Each packet holds its evidence fragments plus a <code>packet_hash</code>, a fingerprint of the evidence it contains. The same evidence always produces the same hash, which makes runs easy to track and reproduce.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">packet</span> <span class="op">&lt;-</span> <span class="va">packets</span><span class="op">[[</span><span class="st">'MM1'</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="va">packet</span><span class="op">$</span><span class="va">packet_hash</span></span></code></pre></div>
-<pre><code>[1] "6f8c9d360b0491e09c421ca0c12d8ea1145a9449e82a07f51d1b43e1ce8aa906"</code></pre>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">packet</span><span class="op">$</span><span class="va">fragments</span><span class="op">)</span></span></code></pre></div>
-<pre><code>[1] 3</code></pre>
+<span><span class="va">packet</span><span class="op">$</span><span class="va">packet_hash</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">packet</span><span class="op">$</span><span class="va">fragments</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="dataset-context">Dataset context<a class="anchor" aria-label="anchor" href="#dataset-context"></a>
+<h2 id="provide-dataset-context">Provide dataset context<a class="anchor" aria-label="anchor" href="#provide-dataset-context"></a>
 </h2>
 <p>Before interpreting the modules, we provide a brief description of the dataset <code><a href="../reference/dataset_description.html">dataset_description()</a></code>. This biological context is given to the model so it interprets each module in an appropriate setting (the same gene program can mean something different in CSF myeloid cells than in a solid tumor). It is required: <strong>llegir</strong> will not run synthesis without it.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataset_description.html">dataset_description</a></span><span class="op">(</span></span>
 <span>    species <span class="op">=</span> <span class="st">'human'</span>,</span>
 <span>    tissue <span class="op">=</span> <span class="st">'cerebrospinal fluid (CSF)'</span>,</span>
@@ -213,21 +184,14 @@ Warning in readLines(gmt.file): incomplete final line found on
 <span>    notes <span class="op">=</span> <span class="st">'Modules are CSF-myeloid co-expression programs; interpret in a CNS-myeloid, neuro-oncology / neuroinflammation context.'</span></span>
 <span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_dataset_description.html">render_dataset_description</a></span><span class="op">(</span><span class="va">desc</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code>Dataset context:
-- species: human
-- tissue: cerebrospinal fluid (CSF)
-- cell compartment: myeloid cells
-- assay: single-cell RNA-seq (10x)
-- conditions: Glioblastoma, Brain Metastasis, Primary CNS lymphoma, Secondary CNS lymphoma, Inflammatory / other neuroinflammatory
-- notes: Modules are CSF-myeloid co-expression programs; interpret in a CNS-myeloid, neuro-oncology / neuroinflammation context.</code></pre>
 </div>
 <div class="section level2">
-<h2 id="synthesis">Synthesis<a class="anchor" aria-label="anchor" href="#synthesis"></a>
+<h2 id="interpreting-evidence">Interpreting evidence<a class="anchor" aria-label="anchor" href="#interpreting-evidence"></a>
 </h2>
-<p><code><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator()</a></code> turns the evidence packets into written interpretations. For each module it sends the evidence to the model, checks that every claim is actually backed by the evidence (<code><a href="../reference/enforce_faithfulness.html">enforce_faithfulness()</a></code>), and combines the model’s confidence with the evidence-based confidence (<code><a href="../reference/fuse_confidence.html">fuse_confidence()</a></code>). It saves an interpretation and a readable Markdown paragraph per module, plus a <code>review_queue.tsv</code> and <code>manifest.json</code> for the whole run.</p>
-<p>The model’s role is deliberately limited: it only ever sees the summarized evidence, never the raw data tables, and it never runs any analysis itself.</p>
+<p><code><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator()</a></code> turns the evidence packets into written interpretations. Each module’s evidence packet is sent to a user-specified LLM, checks that every claim is actually backed by the evidence (<code><a href="../reference/enforce_faithfulness.html">enforce_faithfulness()</a></code>), and combines the model’s confidence with the evidence-based confidence (<code><a href="../reference/fuse_confidence.html">fuse_confidence()</a></code>). It saves an interpretation and a readable Markdown paragraph per module, plus a <code>review_queue.tsv</code> and <code>manifest.json</code> for the whole run.</p>
+<p>The language model’s role is deliberately limited: it only ever sees the summarized evidence, never the raw data tables, and it never runs any analysis itself.</p>
 <p>You can use different model providers through <code><a href="../reference/resolve_backend.html">resolve_backend()</a></code> (here <code>'github'</code>; <code>'gemini'</code> also works), which reads your API key from the environment (e.g. <code>GITHUB_PAT</code> or <code>GEMINI_API_KEY</code>). Wrapping it in <code><a href="../reference/cached_backend.html">cached_backend()</a></code> saves each result to disk, so re-running synthesis on unchanged packets doesn’t spend another API call.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">backend</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cached_backend.html">cached_backend</a></span><span class="op">(</span></span>
 <span>    <span class="fu"><a href="../reference/resolve_backend.html">resolve_backend</a></span><span class="op">(</span><span class="st">'github'</span><span class="op">)</span>,</span>
 <span>    provider <span class="op">=</span> <span class="st">'github'</span>,</span>
@@ -235,40 +199,18 @@ Warning in readLines(gmt.file): incomplete final line found on
 <span>    prompt_template_version <span class="op">=</span> <span class="va">PROMPT_TEMPLATE_VERSION</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">interps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator</a></span><span class="op">(</span><span class="va">packets</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="va">backend</span>, output_dir <span class="op">=</span> <span class="st">'output/interpretations'</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">interps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator</a></span><span class="op">(</span></span>
+<span>    <span class="va">packets</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="va">backend</span>, output_dir <span class="op">=</span> <span class="st">'output/interpretations'</span>, dataset_context <span class="op">=</span> <span class="va">dataset_ctx</span></span>
+<span><span class="op">)</span></span></code></pre></div>
 <p>Inspect one interpretation: its proposed label, fused confidence, and the rendered paragraph.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">interp</span> <span class="op">&lt;-</span> <span class="va">interps</span><span class="op">[[</span><span class="st">'MM1'</span><span class="op">]</span><span class="op">]</span></span>
-<span><span class="va">interp</span><span class="op">$</span><span class="va">proposed_label</span></span></code></pre></div>
-<pre><code>[1] "Myeloid Activation in CNS Tumors"</code></pre>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">interp</span><span class="op">$</span><span class="va">confidence</span><span class="op">$</span><span class="va">score</span></span></code></pre></div>
-<pre><code>[1] 0.9032809</code></pre>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_paragraph.html">render_paragraph</a></span><span class="op">(</span><span class="va">interp</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
-<pre><code>**Myeloid Activation in CNS Tumors** (MM1)
-
-Myeloid cell activation in response to CNS tumors and inflammation
-
-Dominant biology: Myeloid cell activation in neuro-oncology
-Primarily expressed in: Border TAMs
-Condition dynamics: 
-
-Supporting evidence:
-- Myeloid cell states are significantly upregulated in the context of CNS tumors. (cluster_dme; direction: up)
-- Genes associated with myeloid activation are enriched in biological processes related to immune response and synapse pruning. (geneset_enrichment; direction: up)
-
-Metadata associations:
-- cell_state: Strong expression in Border TAMs indicates a significant role in the module. (cluster_dme)
-
-Confidence: 0.90 -- The evidence indicates a strong upregulation of myeloid cell states and significant enrichment in relevant biological processes, supporting the proposed label. [fusion: model=0.85, evidence=0.96 (effect=0.87, enrichment=1.00, agreement=1.00/convergent_signal), fused=0.90]</code></pre>
+<span><span class="va">interp</span><span class="op">$</span><span class="va">proposed_label</span></span>
+<span><span class="va">interp</span><span class="op">$</span><span class="va">confidence</span><span class="op">$</span><span class="va">score</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_paragraph.html">render_paragraph</a></span><span class="op">(</span><span class="va">interp</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p>The review queue (<code><a href="../reference/build_review_queue.html">build_review_queue()</a></code>) collects only the interpretations flagged for a closer look (<code><a href="../reference/needs_review.html">needs_review()</a></code>), sorted lowest-confidence first, so you know which modules to check by hand:</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="../reference/build_review_queue.html">build_review_queue</a></span><span class="op">(</span><span class="va">interps</span><span class="op">)</span></span></code></pre></div>
-<pre><code>    module_id confidence                 flags
-MM2       MM2      0.826 insufficient_evidence
-                                                                               reason
-MM2 deterministic evidence signals are weak (low effect size / few significant terms)</code></pre>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
