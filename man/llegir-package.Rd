@@ -12,8 +12,8 @@ Loads a gene co-expression module object (hdWGCNA first), gathers a standardized
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/smorabit/Module_Interpretation}
-  \item Report bugs at \url{https://github.com/smorabit/Module_Interpretation/issues}
+  \item \url{https://github.com/smorabit/llegir}
+  \item Report bugs at \url{https://github.com/smorabit/llegir/issues}
 }
 
 }

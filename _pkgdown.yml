@@ -1,4 +1,4 @@
-url: https://smorabit.github.io/Module_Interpretation/
+url: https://smorabit.github.io/llegir/
 
 # repo already has a docs/ directory for design notes (see navbar link below);
 # pkgdown's own default output dir would collide with it, so it's built to

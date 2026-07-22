@@ -16,8 +16,8 @@ knitr::opts_chunk$set(
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-**llegir** is a Module Interpretation Engine: it loads a gene co-expression
-module object (starting with hdWGCNA), systematically gathers a standardized
+**llegir** loads a gene co-expression module object (starting with hdWGCNA),
+systematically gathers a standardized
 bundle of evidence for each module, and produces a short, evidence-backed
 interpretation paragraph -- with confidence-gated human review and a full
 reproducibility log. The deterministic evidence core is in R; the synthesis
@@ -34,7 +34,7 @@ general tool.*
 
 ```r
 # install.packages('remotes')
-remotes::install_github('smorabit/Module_Interpretation')
+remotes::install_github('smorabit/llegir')
 ```
 
 ## Design docs

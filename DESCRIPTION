@@ -41,5 +41,5 @@ Suggests:
     SummarizedExperiment
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: https://github.com/smorabit/Module_Interpretation
-BugReports: https://github.com/smorabit/Module_Interpretation/issues
+URL: https://github.com/smorabit/llegir
+BugReports: https://github.com/smorabit/llegir/issues
