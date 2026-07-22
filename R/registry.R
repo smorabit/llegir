@@ -142,4 +142,9 @@ list_tools <- function(scope = NULL){
         description = "Gene-level differential expression (limma-voom) within a module, on pseudo-bulk counts",
         requires = character(0), tier = 'high'
     )
+    register_tool(
+        'composition', dataset_composition_tool, type = 'composition_summary',
+        description = 'Cell-state census and condition covariate balance across the whole dataset',
+        requires = 'grouping', scope = 'dataset'
+    )
 }
