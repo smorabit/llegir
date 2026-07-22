@@ -19,6 +19,7 @@
 │   │   ├── milestone_1.md
 │   │   ├── milestone_2.md
 │   │   ├── milestone_abstract_moduleset.md
+│   │   ├── milestone_dataset_tools.md
 │   │   ├── milestone_extensibility.md
 │   │   ├── milestone_fused_confidence.md
 │   │   ├── milestone_packaging.md
@@ -26,6 +27,7 @@
 │   │   └── milestone2_verification.md
 │   ├── overview.md
 │   ├── prompts
+│   │   ├── handoff_prompt_dataset_tools.md
 │   │   ├── handoff_prompt_dev_economy.md
 │   │   ├── handoff_prompt_extensibility_1.md
 │   │   ├── handoff_prompt_extensibility_2.md
@@ -40,6 +42,7 @@
 │   └── schemas.md
 ├── inst
 │   ├── schemas
+│   │   ├── dataset_fragment.schema.json
 │   │   ├── evidence_fragment.schema.json
 │   │   └── interpretation.schema.json
 │   └── templates
@@ -48,6 +51,7 @@
 ├── LICENSE.md
 ├── man
 │   ├── assert_faithfulness.Rd
+│   ├── build_dataset_context.Rd
 │   ├── build_evidence_packet.Rd
 │   ├── build_review_queue.Rd
 │   ├── build_synthesis_manifest.Rd
@@ -62,7 +66,11 @@
 │   ├── components_ModuleSet.Rd
 │   ├── compute_evidence_signals.Rd
 │   ├── counts.Rd
+│   ├── dataset_context_to_json.Rd
 │   ├── dataset_description.Rd
+│   ├── dataset_fragment_from_json.Rd
+│   ├── dataset_fragment_to_json.Rd
+│   ├── dataset_fragment.Rd
 │   ├── describe_flags.Rd
 │   ├── differential_module_activity_tool.Rd
 │   ├── ellmer_backend.Rd
@@ -106,6 +114,7 @@
 │   ├── pseudobulk_ModuleSet.Rd
 │   ├── pseudobulk_view.Rd
 │   ├── pseudobulk.Rd
+│   ├── read_dataset_context.Rd
 │   ├── read_evidence_packet.Rd
 │   ├── read_interpretation.Rd
 │   ├── register_tool.Rd
@@ -123,10 +132,12 @@
 │   ├── synthetic_ModuleSet.Rd
 │   ├── top_genes_tool.Rd
 │   ├── validate_dataset_description.Rd
+│   ├── validate_dataset_fragment.Rd
 │   ├── validate_evidence_fragment.Rd
 │   ├── validate_interpretation.Rd
 │   ├── validate_moduleset.Rd
 │   ├── with_pseudobulk.Rd
+│   ├── write_dataset_context.Rd
 │   ├── write_evidence_packet.Rd
 │   ├── write_fragment_tables.Rd
 │   ├── write_interpretation_report.Rd
@@ -495,6 +506,7 @@
 ├── R
 │   ├── confidence.R
 │   ├── dataset_description.R
+│   ├── dataset_fragment.R
 │   ├── example_moduleset.R
 │   ├── exporters.R
 │   ├── faithfulness.R
@@ -523,7 +535,9 @@
 ├── README.md
 ├── README.Rmd
 ├── sample_code
-│   └── T-cell_tumor_network_compare.Rmd
+│   ├── pseudobulk_functions.R
+│   ├── T-cell_tumor_network_compare.Rmd
+│   └── TCGA_predictions_clean.Rmd
 ├── scripts
 │   ├── interactive_test.R
 │   ├── interactive_test.Rmd
@@ -534,11 +548,13 @@
 ├── STYLE.md
 ├── tests
 │   └── testthat
+│       ├── _snaps
 │       ├── setup.R
 │       ├── synthetic_extensibility.R
 │       ├── synthetic_moduleset.R
 │       ├── synthetic_pseudobulk.R
 │       ├── test-confidence.R
+│       ├── test-dataset_fragment.R
 │       ├── test-faithfulness.R
 │       ├── test-fragment.R
 │       ├── test-import_fragment.R
@@ -560,4 +576,4 @@
 └── vignettes
     └── getting-started.Rmd
 
-51 directories, 510 files
+52 directories, 525 files
