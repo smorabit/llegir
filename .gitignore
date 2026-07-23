@@ -46,12 +46,10 @@ STYLE.md
 docs/
 2026-*.md
 
-# --- pkgdown auto-renders every root *.md into an html page; keep the
-# --- internal ones out of the published site ---
-pkgdown_site/CLAUDE.html
-pkgdown_site/CLAUDE_old.html
-pkgdown_site/STYLE.html
-pkgdown_site/2026-*.html
+# --- pkgdown output: built locally for preview, deployed via the
+# --- pkgdown.yaml GitHub Action to the gh-pages branch, never committed
+# --- to main (avoids leaking internal *.md pages and repo bloat) ---
+pkgdown_site/
 
 # --- Obsidian vault config/state, not project content ---
 .obsidian/
