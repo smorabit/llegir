@@ -8,8 +8,13 @@
 ## serialization plumbing and the manifest reader; Part 2 (below that) is the
 ## cheat-sheet generators, pure introspection with no rendering; Part 3
 ## (below that) renders the packaged template via export_agent_workspace().
+## Part 4 (v0.2 hardening, below that) splits the serialized ModuleSet into a
+## lite (default) / full pair, switches artifact serialization to qs2,
+## exports interpretations when present, and fixes the hardcoded grouping
+## column and positional fragment access two bugs found reviewing a real
+## exported workspace.
 
-.llegir_manifest_version <- '0.1'
+.llegir_manifest_version <- '0.2'
 
 #' Write a combined interpretation + evidence HTML report
 #'
@@ -68,22 +73,100 @@ write_interpretation_report <- function(interps, packets, desc,
     list(art_dir = art_dir, scratch_dir = scratch_dir)
 }
 
-# .rds is authoritative (full S3 objects); .json is the portable/hashable
-# mirror an agent can read without spawning R. Both point at the same run.
-# art_dir is expected to already exist (see .scaffold_workspace()).
-.write_workspace_artifacts <- function(ms, dataset_context, packets, art_dir, write_json){
-    ms_path <- file.path(art_dir, 'moduleset.rds')
-    dctx_path <- file.path(art_dir, 'dataset_context.rds')
-    pkt_path <- file.path(art_dir, 'evidence_packets.rds')
-    saveRDS(ms, ms_path)
-    saveRDS(dataset_context, dctx_path)
-    saveRDS(packets, pkt_path)
+# the declared grouping / sample-id column name for a ModuleSet, if any --
+# plain field access (the convention components_ModuleSet() and its
+# subclasses use, delegated by synthetic_ModuleSet()); NULL when the adapter
+# never declared one (e.g. hdWGCNA_ModuleSet reports the grouping capability
+# without naming a column), the signal to omit a recipe/invocation that would
+# otherwise hardcode a guessed column name
+.ms_group_col <- function(ms) ms[['group_col']]
+.ms_sample_col <- function(ms) ms[['sample_col']]
+
+# a pseudobulk view above this many rows (samples/units) is dropped from the
+# lite object rather than carried forward -- lite is meant to stay cheap to
+# reload, and a pseudobulk view is only "free" to keep when it's already
+# small
+.lite_pseudobulk_row_limit <- 500
+
+#' Build a reduced ModuleSet carrying only the token-safe views
+#'
+#' Rebuilds a `components_ModuleSet` from `ms`'s own getters, carrying the
+#' full gene-membership tables (every module), module scores, metadata, the
+#' declared grouping/sample-id columns, `pkg_versions()`, `data_level`/
+#' `aggregated`, and the pseudobulk view when one is attached and already
+#' small -- but never the backing expression/counts matrices. This is the
+#' artifact an agent workspace loads by default (`moduleset_lite.qs2`); the
+#' full `ms` still ships alongside it (`moduleset_full.qs2`) for the rare
+#' `expression()`/`counts()` query.
+#'
+#' Reuses [components_ModuleSet()] rather than a bespoke class so every
+#' `ModuleSet` generic keeps dispatching unchanged against the reduced
+#' object.
+#'
+#' @param ms A validated `ModuleSet`.
+#' @return A `components_ModuleSet` with `capabilities()$expression` and
+#'   `$counts` `FALSE`.
+.make_moduleset_lite <- function(ms){
+    caps <- capabilities(ms)
+    mods <- modules(ms)
+    gene_table <- do.call(rbind, lapply(mods, function(m){
+        gm <- gene_membership(ms, m)
+        data.frame(module = gm$module, gene_name = gm$gene_name, weight = gm$kme)
+    }))
+    # drop the weight column entirely (rather than carry all-NA kme) when the
+    # source ms never declared real gene weights, so components_ModuleSet()'s
+    # has_weight/gene_weights capability stays faithful to the original
+    if (!isTRUE(caps[['gene_weights']])) gene_table$weight <- NULL
+
+    lite <- components_ModuleSet(
+        gene_table = gene_table,
+        expression = NULL,
+        metadata = metadata(ms),
+        scores = if (isTRUE(caps[['module_scores']])) module_scores(ms) else NULL,
+        counts = NULL,
+        group_col = .ms_group_col(ms),
+        sample_col = .ms_sample_col(ms),
+        data_level = ms$data_level,
+        aggregated = ms$aggregated,
+        pkg_versions = pkg_versions(ms)
+    )
+
+    if (isTRUE(caps[['pseudobulk']])) {
+        pb <- pseudobulk_view(ms)
+        if (!is.null(pb) && nrow(metadata(pb)) <= .lite_pseudobulk_row_limit) {
+            lite <- with_pseudobulk(lite, pb)
+        }
+    }
+    lite
+}
+
+# qs2 is authoritative (full S3 objects, faster + smaller than .rds); .json
+# is the portable/hashable mirror an agent can read without spawning R. Both
+# point at the same run. art_dir is expected to already exist (see
+# .scaffold_workspace()). ms_lite is passed in (rather than recomputed here)
+# so callers that also need it for capability-diffing build it once.
+.write_workspace_artifacts <- function(ms, ms_lite, dataset_context, packets, interps, art_dir, write_json){
+    ms_lite_path <- file.path(art_dir, 'moduleset_lite.qs2')
+    ms_full_path <- file.path(art_dir, 'moduleset_full.qs2')
+    dctx_path <- file.path(art_dir, 'dataset_context.qs2')
+    pkt_path <- file.path(art_dir, 'evidence_packets.qs2')
+    qs2::qs_save(ms_lite, ms_lite_path)
+    qs2::qs_save(ms, ms_full_path)
+    qs2::qs_save(dataset_context, dctx_path)
+    qs2::qs_save(packets, pkt_path)
 
     paths <- list(
-        moduleset_rds = ms_path,
-        dataset_context_rds = dctx_path,
-        packets_rds = pkt_path
+        moduleset_lite = ms_lite_path,
+        moduleset_full = ms_full_path,
+        dataset_context = dctx_path,
+        packets = pkt_path
     )
+    if (!is.null(interps)) {
+        interps_path <- file.path(art_dir, 'interpretations.qs2')
+        qs2::qs_save(interps, interps_path)
+        paths$interpretations <- interps_path
+    }
+
     if (isTRUE(write_json)) {
         dctx_json_path <- file.path(art_dir, 'dataset_context.json')
         writeLines(dataset_context_to_json(dataset_context), dctx_json_path)
@@ -96,6 +179,15 @@ write_interpretation_report <- function(interps, packets, desc,
 
         paths$dataset_context_json <- dctx_json_path
         paths$packets_dir_json <- pkt_json_dir
+
+        if (!is.null(interps)) {
+            interps_json_dir <- file.path(art_dir, 'interpretations')
+            dir.create(interps_json_dir, showWarnings = FALSE)
+            for (mid in names(interps)) {
+                writeLines(interpretation_to_json(interps[[mid]]), file.path(interps_json_dir, paste0(mid, '.json')))
+            }
+            paths$interpretations_dir_json <- interps_json_dir
+        }
     }
     lapply(paths, normalizePath, mustWork = TRUE)
 }
@@ -133,37 +225,67 @@ read_agent_manifest <- function(path){
 }
 
 #---------------------------------------------------------
-# agent workspace: cheat-sheet generators (part 2)
+# agent workspace: cheat-sheet generators (part 2; part 4 adds the
+# lite/full capability diff and the grouping-column injection)
 #---------------------------------------------------------
+
+# TRUE when `need` is something the full ms reports but the lite object
+# doesn't -- the signal a cheat-sheet row/recipe rung must tell the agent it
+# needs moduleset_full.qs2, not the default moduleset_lite.qs2
+.capability_gap <- function(need, full_caps, lite_caps) isTRUE(full_caps[[need]]) && !isTRUE(lite_caps[[need]])
+
+.any_capability_gap <- function(needs, full_caps, lite_caps){
+    length(needs) > 0 && any(vapply(needs, .capability_gap, logical(1), full_caps = full_caps, lite_caps = lite_caps))
+}
 
 # one copy-pasteable call string per tool_spec: run_module() for a
 # module-scope tool, run_dataset_context() for a dataset-scope tool. String
 # only, never executed here -- the manifest template just interpolates it.
-.example_invocation <- function(spec){
+# cluster_dme is the one core tool with a required params$group_by (see
+# cluster_dme_tool()); fill it in with this ms's actual declared grouping
+# column rather than a guessed name, and fall back to the bare invocation
+# (no params) when this ms never declared one.
+.example_invocation <- function(spec, ms){
     if (spec$scope == 'dataset') {
-        sprintf("run_dataset_context(ms, list(list(id = '%s')))", spec$id)
-    } else {
-        sprintf("run_module(ms, module_ids[1], tool_config = list(list(id = '%s')))", spec$id)
+        return(sprintf("run_dataset_context(ms, list(list(id = '%s')))", spec$id))
     }
+    if (identical(spec$id, 'cluster_dme')) {
+        group_col <- .ms_group_col(ms)
+        if (!is.null(group_col)) {
+            return(sprintf(
+                "run_module(ms, module_ids[1], tool_config = list(list(id = 'cluster_dme', params = list(group_by = '%s'))))",
+                group_col
+            ))
+        }
+    }
+    sprintf("run_module(ms, module_ids[1], tool_config = list(list(id = '%s')))", spec$id)
 }
 
 # walks the live registry (list_tools() -> get_tool()) rather than any
 # hard-coded tool list, so a custom register_tool() call is picked up with no
 # special-casing; runnable is computed the same way run_module() itself gates
-# a registered tool, so this table never promises a call that would skip
-.build_tool_cheatsheet <- function(ms){
+# a registered tool, so this table never promises a call that would skip.
+# `requires` is tagged "(full object only)" when a needed capability is
+# present on the full ms but dropped from lite_caps, so the agent knows this
+# row won't work against the default moduleset_lite.qs2.
+.build_tool_cheatsheet <- function(ms, lite_caps){
+    full_caps <- capabilities(ms)
     lapply(list_tools(), function(id){
         spec <- get_tool(id)
         needs <- .tool_spec_requires(spec, params = list())
+        requires_txt <- if (length(needs)) paste(needs, collapse = ', ') else 'none'
+        if (.any_capability_gap(needs, full_caps, lite_caps)) {
+            requires_txt <- paste(requires_txt, '(full object only)')
+        }
         list(
             id = spec$id,
             scope = spec$scope,
             tier = spec$tier,
             type = paste(spec$type, collapse = ', '),
-            requires = if (length(needs)) paste(needs, collapse = ', ') else 'none',
+            requires = requires_txt,
             runnable = length(needs) == 0 || all(vapply(needs, function(cap) has_capability(ms, cap), logical(1))),
             description = spec$description,
-            invocation = .example_invocation(spec)
+            invocation = .example_invocation(spec, ms)
         )
     })
 }
@@ -171,34 +293,48 @@ read_agent_manifest <- function(path){
 # worked ModuleSet getter examples; modules()/gene_membership() are part of
 # the core adapter contract so they always dispatch, everything else is
 # emitted only when this ms's capabilities() reports it -- keeps the
-# cheat-sheet honest about what will actually return data instead of erroring
-.build_api_cheatsheet <- function(ms){
+# cheat-sheet honest about what will actually return data instead of
+# erroring. Rows are still emitted purely off the full ms's capabilities
+# (nothing is dropped from the docs); a row is tagged "(full object only)"
+# when lite_caps can't back it.
+.build_api_cheatsheet <- function(ms, lite_caps){
+    full_caps <- capabilities(ms)
     rows <- list(
         list(call = 'modules(ms)', note = 'module ids'),
         list(call = 'gene_membership(ms, module_ids[1])', note = 'ranked hub genes + kME')
     )
     if (has_capability(ms, 'module_scores')) {
-        rows <- c(rows, list(list(call = 'module_scores(ms)', note = 'per-cell/sample eigengenes')))
+        note <- 'per-cell/sample eigengenes'
+        if (.capability_gap('module_scores', full_caps, lite_caps)) note <- paste(note, '(full object only)')
+        rows <- c(rows, list(list(call = 'module_scores(ms)', note = note)))
     }
     if (has_capability(ms, 'expression')) {
-        rows <- c(rows, list(list(
-            call = 'dim(llegir::expression(ms))',
-            note = 'SHAPE ONLY -- never print the matrix; expression() shadows base::expression()'
-        )))
+        note <- 'SHAPE ONLY -- never print the matrix; expression() shadows base::expression()'
+        if (.capability_gap('expression', full_caps, lite_caps)) note <- paste(note, '(full object only)')
+        rows <- c(rows, list(list(call = 'dim(llegir::expression(ms))', note = note)))
     }
     if (has_capability(ms, 'pseudobulk')) {
-        rows <- c(rows, list(list(call = 'pseudobulk_view(ms)', note = 'sample-level view for condition questions')))
+        note <- 'sample-level view for condition questions'
+        if (.capability_gap('pseudobulk', full_caps, lite_caps)) note <- paste(note, '(full object only)')
+        rows <- c(rows, list(list(call = 'pseudobulk_view(ms)', note = note)))
     }
     rows
 }
 
 # the aggregate-then-summarize ladder, cheapest to heaviest: structure only
 # and the per-module slice always apply (core adapter contract), the deeper
-# rungs are emitted only when this ms's capabilities() covers what they read
-.build_safe_recipes <- function(ms){
+# rungs are emitted only when this ms's capabilities() covers what they read.
+# FIX: the aggregate rung used to hardcode 'cell_state' as the grouping
+# column regardless of what this ms actually declared; it now reads the real
+# column via .ms_group_col() and is omitted entirely (rather than emitting a
+# call that would error) when this ms never declared one.
+.build_safe_recipes <- function(ms, lite_caps){
+    full_caps <- capabilities(ms)
     structure_lines <- c('modules(ms)', 'capabilities(ms)')
     if (has_capability(ms, 'expression')) {
-        structure_lines <- c(structure_lines, 'dim(llegir::expression(ms))')
+        expr_line <- 'dim(llegir::expression(ms))'
+        if (.capability_gap('expression', full_caps, lite_caps)) expr_line <- paste(expr_line, '# full object only')
+        structure_lines <- c(structure_lines, expr_line)
     }
     recipes <- list(
         list(
@@ -213,35 +349,47 @@ read_agent_manifest <- function(path){
         )
     )
 
-    if (has_capability(ms, 'module_scores') && has_capability(ms, 'grouping')) {
+    group_col <- .ms_group_col(ms)
+    if (has_capability(ms, 'module_scores') && has_capability(ms, 'grouping') && !is.null(group_col)) {
+        note <- 'module scores are already the reduced representation -- never re-derive it from the matrix'
+        if (.any_capability_gap(c('module_scores', 'grouping'), full_caps, lite_caps)) {
+            note <- paste(note, '(full object only)')
+        }
         recipes <- c(recipes, list(list(
             title = 'Aggregate-then-summarize',
             code = paste(
-                "module_scores(ms) %>%",
-                "    dplyr::bind_cols(metadata(ms)['cell_state']) %>%",
-                "    dplyr::group_by(cell_state) %>%",
-                "    dplyr::summarise(dplyr::across(dplyr::everything(), mean))",
+                'module_scores(ms) %>%',
+                paste0("    dplyr::bind_cols(metadata(ms)['", group_col, "']) %>%"),
+                paste0('    dplyr::group_by(', group_col, ') %>%'),
+                '    dplyr::summarise(dplyr::across(dplyr::everything(), mean))',
                 sep = '\n'
             ),
-            note = 'module scores are already the reduced representation -- never re-derive it from the matrix'
+            note = note
         )))
     }
 
     # names a tool via the same registry walk the tool cheat-sheet uses, so
     # this rung always points at something this ms can actually run rather
     # than hard-coding a tool id that might be capability-gated out
-    runnable_tools <- Filter(function(row) row$scope == 'module' && row$runnable, .build_tool_cheatsheet(ms))
+    runnable_tools <- Filter(function(row) row$scope == 'module' && row$runnable, .build_tool_cheatsheet(ms, lite_caps))
     if (length(runnable_tools) > 0) {
         tool_id <- runnable_tools[[1]]$id
+        needs <- .tool_spec_requires(get_tool(tool_id), params = list())
+        note <- 'let a tool do the reduction and hand back a token-efficient fragment digest'
+        if (.any_capability_gap(needs, full_caps, lite_caps)) note <- paste(note, '(full object only)')
         recipes <- c(recipes, list(list(
             title = 'Delegate to a registered tool',
+            # named/filtered access by fragment_id -- never the positional
+            # packet$fragments[[1]], which silently grabs the wrong fragment
+            # once a tool_config runs more than one tool
             code = paste(
                 sprintf("packet <- run_module(ms, module_ids[1], tool_config = list(list(id = '%s')))", tool_id),
-                'packet$fragments[[1]]$compact_summary',
-                'packet$fragments[[1]]$top_findings',
+                sprintf("frag <- Filter(function(f) f$fragment_id == '%s', packet$fragments)[[1]]", tool_id),
+                'frag$compact_summary',
+                'frag$top_findings',
                 sep = '\n'
             ),
-            note = 'let a tool do the reduction and hand back a token-efficient fragment digest'
+            note = note
         )))
     }
 
@@ -287,22 +435,30 @@ read_agent_manifest <- function(path){
 }
 
 # one row per artifact for the manifest's Data Topography table; class/notes
-# are known statically per artifact rather than re-read from disk since ms
-# and dataset_context are already in scope at export time
-.build_data_topography <- function(ms, dataset_context, paths, workspace_root){
+# are known statically per artifact rather than re-read from disk since ms,
+# ms_lite, and dataset_context are already in scope at export time. The
+# lite/full rows are annotated so the real on-disk size gap between them
+# (moduleset_lite drops expression/counts entirely) is visible at a glance.
+.build_data_topography <- function(ms, ms_lite, dataset_context, paths, workspace_root){
     classes <- list(
-        moduleset_rds = paste(class(ms), collapse = '/'),
-        dataset_context_rds = paste(class(dataset_context), collapse = '/'),
-        packets_rds = 'list[evidence_packet]',
+        moduleset_lite = paste(class(ms_lite), collapse = '/'),
+        moduleset_full = paste(class(ms), collapse = '/'),
+        dataset_context = paste(class(dataset_context), collapse = '/'),
+        packets = 'list[evidence_packet]',
+        interpretations = 'list[interpretation]',
         dataset_context_json = 'json',
-        packets_dir_json = 'directory[json]'
+        packets_dir_json = 'directory[json]',
+        interpretations_dir_json = 'directory[json]'
     )
     notes <- list(
-        moduleset_rds = 'readRDS() to a ModuleSet S3 object; pass straight into any llegir getter',
-        dataset_context_rds = 'readRDS() to a dataset_context S3 object',
-        packets_rds = 'readRDS() to a named list of evidence packets, keyed by module id',
-        dataset_context_json = 'text mirror of dataset_context_rds; hashable, readable without R',
-        packets_dir_json = 'one <module_id>.json per evidence packet; text mirror of packets_rds'
+        moduleset_lite = 'default -- load this. qs2::qs_read() to a ModuleSet with expression()/counts() dropped; every other getter/tool works unchanged',
+        moduleset_full = 'load only for expression()/counts() queries. qs2::qs_read() to the original ModuleSet, backing matrices included',
+        dataset_context = 'qs2::qs_read() to a dataset_context S3 object',
+        packets = 'qs2::qs_read() to a named list of evidence packets, keyed by module id',
+        interpretations = 'qs2::qs_read() to a named list of interpretation objects, keyed by module id',
+        dataset_context_json = 'text mirror of dataset_context; hashable, readable without R',
+        packets_dir_json = 'one <module_id>.json per evidence packet; text mirror of packets',
+        interpretations_dir_json = 'one <module_id>.json per interpretation; text mirror of interpretations'
     )
     lapply(names(paths), function(nm){
         list(
@@ -350,14 +506,29 @@ read_agent_manifest <- function(path){
     )
 }
 
+# %H:%M:%S%z ('+0200') is ambiguous to a YAML timestamp resolver and yaml::
+# as.yaml() doesn't reliably quote it; inserting the ISO 8601 offset colon
+# ('+02:00') makes the value visibly non-numeric so as.yaml() quotes it
+# itself -- read_agent_manifest() then round-trips it as a plain character
+.iso8601_now <- function(){
+    ts <- format(Sys.time(), '%Y-%m-%dT%H:%M:%S%z')
+    sub('([+-][0-9]{2})([0-9]{2})$', '\\1:\\2', ts)
+}
+
+# yaml::as.yaml() renders R logicals as YAML 1.1 yes/no by default; this
+# handler forces the lowercase true/false the manifest spec documents, still
+# round-tripping to an R logical via yaml::yaml.load()
+.yaml_bool_handler <- list(logical = function(x) structure(ifelse(x, 'true', 'false'), class = 'verbatim'))
+
 # the machine-readable YAML front matter read_agent_manifest() parses back;
 # artifact paths are recorded relative to workspace_root so the folder stays
 # portable if zipped/moved, resolvable against the absolute workspace_root
-# also recorded here
+# also recorded here. capabilities are always the FULL ms's -- nothing is
+# dropped from the docs just because the default load is the lite object.
 .build_front_matter <- function(ms, desc, paths, workspace_root){
     front <- list(
         llegir_manifest_version = .llegir_manifest_version,
-        generated_at = format(Sys.time(), '%Y-%m-%dT%H:%M:%S%z'),
+        generated_at = .iso8601_now(),
         llegir_version = as.character(utils::packageVersion('llegir')),
         r_version = as.character(getRversion()),
         workspace_root = workspace_root,
@@ -368,7 +539,7 @@ read_agent_manifest <- function(path){
         data_level = ms$data_level,
         aggregated = ms$aggregated
     )
-    yaml::as.yaml(front)
+    yaml::as.yaml(front, handlers = .yaml_bool_handler)
 }
 
 #' Export a self-contained agent workspace and manifest
@@ -382,17 +553,32 @@ read_agent_manifest <- function(path){
 #' manual step. Pure exporter: writes files and returns a path, never calls
 #' `ellmer` or spends budget.
 #'
+#' The `ModuleSet` is serialized twice: `artifacts/moduleset_lite.qs2` (a
+#' [`.make_moduleset_lite()`] reduction with the backing expression/counts
+#' matrices dropped -- what `query_example.R` loads by default) and
+#' `artifacts/moduleset_full.qs2` (`ms` unchanged, for the rare
+#' `expression()`/`counts()` query). Every cheat-sheet row, tool-registry
+#' row, and recipe rung is still generated against `ms`'s full capabilities
+#' -- nothing is dropped from the docs -- but is tagged `(full object only)`
+#' when it needs something the lite object doesn't carry.
+#'
 #' @param ms A validated `ModuleSet`.
 #' @param dataset_context A `dataset_context` (see [build_dataset_context()]).
 #' @param packets A named list of evidence packets, keyed by module id (e.g.
 #'   the return value of [run_orchestrator()]).
 #' @param desc The `dataset_description` for this run.
+#' @param interps A named list of `interpretation` objects, keyed by module
+#'   id (e.g. the return value of [run_synthesis_orchestrator()]), or `NULL`
+#'   (default) when this run didn't synthesize any. When `NULL`, no
+#'   interpretation artifacts are written and the manifest records that this
+#'   run shipped no interpretations, so the guest agent does not
+#'   mock-synthesize one.
 #' @param out_dir Destination workspace directory. Default `'agent_workspace'`.
-#' @param write_json Also emit portable JSON copies of the context and
-#'   packets. Default `TRUE`.
+#' @param write_json Also emit portable JSON copies of the context, packets,
+#'   and (if present) interpretations. Default `TRUE`.
 #' @return The absolute path to the written manifest, invisibly.
 #' @export
-export_agent_workspace <- function(ms, dataset_context, packets, desc,
+export_agent_workspace <- function(ms, dataset_context, packets, desc, interps = NULL,
                                    out_dir = 'agent_workspace', write_json = TRUE){
     validate_moduleset(ms)
     validate_dataset_description(desc)
@@ -406,7 +592,10 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc,
     out_dir_display <- out_dir
     scaffold <- .scaffold_workspace(out_dir)
     out_dir <- normalizePath(out_dir, mustWork = TRUE)
-    paths <- .write_workspace_artifacts(ms, dataset_context, packets, scaffold$art_dir, write_json)
+
+    ms_lite <- .make_moduleset_lite(ms)
+    lite_caps <- capabilities(ms_lite)
+    paths <- .write_workspace_artifacts(ms, ms_lite, dataset_context, packets, interps, scaffold$art_dir, write_json)
 
     provenance <- make_provenance(
         tool_version = as.character(utils::packageVersion('llegir')),
@@ -423,10 +612,11 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc,
         front_matter = .build_front_matter(ms, desc, paths, out_dir),
         desc_block = render_dataset_description(desc, ms$data_level, ms$aggregated),
         context_block = render_dataset_context_compact(dataset_context),
-        topography_block = .render_data_topography_block(.build_data_topography(ms, dataset_context, paths, out_dir)),
-        api_cheatsheet = .build_api_cheatsheet(ms),
-        tool_cheatsheet = .build_tool_cheatsheet(ms),
-        recipes = .build_safe_recipes(ms),
+        topography_block = .render_data_topography_block(.build_data_topography(ms, ms_lite, dataset_context, paths, out_dir)),
+        interpretations_missing = is.null(interps),
+        api_cheatsheet = .build_api_cheatsheet(ms, lite_caps),
+        tool_cheatsheet = .build_tool_cheatsheet(ms, lite_caps),
+        recipes = .build_safe_recipes(ms, lite_caps),
         provenance_block = .render_provenance_block(provenance)
     )
 
@@ -444,11 +634,13 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc,
     if (!nzchar(query_example_src)) stop('could not locate query_example.R in the installed llegir package')
     file.copy(query_example_src, file.path(out_dir, 'query_example.R'), overwrite = TRUE)
 
+    artifact_summary <- 'moduleset_lite.qs2 (default), moduleset_full.qs2, dataset_context.qs2, evidence_packets.qs2'
+    if (!is.null(interps)) artifact_summary <- paste0(artifact_summary, ', interpretations.qs2')
+
     message(
         '\u2714 Agent workspace exported.\n\n',
         '  Manifest : ', file.path(out_dir_display, '.llegir_agent_manifest.md'), '\n',
-        '  Artifacts: ', file.path(out_dir_display, 'artifacts'),
-        '/  (moduleset.rds, dataset_context.rds, evidence_packets.rds)\n\n',
+        '  Artifacts: ', file.path(out_dir_display, 'artifacts'), '/  (', artifact_summary, ')\n\n',
         'Start your terminal coding agent in this folder and point it at the manifest:\n\n',
         '  cd ', out_dir_display, '\n',
         '  claude   "Read .llegir_agent_manifest.md, then follow its Mission & Guardrails and Execution Protocol before answering anything."\n',

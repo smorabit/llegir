@@ -14,12 +14,13 @@
 \usage{
 components_ModuleSet(
   gene_table,
-  expression,
+  expression = NULL,
   metadata,
   scores = NULL,
   counts = NULL,
   group_col = NULL,
   sample_col = NULL,
+  pkg_versions = NULL,
   data_level = "cell",
   aggregated = FALSE
 )
@@ -45,7 +46,10 @@ components_ModuleSet(
 \code{module}, \code{gene_name}, and an optional numeric \code{weight} column (e.g.
 kME). If \code{weight} is absent, \code{\link[=gene_membership]{gene_membership()}} reports \code{kme = NA_real_} for every gene and \code{\link[=capabilities]{capabilities()}}\verb{$gene_weights} is \code{FALSE}.}
 
-\item{expression}{A genes-by-cells (or genes-by-samples) numeric matrix.}
+\item{expression}{A genes-by-cells (or genes-by-samples) numeric matrix, or
+\code{NULL} for a reduced view with the backing matrix dropped (e.g.
+\code{.make_moduleset_lite()}). If \code{NULL}, \code{\link[=expression]{expression()}} returns \code{NULL} and
+\code{\link[=capabilities]{capabilities()}}\verb{$expression} is \code{FALSE}.}
 
 \item{metadata}{A data.frame with one row per cell/sample, aligned to the
 columns of \code{expression}.}
@@ -69,6 +73,12 @@ concept at all.}
 
 \item{sample_col}{Optional name of a \code{metadata} column declared as the
 sample id, analogous to \code{group_col} for \code{\link[=capabilities]{capabilities()}}\verb{$sample_ids}.}
+
+\item{pkg_versions}{Optional named list overriding what \code{\link[=pkg_versions]{pkg_versions()}}
+reports (default \code{list(llegir = ...)}). Used by callers rebuilding a
+\code{components_ModuleSet} from another adapter (e.g. the agent workspace
+exporter's lite object) that want \code{pkg_versions()} to keep reporting the
+original backend's versions rather than falling back to \code{llegir} alone.}
 
 \item{data_level}{Observation-unit descriptor, e.g. \code{'cell'} or \code{'sample'}.
 Default \code{'cell'}.}

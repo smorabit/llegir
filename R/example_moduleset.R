@@ -52,7 +52,12 @@
 #' @export
 synthetic_ModuleSet <- function(base_ms, gene_sets, data_level = 'cell', aggregated = FALSE){
     structure(
-        list(base_ms = base_ms, gene_sets = gene_sets, data_level = data_level, aggregated = aggregated),
+        list(
+            base_ms = base_ms, gene_sets = gene_sets, data_level = data_level, aggregated = aggregated,
+            # delegate the declared grouping / sample-id column names from base_ms
+            # (when it stores them), same convention components_ModuleSet() uses
+            group_col = base_ms[['group_col']], sample_col = base_ms[['sample_col']]
+        ),
         class = 'synthetic_ModuleSet'
     )
 }
@@ -174,7 +179,13 @@ capabilities.synthetic_ModuleSet <- function(ms, ...){
         row.names = colnames(expr)
     )
 
-    structure(list(expr = expr, meta = meta), class = 'example_base_ModuleSet')
+    # declares which metadata column backs the grouping / sample_ids
+    # capabilities below, so callers (e.g. the agent workspace exporter) can
+    # recover the actual column name instead of guessing one
+    structure(
+        list(expr = expr, meta = meta, group_col = 'cell_type', sample_col = 'sample'),
+        class = 'example_base_ModuleSet'
+    )
 }
 
 #' @noRd

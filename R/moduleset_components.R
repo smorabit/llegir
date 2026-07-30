@@ -16,7 +16,10 @@
 #'   `module`, `gene_name`, and an optional numeric `weight` column (e.g.
 #'   kME). If `weight` is absent, [gene_membership()] reports `kme =
 #'   NA_real_` for every gene and [capabilities()]`$gene_weights` is `FALSE`.
-#' @param expression A genes-by-cells (or genes-by-samples) numeric matrix.
+#' @param expression A genes-by-cells (or genes-by-samples) numeric matrix, or
+#'   `NULL` for a reduced view with the backing matrix dropped (e.g.
+#'   `.make_moduleset_lite()`). If `NULL`, [expression()] returns `NULL` and
+#'   [capabilities()]`$expression` is `FALSE`.
 #' @param metadata A data.frame with one row per cell/sample, aligned to the
 #'   columns of `expression`.
 #' @param scores Optional module-scores data.frame/matrix: one row per
@@ -35,6 +38,11 @@
 #'   concept at all.
 #' @param sample_col Optional name of a `metadata` column declared as the
 #'   sample id, analogous to `group_col` for [capabilities()]`$sample_ids`.
+#' @param pkg_versions Optional named list overriding what [pkg_versions()]
+#'   reports (default `list(llegir = ...)`). Used by callers rebuilding a
+#'   `components_ModuleSet` from another adapter (e.g. the agent workspace
+#'   exporter's lite object) that want `pkg_versions()` to keep reporting the
+#'   original backend's versions rather than falling back to `llegir` alone.
 #' @param data_level Observation-unit descriptor, e.g. `'cell'` or `'sample'`.
 #'   Default `'cell'`.
 #' @param aggregated Whether `expression`/`scores` are already aggregated
@@ -52,19 +60,19 @@
 #' ms <- components_ModuleSet(gene_table, expr, meta, group_col = 'cell_type')
 #' modules(ms)
 #' @export
-components_ModuleSet <- function(gene_table, expression, metadata, scores = NULL, counts = NULL,
-                                  group_col = NULL, sample_col = NULL,
+components_ModuleSet <- function(gene_table, expression = NULL, metadata, scores = NULL, counts = NULL,
+                                  group_col = NULL, sample_col = NULL, pkg_versions = NULL,
                                   data_level = 'cell', aggregated = FALSE){
     if (!all(c('module', 'gene_name') %in% colnames(gene_table))) {
         stop("gene_table must have 'module' and 'gene_name' columns")
     }
-    if (ncol(expression) != nrow(metadata)) {
+    if (!is.null(expression) && ncol(expression) != nrow(metadata)) {
         stop('expression columns and metadata rows must align (', ncol(expression), ' vs ', nrow(metadata), ')')
     }
-    if (!is.null(scores) && nrow(scores) != ncol(expression)) {
-        stop('scores rows must align with expression columns (', nrow(scores), ' vs ', ncol(expression), ')')
+    if (!is.null(scores) && nrow(scores) != nrow(metadata)) {
+        stop('scores rows must align with metadata rows (', nrow(scores), ' vs ', nrow(metadata), ')')
     }
-    if (!is.null(counts) && !identical(dim(counts), dim(expression))) {
+    if (!is.null(counts) && !is.null(expression) && !identical(dim(counts), dim(expression))) {
         stop('counts dimensions must match expression (', paste(dim(counts), collapse = 'x'),
              ' vs ', paste(dim(expression), collapse = 'x'), ')')
     }
@@ -84,6 +92,7 @@ components_ModuleSet <- function(gene_table, expression, metadata, scores = NULL
             scores = if (is.null(scores)) NULL else as.data.frame(scores),
             counts = counts,
             has_weight = has_weight, group_col = group_col, sample_col = sample_col,
+            pkg_versions_override = pkg_versions,
             data_level = data_level, aggregated = aggregated
         ),
         class = 'components_ModuleSet'
@@ -127,7 +136,7 @@ metadata.components_ModuleSet <- function(ms, ...) ms$metadata
 #' @rdname components_ModuleSet
 #' @export
 pkg_versions.components_ModuleSet <- function(ms, ...){
-    list(llegir = as.character(utils::packageVersion('llegir')))
+    ms$pkg_versions_override %||% list(llegir = as.character(utils::packageVersion('llegir')))
 }
 
 #' @rdname components_ModuleSet

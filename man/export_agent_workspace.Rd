@@ -9,6 +9,7 @@ export_agent_workspace(
   dataset_context,
   packets,
   desc,
+  interps = NULL,
   out_dir = "agent_workspace",
   write_json = TRUE
 )
@@ -23,10 +24,17 @@ the return value of \code{\link[=run_orchestrator]{run_orchestrator()}}).}
 
 \item{desc}{The \code{dataset_description} for this run.}
 
+\item{interps}{A named list of \code{interpretation} objects, keyed by module
+id (e.g. the return value of \code{\link[=run_synthesis_orchestrator]{run_synthesis_orchestrator()}}), or \code{NULL}
+(default) when this run didn't synthesize any. When \code{NULL}, no
+interpretation artifacts are written and the manifest records that this
+run shipped no interpretations, so the guest agent does not
+mock-synthesize one.}
+
 \item{out_dir}{Destination workspace directory. Default \code{'agent_workspace'}.}
 
-\item{write_json}{Also emit portable JSON copies of the context and
-packets. Default \code{TRUE}.}
+\item{write_json}{Also emit portable JSON copies of the context, packets,
+and (if present) interpretations. Default \code{TRUE}.}
 }
 \value{
 The absolute path to the written manifest, invisibly.
@@ -40,4 +48,14 @@ from the live registry and this \code{ModuleSet}'s capabilities, so a workspace
 exported after a user registers a custom tool documents that tool with no
 manual step. Pure exporter: writes files and returns a path, never calls
 \code{ellmer} or spends budget.
+}
+\details{
+The \code{ModuleSet} is serialized twice: \code{artifacts/moduleset_lite.qs2} (a
+[\code{.make_moduleset_lite()}] reduction with the backing expression/counts
+matrices dropped -- what \code{query_example.R} loads by default) and
+\code{artifacts/moduleset_full.qs2} (\code{ms} unchanged, for the rare
+\code{expression()}/\code{counts()} query). Every cheat-sheet row, tool-registry
+row, and recipe rung is still generated against \code{ms}'s full capabilities
+-- nothing is dropped from the docs -- but is tagged \code{(full object only)}
+when it needs something the lite object doesn't carry.
 }

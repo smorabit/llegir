@@ -30,12 +30,23 @@ analysis run. Three rules govern every action you take in this workspace:
 
 ## 2. Data Topography
 
-Every artifact this workspace ships, resolved at export time:
+Every artifact this workspace ships, resolved at export time. The
+`ModuleSet` is serialized twice -- `moduleset_lite.qs2` (load this by
+default) and `moduleset_full.qs2` (only for an `expression()`/`counts()`
+query) -- so read the `moduleset_lite` row's note before reaching for the
+full object:
 
 {{{topography_block}}}
 
 `workspace_root` in the front matter above is this workspace's absolute
 path; every relative path in this table is resolvable against it.
+
+{{#interpretations_missing}}
+**No interpretations shipped with this run.** `artifacts/interpretations.qs2`
+does not exist. Do not invent or mock-synthesize a `proposed_label`,
+`dominant_biology`, or any other `interpretation` field for a module --
+treat this workspace as evidence-only (fragments/packets), not narrative.
+{{/interpretations_missing}}
 
 ## 3. Dataset Grounding
 
@@ -62,7 +73,9 @@ above):
 Every tool registered in the live registry at export time, including any
 custom `register_tool()` call -- this table is generated, never
 hand-maintained, so a workspace exported after you register a new tool
-documents it with no manual step:
+documents it with no manual step. A `requires` entry tagged `(full object
+only)` needs a capability `moduleset_lite.qs2` dropped (always
+`expression`/`counts`); load `moduleset_full.qs2` instead for that row:
 
 | id | scope | tier | type | requires | runnable here | invocation |
 |---|---|---|---|---|---|---|
@@ -169,12 +182,18 @@ suppressPackageStartupMessages(library(llegir))
 options(llegir.agent_session = TRUE)
 
 manifest <- llegir::read_agent_manifest('.llegir_agent_manifest.md')
-ms       <- readRDS(manifest$artifacts$moduleset_rds)
-dctx     <- readRDS(manifest$artifacts$dataset_context_rds)
-packets  <- readRDS(manifest$artifacts$packets_rds)
+ms       <- qs2::qs_read(manifest$artifacts$moduleset_lite)   # default -- expression()/counts() dropped
+dctx     <- qs2::qs_read(manifest$artifacts$dataset_context)
+packets  <- qs2::qs_read(manifest$artifacts$packets)
 
 # fail fast if the workspace drifted from what the manifest promised
 stopifnot(identical(modules(ms), manifest$module_ids))
+
+# only load this for an expression()/counts() query -- see Data Topography
+# ms_full <- qs2::qs_read(manifest$artifacts$moduleset_full)
+
+# only present if this run synthesized interpretations -- see Data Topography
+# interps <- qs2::qs_read(manifest$artifacts$interpretations)
 ```
 
 `options(llegir.agent_session = TRUE)` signals read-only intent. The primary

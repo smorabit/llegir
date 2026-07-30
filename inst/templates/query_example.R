@@ -10,9 +10,18 @@ suppressPackageStartupMessages(library(llegir))
 options(llegir.agent_session = TRUE)
 
 manifest <- llegir::read_agent_manifest('.llegir_agent_manifest.md')
-ms <- readRDS(manifest$artifacts$moduleset_rds)
-dctx <- readRDS(manifest$artifacts$dataset_context_rds)
-packets <- readRDS(manifest$artifacts$packets_rds)
+ms <- qs2::qs_read(manifest$artifacts$moduleset_lite)
+dctx <- qs2::qs_read(manifest$artifacts$dataset_context)
+packets <- qs2::qs_read(manifest$artifacts$packets)
+
+# only load this for an expression()/counts() query -- see Data Topography
+# in the manifest for why moduleset_lite is the default
+# ms_full <- qs2::qs_read(manifest$artifacts$moduleset_full)
+
+# only present if this run synthesized interpretations
+if (!is.null(manifest$artifacts$interpretations)) {
+    interps <- qs2::qs_read(manifest$artifacts$interpretations)
+}
 
 # fail fast if the workspace drifted from what the manifest promised
 stopifnot(identical(modules(ms), manifest$module_ids))

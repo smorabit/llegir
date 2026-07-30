@@ -27,6 +27,7 @@ Imports:
     digest,
     yaml,
     whisker,
+    qs2,
     dplyr,
     tidyr,
     GeneOverlap,

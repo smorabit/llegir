@@ -1,5 +1,33 @@
 # llegir 0.0.0.9000
 
+* `export_agent_workspace()` v0.2 hardening (`docs/milestones/milestone_agent_workspace.md`
+  Part 4): the serialized `ModuleSet` is now split into a lite/full pair --
+  `artifacts/moduleset_lite.qs2` (default load; a new internal
+  `.make_moduleset_lite()` reduction with the backing expression/counts
+  matrices dropped, built on `components_ModuleSet()`) and
+  `artifacts/moduleset_full.qs2` (the original object, for the rare
+  `expression()`/`counts()` query). Workspace artifacts (moduleset lite/full,
+  `dataset_context`, `packets`, `interpretations`) now serialize via `qs2`
+  (`qs2::qs_save()`/`qs2::qs_read()`) instead of `saveRDS()`/`readRDS()`; `qs2`
+  added to `Imports`. `export_agent_workspace()` gained an `interps = NULL`
+  argument -- when supplied, writes `artifacts/interpretations.qs2` plus
+  per-module JSON mirrors and records them in the manifest; when omitted, the
+  manifest explicitly states no interpretations shipped so a guest agent does
+  not mock-synthesize one. Every cheat-sheet row, tool-registry row, and
+  recipe rung is tagged `(full object only)` when it needs a capability the
+  lite object dropped. Fixed two bugs found reviewing a real exported
+  workspace: the "Aggregate-then-summarize" recipe and the `cluster_dme`
+  example invocation used to hardcode `'cell_state'` as the grouping column
+  regardless of what the `ModuleSet` actually declared (now reads the real
+  declared column via new internal `.ms_group_col()`/`.ms_sample_col()`,
+  omitting the rung when none is declared); the "delegate to a registered
+  tool" recipe used to grab `packet$fragments[[1]]` positionally (now filters
+  by `fragment_id`). Front matter now emits `aggregated: false` (lowercase)
+  and quotes `generated_at` unambiguously. `components_ModuleSet()` gained an
+  optional `pkg_versions` override argument and now accepts `expression =
+  NULL` (dropping the backing matrix entirely) to support the lite object.
+  `synthetic_ModuleSet()` (and the shared `llegir_example_moduleset()`
+  fixture) now delegates `group_col`/`sample_col` from its wrapped base.
 * Added `export_agent_workspace()`: serializes a completed run's
   `ModuleSet`, dataset context, and evidence packets to `out_dir/artifacts/`
   (`.rds` authoritative, `.json` portable mirror) and renders
