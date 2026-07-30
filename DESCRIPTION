@@ -25,6 +25,8 @@ Imports:
     limma,
     jsonlite,
     digest,
+    yaml,
+    whisker,
     dplyr,
     tidyr,
     GeneOverlap,

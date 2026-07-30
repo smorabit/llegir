@@ -176,6 +176,15 @@ reference:
   - write_synthesis_manifest
   - write_interpretation_report
 
+- title: Agent workspace
+  desc: >
+    export_agent_workspace() serializes a completed run and renders a static
+    launchpad file for an external terminal coding agent to run open-ended,
+    read-only queries against it; see docs/agent_workspace.md.
+  contents:
+  - export_agent_workspace
+  - read_agent_manifest
+
 - title: Statistical helpers
   contents:
   - categorical_group_test

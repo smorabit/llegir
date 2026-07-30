@@ -1,5 +1,21 @@
 # llegir 0.0.0.9000
 
+* Added `export_agent_workspace()`: serializes a completed run's
+  `ModuleSet`, dataset context, and evidence packets to `out_dir/artifacts/`
+  (`.rds` authoritative, `.json` portable mirror) and renders
+  `.llegir_agent_manifest.md` -- a static launchpad an external terminal
+  coding agent (Claude Code, Aider, ...) points at to run open-ended,
+  read-only queries against the analysis. The manifest's ModuleSet API and
+  Tool Registry cheat-sheets are generated from the live registry and this
+  `ModuleSet`'s `capabilities()` at export time, so a custom
+  `register_tool()` call propagates into the next export with no manual
+  edits. Pure exporter -- writes files and returns a path, never calls
+  `ellmer` or spends budget. Added `read_agent_manifest()`, the inverse that
+  parses a manifest's YAML front matter back into an R list. New packaged
+  templates `inst/templates/agent_manifest.md` (rendered via `whisker`, now
+  an Imports dependency) and `inst/templates/query_example.R` (the vanilla
+  bootstrap script, copied into every exported workspace). See
+  `docs/agent_workspace.md` and `tests/testthat/test-agent_workspace.R`.
 * Added `pseudobulk_ModuleSet()`: builds a `ModuleSet` from a user-supplied
   pseudo-bulk counts matrix + metadata, or a `SummarizedExperiment`
   (`SummarizedExperiment` is a `Suggests` dependency), re-scoring module

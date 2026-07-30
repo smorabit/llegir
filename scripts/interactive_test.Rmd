@@ -551,3 +551,64 @@ needs_review(interps_mixed[['MM1']])
 # pseudo-bulk fragments both render in the same module's evidence table
 write_interpretation_report(interps_mixed, packets_mixed, desc, output_file = 'output/dev_report_pseudobulk.html')
 ```
+
+## Agent Workspace Export
+
+`export_agent_workspace()` (docs/agent_workspace.md) is the terminal-agent
+counterpart to `write_interpretation_report()` above: instead of an HTML
+report for a human, it serializes this run and renders a static
+`.llegir_agent_manifest.md` launchpad that an external terminal coding agent
+(Claude Code, Aider, ...) can point at to run its own open-ended, read-only
+queries against `ms_with_pb`/`packets_mixed`/`dataset_ctx_pb`. It is a pure
+exporter -- it never calls `ellmer` and spends no API budget.
+
+```{r agent-workspace-export}
+#---------------------------------------------------------
+# export the mixed (cell + pseudo-bulk) run as an agent workspace
+#---------------------------------------------------------
+
+# reuses the richest objects already built above -- ms_with_pb carries both
+# cell-level and pseudo-bulk capabilities, so the exported manifest's API/
+# tool cheat-sheets include both families of getters and tools
+manifest_path <- export_agent_workspace(
+    ms_with_pb, dataset_ctx_pb, packets_mixed, desc, out_dir = 'output/agent_workspace'
+)
+
+# inspect the manifest's front matter back in R -- module_ids/capabilities
+# here should match modules(ms_with_pb)/capabilities(ms_with_pb) exactly
+manifest <- read_agent_manifest(manifest_path)
+manifest$module_ids
+manifest$capabilities
+manifest$artifacts
+
+# eyeball the rendered manifest itself before handing it to an agent -- or
+# just open manifest_path in your editor
+cat(readLines(manifest_path), sep = '\n')
+```
+
+To actually drive it, leave R and launch a terminal coding agent **inside**
+the exported workspace directory (not this repo) -- the message printed by
+the chunk above already contains this, repeated here for convenience:
+
+```sh
+cd output/agent_workspace
+claude   "Read .llegir_agent_manifest.md, then follow its Mission & Guardrails and Execution Protocol before answering anything."
+# or:  aider --read .llegir_agent_manifest.md
+```
+
+A few things to check while testing this:
+
+- The agent should only ever call `Rscript query_example.R` / write its own
+  `query_*.R` scripts and run them with `Rscript` -- never open an
+  interactive graphical R session.
+- Ask it something that needs the Tool Registry Cheat-Sheet (e.g. "run the
+  `differential_module_activity` tool on module MM1 and summarize the
+  result") and confirm it uses `run_module()`/`run_dataset_context()`
+  through the manifest's worked examples rather than reaching for
+  `hdWGCNA`/`Seurat` directly.
+- Ask it something that would naively require printing a full matrix (e.g.
+  "show me the expression matrix") and confirm it refuses per the Mission &
+  Guardrails / Safe Interrogation Recipes sections, offering `dim()` or an
+  aggregated summary instead.
+- Confirm it writes any derived output under `output/agent_workspace/scratch/`
+  and never back over `output/agent_workspace/artifacts/`.
