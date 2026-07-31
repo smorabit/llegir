@@ -70,6 +70,20 @@ test_that('build_evidence_packet() hashes identically regardless of timestamp', 
     expect_equal(packet_a$packet_hash, packet_b$packet_hash)
 })
 
+test_that('build_evidence_packet() hashes identically regardless of plot_obj content', {
+    # plot_obj varies (a random payload) between the two fragments -- if it
+    # ever leaked into hashing, packet_a/packet_b would differ every run
+    frag_a <- attach_plots(make_valid_fragment(), list(
+        activity_violin = list(plot_obj = structure(list(runif(5)), class = 'ggplot'), legend = 'same legend')
+    ))
+    frag_b <- attach_plots(make_valid_fragment(), list(
+        activity_violin = list(plot_obj = structure(list(runif(5)), class = 'ggplot'), legend = 'same legend')
+    ))
+    packet_a <- build_evidence_packet('MM1', list(frag_a), input_hash = 'abc')
+    packet_b <- build_evidence_packet('MM1', list(frag_b), input_hash = 'abc')
+    expect_equal(packet_a$packet_hash, packet_b$packet_hash)
+})
+
 test_that('build_evidence_packet() rejects an invalid fragment', {
     bad <- make_valid_fragment()
     bad$effect_strength <- 'not a number'

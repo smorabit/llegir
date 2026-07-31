@@ -10,6 +10,26 @@ params:
   desc: !r NULL
 ---
 
+<style>
+.llegir-fig-card {
+    margin: 0 auto 15px auto;
+    max-width: 760px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 8px;
+    text-align: center;
+}
+.llegir-fig-img {
+    max-width: 100%;
+    height: auto;
+}
+.llegir-fig-legend {
+    font-style: italic;
+    text-align: left;
+    margin-top: 6px;
+}
+</style>
+
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 
@@ -65,6 +85,55 @@ render_desc_html <- function(desc) {
         desc_line('Notes', desc$notes)
     )
     paste(lines, collapse = '\n')
+}
+
+# base64 data URI for one plot spec -- a live plot_obj is rendered to a temp
+# PNG first (llegir:::save_plot_to_png(), reachable regardless of whether the
+# caller attached the package via library()); a re-read fragment has no
+# plot_obj, so it falls back to the persisted image_path; NULL when neither
+# is usable, so the report degrades silently rather than erroring
+plot_data_uri <- function(spec) {
+    if (!is.null(spec$plot_obj)) {
+        tmp_png <- tempfile(fileext = '.png')
+        llegir:::save_plot_to_png(spec$plot_obj, tmp_png)
+        return(knitr::image_uri(tmp_png))
+    }
+    if (!is.null(spec$image_path) && file.exists(spec$image_path)) {
+        return(knitr::image_uri(spec$image_path))
+    }
+    NULL
+}
+
+# one centered figure card for a plot spec; '' (not an error) when the figure
+# can't be rendered, so a stripped-and-unpersisted plot degrades silently
+plot_card_html <- function(spec, plot_id) {
+    uri <- plot_data_uri(spec)
+    if (is.null(uri)) return('')
+    legend_html <- if (!is.null(spec$legend)) {
+        paste0('<figcaption class="llegir-fig-legend"><em>', spec$legend, '</em></figcaption>')
+    } else {
+        ''
+    }
+    paste0(
+        '<figure class="llegir-fig-card">',
+        '<img class="llegir-fig-img" src="', uri, '">',
+        legend_html,
+        '</figure>\n\n'
+    )
+}
+
+# all cards for one fragment's plots matching the requested placement, in
+# attach order; '' for a NULL/empty plots slot so a plotless fragment writes
+# nothing and stays byte-identical to the pre-milestone report
+plots_block_html <- function(plots, placement) {
+    if (is.null(plots) || length(plots) == 0) return('')
+    plot_ids <- names(plots)
+    cards <- lapply(plot_ids, function(plot_id) {
+        spec <- plots[[plot_id]]
+        if ((spec$placement %||% 'below') != placement) return('')
+        plot_card_html(spec, plot_id)
+    })
+    paste(cards, collapse = '')
 }
 ```
 
@@ -160,11 +229,15 @@ for (module_id in module_ids) {
         show_summary <- is.null(tbl) || nrow(tbl) == 0 || !(frag$type %in% redundant_summary_types)
         if (show_summary) cat(frag$compact_summary, '\n\n', sep = '')
 
+        cat(plots_block_html(frag$plots, 'above'))
+
         if (!is.null(tbl) && nrow(tbl) > 0) {
             cat('<div style="max-height: 250px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; margin-bottom: 15px;">\n\n')
             print(knitr::kable(tbl, format = 'markdown'))
             cat('\n\n</div>\n\n')
         }
+
+        cat(plots_block_html(frag$plots, 'below'))
     }
 }
 ```

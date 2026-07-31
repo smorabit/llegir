@@ -12,7 +12,8 @@ dataset_fragment(
   compact_summary,
   top_findings,
   caveats = list(),
-  provenance = list()
+  provenance = list(),
+  plots = NULL
 )
 }
 \arguments{
@@ -34,6 +35,9 @@ dataset_fragment(
 controlled vocab. Default \code{list()}.}
 
 \item{provenance}{A provenance list, typically built with \code{\link[=make_provenance]{make_provenance()}}.}
+
+\item{plots}{Optional named list of plot specs to attach; see
+\code{\link[=attach_plots]{attach_plots()}}. Default \code{NULL}.}
 }
 \value{
 A \code{dataset_fragment} object.

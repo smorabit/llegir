@@ -1,5 +1,24 @@
 # llegir 0.0.0.9000
 
+* Plot ingestion (`docs/milestones/milestone_plot_ingestion.md` Parts 1-2):
+  both `evidence_fragment()` and `dataset_fragment()` gained an optional
+  `plots` slot -- a named list of pre-rendered figure specs (a live
+  `plot_obj` and/or a persisted `image_path`, plus `legend`/`placement`
+  hints). `llegir` ships no plotting functions and stays strictly an asset
+  container; a fragment with no plots validates, serializes, and hashes
+  exactly as before. New exported `attach_plots(frag, plots)` decorates an
+  existing fragment and re-validates at attach time. A raw `plot_obj` never
+  reaches `jsonlite::toJSON()` or `digest::digest()`: the new internal
+  `.strip_plot_objs()` guardrail runs before every existing `unclass()` in
+  `.fragment_hashable()`/`fragment_to_json()`/`packet_to_json()` and their
+  `dataset_fragment` siblings, so `packet_hash` stays reproducible across
+  sessions while legends (text, not pixels) still serialize and count toward
+  the hash. New exported `write_fragment_figures(packet, figures_dir)`
+  renders each fragment's live plots to
+  `<figures_dir>/<module_id>/<fragment_id>__<plot_id>.png` and records the
+  path back onto the spec as `image_path`, the graphical sibling of
+  `write_fragment_tables()`. `ggplot2` added to `Suggests` (not `Imports`);
+  the core pipeline runs without it.
 * `export_agent_workspace()` v0.2 hardening (`docs/milestones/milestone_agent_workspace.md`
   Part 4): the serialized `ModuleSet` is now split into a lite/full pair --
   `artifacts/moduleset_lite.qs2` (default load; a new internal

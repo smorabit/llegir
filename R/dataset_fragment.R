@@ -37,10 +37,12 @@
 #' @param caveats A list of machine-readable confounder flags, drawn from the
 #'   controlled vocab. Default `list()`.
 #' @param provenance A provenance list, typically built with [make_provenance()].
+#' @param plots Optional named list of plot specs to attach; see
+#'   [attach_plots()]. Default `NULL`.
 #' @return A `dataset_fragment` object.
 #' @export
 dataset_fragment <- function(fragment_id, tool_id, type, result, compact_summary,
-                              top_findings, caveats = list(), provenance = list()){
+                              top_findings, caveats = list(), provenance = list(), plots = NULL){
     type <- match.arg(type, .dataset_fragment_types)
     frag <- list(
         fragment_id = fragment_id,
@@ -50,7 +52,8 @@ dataset_fragment <- function(fragment_id, tool_id, type, result, compact_summary
         compact_summary = compact_summary,
         top_findings = top_findings,
         caveats = caveats,
-        provenance = provenance
+        provenance = provenance,
+        plots = plots
     )
     structure(frag, class = 'dataset_fragment')
 }
@@ -88,12 +91,17 @@ validate_dataset_fragment <- function(frag){
     if (length(prov_missing) > 0) {
         stop('provenance missing fields: ', paste(prov_missing, collapse = ', '))
     }
+    .validate_plots(frag$plots, 'dataset_fragment')
     invisible(TRUE)
 }
 
 # strip volatile fields (timestamps) before hashing so identical dataset
-# fragments hash identically across reruns
+# fragments hash identically across reruns; plot_obj is stripped first since a
+# live grob holds environments/external pointers and would make the hash
+# non-reproducible across sessions -- legends are text and stay in, so they
+# still count toward the hash
 .dataset_fragment_hashable <- function(frag){
+    frag <- .strip_plot_objs(frag)
     frag$provenance$timestamp <- NULL
     unclass(frag)
 }
@@ -105,7 +113,8 @@ validate_dataset_fragment <- function(frag){
 #' @return A JSON string (a `jsonlite::json` scalar).
 #' @export
 dataset_fragment_to_json <- function(frag, pretty = TRUE){
-    jsonlite::toJSON(unclass(frag), dataframe = 'rows', auto_unbox = TRUE, na = 'null', pretty = pretty)
+    # `.strip_plot_objs()` drops any live plot_obj so a raw grob never reaches jsonlite
+    jsonlite::toJSON(unclass(.strip_plot_objs(frag)), dataframe = 'rows', auto_unbox = TRUE, na = 'null', pretty = pretty)
 }
 
 #' Parse a dataset fragment from JSON
@@ -127,7 +136,8 @@ dataset_fragment_from_json <- function(json_str){
         compact_summary = parsed$compact_summary,
         top_findings = parsed$top_findings,
         caveats = if (is.null(parsed$caveats)) list() else parsed$caveats,
-        provenance = parsed$provenance
+        provenance = parsed$provenance,
+        plots = parsed$plots
     ))
 }
 
@@ -175,7 +185,7 @@ build_dataset_context <- function(dataset_fragments, input_hash = NA_character_,
 dataset_context_to_json <- function(context, pretty = TRUE){
     jsonlite::toJSON(
         list(
-            dataset_fragments = lapply(context$dataset_fragments, unclass),
+            dataset_fragments = lapply(context$dataset_fragments, function(f) unclass(.strip_plot_objs(f))),
             context_hash = context$context_hash,
             schema_version = context$schema_version,
             provenance = context$provenance
@@ -206,10 +216,15 @@ write_dataset_context <- function(context, path){
 read_dataset_context <- function(path){
     # jsonlite simplifies the dataset_fragments array into a data.frame, so
     # fragments are indexed row-by-row; see read_evidence_packet() for the
-    # same unwrapping pattern
+    # same unwrapping pattern, including the second unsimplified parse needed
+    # to pull `plots` out untouched (it's keyed by plot id, not a uniform
+    # array, so the row-simplification mangles it once a spec has more than
+    # one field)
     parsed <- jsonlite::fromJSON(path, simplifyDataFrame = TRUE, simplifyVector = TRUE)
+    raw <- jsonlite::fromJSON(path, simplifyDataFrame = FALSE, simplifyVector = FALSE)
     dataset_fragments <- lapply(seq_len(nrow(parsed$dataset_fragments)), function(i) {
         f <- parsed$dataset_fragments[i, ]
+        raw_plots <- raw$dataset_fragments[[i]]$plots
         do.call(dataset_fragment, list(
             fragment_id = f$fragment_id[[1]],
             tool_id = f$tool_id[[1]],
@@ -218,7 +233,8 @@ read_dataset_context <- function(path){
             compact_summary = f$compact_summary[[1]],
             top_findings = f$top_findings[[1]],
             caveats = if (is.null(f$caveats[[1]])) list() else f$caveats[[1]],
-            provenance = as.list(f$provenance)
+            provenance = as.list(f$provenance),
+            plots = if (length(raw_plots) == 0) NULL else raw_plots
         ))
     })
     list(
