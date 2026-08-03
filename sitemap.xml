@@ -1,19 +1,19 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
-<url><loc>https://smorabit.github.io/llegir/2026-07-22.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/404.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/CLAUDE.html</loc></url>
-<url><loc>https://smorabit.github.io/llegir/CLAUDE_old.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/LICENSE-text.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/LICENSE.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/STYLE.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/articles/getting-started.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/articles/index.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/articles/local-llm-backend.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/authors.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/index.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/news/index.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/PROMPT_TEMPLATE_VERSION.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/RENDER_TEMPLATE_VERSION.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/assert_faithfulness.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/attach_plots.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/build_dataset_context.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/build_evidence_packet.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/build_review_queue.html</loc></url>
@@ -39,9 +39,11 @@
 <url><loc>https://smorabit.github.io/llegir/reference/dataset_variance_structure_tool.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/describe_flags.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/differential_module_activity_tool.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/dot-make_moduleset_lite.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/ellmer_backend.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/enforce_faithfulness.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/evidence_fragment.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/export_agent_workspace.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/expression.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/fragment_from_json.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/fragment_to_json.html</loc></url>
@@ -69,6 +71,8 @@
 <url><loc>https://smorabit.github.io/llegir/reference/list_tools.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/llegir-package.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/llegir_example_moduleset.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/llm_server_status.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/local_backend.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/make_interpretation_provenance.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/make_provenance.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/metadata.html</loc></url>
@@ -83,6 +87,7 @@
 <url><loc>https://smorabit.github.io/llegir/reference/pseudobulk_ModuleSet.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/pseudobulk_de_limma_tool.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/pseudobulk_view.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/read_agent_manifest.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/read_dataset_context.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/read_evidence_packet.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/read_interpretation.html</loc></url>
@@ -109,6 +114,7 @@
 <url><loc>https://smorabit.github.io/llegir/reference/with_pseudobulk.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_dataset_context.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_evidence_packet.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/write_fragment_figures.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_fragment_tables.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_interpretation.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_interpretation_report.html</loc></url>

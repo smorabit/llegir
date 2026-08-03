@@ -1,0 +1,141 @@
+# Using a local open-source LLM
+
+This vignette assumes you have already read *Getting started with
+llegir* and run its core workflow. The only thing that changes here is
+the backend. Everything from
+[`run_orchestrator()`](https://smorabit.github.io/llegir/reference/run_orchestrator.md)
+onward is identical.
+
+## Why run locally?
+
+**llegir** synthesis calls `chat$chat_structured()` and expects the
+model to return JSON that validates against the `interpretation` schema.
+That means the serving engine must support **grammar-constrained
+(“guided”) decoding** — a model that can chat freely but cannot reliably
+emit schema-constrained JSON will fail
+[`validate_interpretation()`](https://smorabit.github.io/llegir/reference/validate_interpretation.md)
+every time. vLLM provides mature, well-tested guided decoding via its
+OpenAI-compatible API, which is exactly what
+[`ellmer::chat_vllm()`](https://ellmer.tidyverse.org/reference/chat_vllm.html)
+targets. Everything downstream — faithfulness checking, confidence
+fusion, caching, rendering — is unchanged.
+
+## Choosing a model
+
+Pick an **instruct-tuned** model from a family with strong
+structured-output behavior. The **Qwen instruct** series
+(e.g. `Qwen/Qwen2.5-7B-Instruct`) is a reliable starting point: it fits
+comfortably on most modern data-center GPUs, serves fast, and handles
+schema-constrained output well. Start at 7B regardless of available
+VRAM; once the full pipeline works, swapping the model id for a 14B or
+32B checkpoint is a one-line change. Avoid base (non-instruct)
+checkpoints and “reasoning” models — the latter emit chain-of-thought
+that conflicts with strict JSON decoding.
+
+## Serving the model with vLLM
+
+The commands below run on a **GPU node**. On an HPC cluster they belong
+inside a GPU job allocation; scheduler headers and connection recipes
+(SSH tunnel, cross-node URL) vary by site — see
+`docs/local_llm_backend.md` for the full setup guide and a validated
+CNAG example.
+
+**One-time setup (run on a login node that has internet access):**
+
+``` bash
+micromamba create -n vllm python=3.11 -y
+micromamba activate vllm
+pip install vllm "huggingface_hub[cli]"
+
+export HF_HOME=/path/to/scratch/hf_cache   # large, shared, GPU-node-visible
+hf download Qwen/Qwen2.5-7B-Instruct
+# gated models (some Llama/Gemma repos) also need: hf auth login
+```
+
+**Each run (inside the GPU allocation):**
+
+``` bash
+export HF_HOME=/path/to/scratch/hf_cache
+export HF_HUB_OFFLINE=1          # if compute nodes have no outbound internet
+export VLLM_API_KEY=EMPTY
+
+vllm serve Qwen/Qwen2.5-7B-Instruct \
+    --served-model-name qwen \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --max-model-len 8192 \
+    --gpu-memory-utilization 0.90
+```
+
+`--served-model-name qwen` is the short alias clients use — this is the
+`model` value you pass to **llegir**. Wait for
+`Application startup complete` before running R.
+
+## Connecting llegir
+
+Set the server URL, then call
+[`local_backend()`](https://smorabit.github.io/llegir/reference/local_backend.md).
+That is the only change from the getting-started workflow.
+
+``` r
+
+# optional: point llegir at a non-default URL (defaults to http://127.0.0.1:8000/v1)
+Sys.setenv(LLEGIR_LLM_URL = 'http://127.0.0.1:8000/v1')
+```
+
+[`llm_server_status()`](https://smorabit.github.io/llegir/reference/llm_server_status.md)
+confirms connectivity and returns the list of served models:
+
+``` r
+
+library(llegir)
+
+status <- llm_server_status()
+# $base_url: "http://127.0.0.1:8000/v1"
+# $models:   "qwen"
+```
+
+[`local_backend()`](https://smorabit.github.io/llegir/reference/local_backend.md)
+combines the connectivity check, model auto-discovery, and
+[`cached_backend()`](https://smorabit.github.io/llegir/reference/cached_backend.md)
+into a single call:
+
+``` r
+
+backend <- local_backend()
+```
+
+If more than one model is served, pass the alias explicitly:
+
+``` r
+
+backend <- local_backend(model = 'qwen')
+```
+
+From here the synthesis call is **identical to getting-started** — the
+`backend` line above is the only difference:
+
+``` r
+
+interps <- run_synthesis_orchestrator(
+    packets, desc, backend = backend,
+    output_dir = 'output/interpretations',
+    dataset_context = dataset_ctx
+)
+
+interp <- interps[['MM1']]
+interp$proposed_label
+interp$confidence$score
+cat(render_paragraph(interp))
+```
+
+## What’s next
+
+Everything downstream —
+[`build_review_queue()`](https://smorabit.github.io/llegir/reference/build_review_queue.md),
+[`write_synthesis_manifest()`](https://smorabit.github.io/llegir/reference/write_synthesis_manifest.md),
+[`export_agent_workspace()`](https://smorabit.github.io/llegir/reference/export_agent_workspace.md)
+— is identical regardless of which backend produced the interpretations.
+For HPC scheduler setup, cross-node URL configuration, SSH tunnels,
+quantized checkpoints, and troubleshooting, see
+`docs/local_llm_backend.md`.

@@ -1,0 +1,404 @@
+# llegir
+
+**llegir** is a package for LLM-enabled gene-program interpretations in
+R. In transcriptomics data analysis, we often work with groups of genes
+that are somehow related to one another, and **llegir** aims to automate
+the interpretation of these interrelated groups of genes, which we refer
+to as “*gene modules*”. **llegir** is completely agnostic to the
+sequencing technology (e.g. bulk RNA-seq, single-cell RNA-seq,
+sequencing or imaging based spatial transcriptomics, etc), and it is
+agnostic to the method used to group genes into modules (e.g. WGCNA,
+matrix factorization, literature-derived gene lists, etc).
+
+**llegir** takes as input a gene expression matrix and a set of *gene
+modules*, for instance coming from our other tool
+![hdWGCNA](https://smorabit.github.io/hdWGCNA/). Next, **llegir**
+compiles a set of “evidence” for each module by running a user-defined
+chain of analysis tools, flexibly defined to suit the specific needs of
+each dataset. The results of these analysis tools are then assembled
+into an “evidence packet” that is given to an LLM of the user’s choice
+for synthesis, summarization, and interpretation. Finally, **llegir**
+compiles an .html report for the interpretation of all modules. A
+completed run can also be exported as a read-only [agent
+workspace](https://smorabit.github.io/llegir/docs/agent_workspace.md)
+for an external terminal coding agent to interrogate directly.
+
+**llegir** means “to read” in the Catalan language.
+
+## Development stage
+
+**llegir** is in an experimental development stage, and at this point it
+is subject to major changes until we have pushed a more stable release,
+proceed with caution!
+
+## Installation
+
+``` r
+
+remotes::install_github("smorabit/llegir")
+```
+
+See the [Getting
+Started](https://smorabit.github.io/llegir/vignettes/getting-started.Rmd)
+vignette for a full quick start walkthrough.
+
+# Package index
+
+## ModuleSet adapter
+
+The backend-agnostic contract every core tool depends on –
+capabilities() plus hdWGCNA/Seurat, tidy-components, and gene-list
+adapters – and the self-contained synthetic fixture used in examples and
+the vignette.
+
+- [`modules()`](https://smorabit.github.io/llegir/reference/modules.md)
+  : List the module ids in a module set
+- [`gene_membership()`](https://smorabit.github.io/llegir/reference/gene_membership.md)
+  : Genes assigned to a module, ranked by membership strength
+- [`module_scores()`](https://smorabit.github.io/llegir/reference/module_scores.md)
+  : Per-cell (or per-sample) module scores
+- [`expression()`](https://smorabit.github.io/llegir/reference/expression.md)
+  : Underlying expression matrix backing a module set
+- [`metadata()`](https://smorabit.github.io/llegir/reference/metadata.md)
+  : Cell / sample metadata for a module set
+- [`pkg_versions()`](https://smorabit.github.io/llegir/reference/pkg_versions.md)
+  : Backend package versions for provenance logging
+- [`capabilities()`](https://smorabit.github.io/llegir/reference/capabilities.md)
+  : Which capabilities a ModuleSet provides
+- [`has_capability()`](https://smorabit.github.io/llegir/reference/has_capability.md)
+  : Check whether a ModuleSet has a given capability
+- [`hdWGCNA_ModuleSet()`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  [`modules(`*`<hdWGCNA_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  [`gene_membership(`*`<hdWGCNA_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  [`module_scores(`*`<hdWGCNA_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  [`expression(`*`<hdWGCNA_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  [`counts(`*`<hdWGCNA_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  [`metadata(`*`<hdWGCNA_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  [`pkg_versions(`*`<hdWGCNA_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  [`capabilities(`*`<hdWGCNA_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.md)
+  : Build a ModuleSet from a Seurat object with an hdWGCNA experiment
+- [`components_ModuleSet()`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  [`modules(`*`<components_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  [`gene_membership(`*`<components_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  [`module_scores(`*`<components_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  [`expression(`*`<components_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  [`counts(`*`<components_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  [`metadata(`*`<components_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  [`pkg_versions(`*`<components_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  [`capabilities(`*`<components_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/components_ModuleSet.md)
+  : Build a ModuleSet from tidy components
+- [`gene_list_ModuleSet()`](https://smorabit.github.io/llegir/reference/gene_list_ModuleSet.md)
+  [`pkg_versions(`*`<gene_list_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/gene_list_ModuleSet.md)
+  : Build a ModuleSet from named gene lists, scoring on the fly
+- [`pseudobulk_ModuleSet()`](https://smorabit.github.io/llegir/reference/pseudobulk_ModuleSet.md)
+  [`pkg_versions(`*`<pseudobulk_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/pseudobulk_ModuleSet.md)
+  : Build a ModuleSet from pseudo-bulk counts, re-scoring modules with
+  decoupleR
+- [`synthetic_ModuleSet()`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  [`modules(`*`<synthetic_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  [`module_scores(`*`<synthetic_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  [`gene_membership(`*`<synthetic_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  [`expression(`*`<synthetic_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  [`counts(`*`<synthetic_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  [`metadata(`*`<synthetic_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  [`pkg_versions(`*`<synthetic_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  [`capabilities(`*`<synthetic_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.md)
+  : Wrap a ModuleSet with hand-picked gene sets as synthetic modules
+- [`llegir_example_moduleset()`](https://smorabit.github.io/llegir/reference/llegir_example_moduleset.md)
+  : A small, self-contained synthetic ModuleSet for examples and the
+  vignette
+- [`counts()`](https://smorabit.github.io/llegir/reference/counts.md) :
+  Underlying raw counts matrix backing a module set
+- [`validate_moduleset()`](https://smorabit.github.io/llegir/reference/validate_moduleset.md)
+  : Validate that a ModuleSet satisfies the full adapter contract
+- [`with_pseudobulk()`](https://smorabit.github.io/llegir/reference/with_pseudobulk.md)
+  [`capabilities(`*`<with_pseudobulk_ModuleSet>`*`)`](https://smorabit.github.io/llegir/reference/with_pseudobulk.md)
+  : Attach a pseudo-bulk ModuleSet view to a cell-level ModuleSet
+- [`pseudobulk()`](https://smorabit.github.io/llegir/reference/pseudobulk.md)
+  : Attached pseudo-bulk view for a ModuleSet
+- [`pseudobulk_view()`](https://smorabit.github.io/llegir/reference/pseudobulk_view.md)
+  : Resolve the pseudo-bulk view for a ModuleSet
+
+## Evidence tools
+
+Core deterministic evidence tools; each returns one evidence_fragment.
+
+- [`top_genes_tool()`](https://smorabit.github.io/llegir/reference/top_genes_tool.md)
+  : Evidence tool: top module genes ranked by membership (kME)
+
+- [`cluster_dme_tool()`](https://smorabit.github.io/llegir/reference/cluster_dme_tool.md)
+  : Evidence tool: which cell states express this module
+
+- [`geneset_enrichment_tool()`](https://smorabit.github.io/llegir/reference/geneset_enrichment_tool.md)
+  : Evidence tool: gene-set enrichment among a module's hub genes
+
+- [`signature_correlation_tool()`](https://smorabit.github.io/llegir/reference/signature_correlation_tool.md)
+  : Evidence tool: correlate module activity with a signature library
+
+- [`differential_module_activity_tool()`](https://smorabit.github.io/llegir/reference/differential_module_activity_tool.md)
+  : Evidence tool: does a module's pseudo-bulk activity differ across a
+  condition
+
+- [`pseudobulk_de_limma_tool()`](https://smorabit.github.io/llegir/reference/pseudobulk_de_limma_tool.md)
+  : Evidence tool: gene-level pseudo-bulk differential expression
+  (limma-voom)
+
+- [`import_fragment()`](https://smorabit.github.io/llegir/reference/import_fragment.md)
+  : Import a user-supplied result table as an evidence fragment
+
+- [`import_fragment_tool()`](https://smorabit.github.io/llegir/reference/import_fragment_tool.md)
+  :
+
+  `ctx`-compatible tool wrapper around
+  [`import_fragment()`](https://smorabit.github.io/llegir/reference/import_fragment.md)
+
+- [`import_seurat_markers()`](https://smorabit.github.io/llegir/reference/import_seurat_markers.md)
+  : Import a Seurat / DESeq2 / edgeR differential-expression table
+
+- [`import_hdwgcna_dme()`](https://smorabit.github.io/llegir/reference/import_hdwgcna_dme.md)
+  : Import an hdWGCNA differential module eigengene (DME) table
+
+- [`import_enrichr()`](https://smorabit.github.io/llegir/reference/import_enrichr.md)
+  : Import an EnrichR / GeneOverlap enrichment table
+
+## Dataset tools
+
+Global, once-per-dataset tools; each returns one dataset_fragment,
+bundled into a dataset_context via run_dataset_context() and injected as
+shared framing into every module’s synthesis prompt.
+
+- [`dataset_composition_tool()`](https://smorabit.github.io/llegir/reference/dataset_composition_tool.md)
+  : Dataset tool: cell-state census and condition covariate balance
+- [`dataset_variance_structure_tool()`](https://smorabit.github.io/llegir/reference/dataset_variance_structure_tool.md)
+  : Dataset tool: how much dataset variance aligns with each metadata
+  covariate
+- [`dataset_baseline_expression_tool()`](https://smorabit.github.io/llegir/reference/dataset_baseline_expression_tool.md)
+  : Dataset tool: dataset-wide baseline expression and housekeeping
+  signal
+
+## Tool registry
+
+register_tool() makes tool registration a uniform, documented public API
+for core and custom tools alike; see docs/custom_tools.md.
+
+- [`register_tool()`](https://smorabit.github.io/llegir/reference/register_tool.md)
+  : Register a tool (core or custom) in the tool registry
+- [`get_tool()`](https://smorabit.github.io/llegir/reference/get_tool.md)
+  : Look up a registered tool spec by id
+- [`list_tools()`](https://smorabit.github.io/llegir/reference/list_tools.md)
+  : List every registered tool id
+
+## Evidence fragments and packets
+
+The evidence_fragment / evidence packet data contract.
+
+- [`evidence_fragment()`](https://smorabit.github.io/llegir/reference/evidence_fragment.md)
+  : Construct an evidence fragment
+- [`validate_evidence_fragment()`](https://smorabit.github.io/llegir/reference/validate_evidence_fragment.md)
+  : Validate an evidence fragment
+- [`fragment_to_json()`](https://smorabit.github.io/llegir/reference/fragment_to_json.md)
+  : Serialize an evidence fragment to JSON
+- [`fragment_from_json()`](https://smorabit.github.io/llegir/reference/fragment_from_json.md)
+  : Parse an evidence fragment from JSON
+- [`build_evidence_packet()`](https://smorabit.github.io/llegir/reference/build_evidence_packet.md)
+  : Assemble and hash a module's evidence packet
+- [`packet_to_json()`](https://smorabit.github.io/llegir/reference/packet_to_json.md)
+  : Serialize an evidence packet to JSON
+- [`write_evidence_packet()`](https://smorabit.github.io/llegir/reference/write_evidence_packet.md)
+  : Write an evidence packet to a JSON file
+- [`read_evidence_packet()`](https://smorabit.github.io/llegir/reference/read_evidence_packet.md)
+  : Read an evidence packet from a JSON file
+- [`write_fragment_tables()`](https://smorabit.github.io/llegir/reference/write_fragment_tables.md)
+  : Write every fragment's full result table alongside a packet
+- [`write_fragment_figures()`](https://smorabit.github.io/llegir/reference/write_fragment_figures.md)
+  : Materialize every fragment's live plots to PNG files
+- [`attach_plots()`](https://smorabit.github.io/llegir/reference/attach_plots.md)
+  : Attach plots to an evidence or dataset fragment
+- [`make_provenance()`](https://smorabit.github.io/llegir/reference/make_provenance.md)
+  : Build a fragment's provenance record
+
+## Dataset fragments and context
+
+The dataset_fragment / dataset_context data contract – the dataset-tool
+sibling of an evidence_fragment / evidence packet, scoped to the whole
+experiment rather than one module.
+
+- [`dataset_fragment()`](https://smorabit.github.io/llegir/reference/dataset_fragment.md)
+  : Construct a dataset fragment
+
+- [`validate_dataset_fragment()`](https://smorabit.github.io/llegir/reference/validate_dataset_fragment.md)
+  : Validate a dataset fragment
+
+- [`dataset_fragment_to_json()`](https://smorabit.github.io/llegir/reference/dataset_fragment_to_json.md)
+  : Serialize a dataset fragment to JSON
+
+- [`dataset_fragment_from_json()`](https://smorabit.github.io/llegir/reference/dataset_fragment_from_json.md)
+  : Parse a dataset fragment from JSON
+
+- [`build_dataset_context()`](https://smorabit.github.io/llegir/reference/build_dataset_context.md)
+  : Assemble and hash a dataset context
+
+- [`dataset_context_to_json()`](https://smorabit.github.io/llegir/reference/dataset_context_to_json.md)
+  : Serialize a dataset context to JSON
+
+- [`write_dataset_context()`](https://smorabit.github.io/llegir/reference/write_dataset_context.md)
+  : Write a dataset context to a JSON file
+
+- [`read_dataset_context()`](https://smorabit.github.io/llegir/reference/read_dataset_context.md)
+  : Read a dataset context from a JSON file
+
+- [`render_dataset_context_compact()`](https://smorabit.github.io/llegir/reference/render_dataset_context_compact.md)
+  : Render a dataset context as a compact model-facing text block
+
+- [`import_dataset_fragment()`](https://smorabit.github.io/llegir/reference/import_dataset_fragment.md)
+  : Import a user-supplied result table as a dataset fragment
+
+- [`import_dataset_fragment_tool()`](https://smorabit.github.io/llegir/reference/import_dataset_fragment_tool.md)
+  :
+
+  `ctx`-compatible tool wrapper around
+  [`import_dataset_fragment()`](https://smorabit.github.io/llegir/reference/import_dataset_fragment.md)
+
+- [`import_milo_da()`](https://smorabit.github.io/llegir/reference/import_milo_da.md)
+  : Import a miloR differential-abundance neighborhood table
+
+## Orchestration
+
+Run tools/synthesis over a module set and write results to disk.
+
+- [`run_module()`](https://smorabit.github.io/llegir/reference/run_module.md)
+  : Run one module's evidence tools and build its evidence packet
+- [`run_orchestrator()`](https://smorabit.github.io/llegir/reference/run_orchestrator.md)
+  : Run a configured set of evidence tools over every module in a
+  ModuleSet
+- [`run_dataset_context()`](https://smorabit.github.io/llegir/reference/run_dataset_context.md)
+  : Build a dataset context once per dataset
+- [`synthesize_module()`](https://smorabit.github.io/llegir/reference/synthesize_module.md)
+  : Synthesize one evidence packet into a validated interpretation
+- [`run_synthesis_orchestrator()`](https://smorabit.github.io/llegir/reference/run_synthesis_orchestrator.md)
+  : Run synthesis over a batch of evidence packets
+
+## Dataset context and prompts
+
+- [`dataset_description()`](https://smorabit.github.io/llegir/reference/dataset_description.md)
+  : Construct a dataset description
+- [`validate_dataset_description()`](https://smorabit.github.io/llegir/reference/validate_dataset_description.md)
+  : Validate a dataset description
+- [`render_dataset_description()`](https://smorabit.github.io/llegir/reference/render_dataset_description.md)
+  : Render a dataset description as a compact text block
+- [`PROMPT_TEMPLATE_VERSION`](https://smorabit.github.io/llegir/reference/PROMPT_TEMPLATE_VERSION.md)
+  : Prompt template version
+- [`render_packet_compact()`](https://smorabit.github.io/llegir/reference/render_packet_compact.md)
+  : Render an evidence packet as a compact model-facing text block
+- [`build_system_prompt()`](https://smorabit.github.io/llegir/reference/build_system_prompt.md)
+  : Build the synthesis system prompt
+- [`build_user_prompt()`](https://smorabit.github.io/llegir/reference/build_user_prompt.md)
+  : Build the synthesis user prompt for one module
+
+## Synthesis backends
+
+Model-agnostic packet -\> interpretation synthesis.
+
+- [`synthesize_interpretation()`](https://smorabit.github.io/llegir/reference/synthesize_interpretation.md)
+  : Synthesize one evidence packet into an interpretation via a backend
+- [`mock_backend()`](https://smorabit.github.io/llegir/reference/mock_backend.md)
+  : Offline mock synthesis backend
+- [`ellmer_backend()`](https://smorabit.github.io/llegir/reference/ellmer_backend.md)
+  : Live synthesis backend via ellmer structured output
+- [`resolve_backend()`](https://smorabit.github.io/llegir/reference/resolve_backend.md)
+  : Resolve a synthesis backend from a provider name
+- [`cached_backend()`](https://smorabit.github.io/llegir/reference/cached_backend.md)
+  : Cache a synthesis backend's raw model calls on disk
+- [`llm_server_status()`](https://smorabit.github.io/llegir/reference/llm_server_status.md)
+  : Query a local vLLM server's model list
+- [`local_backend()`](https://smorabit.github.io/llegir/reference/local_backend.md)
+  : Convenience constructor for the local vLLM backend
+- [`model_output_schema_json()`](https://smorabit.github.io/llegir/reference/model_output_schema_json.md)
+  : Model-facing interpretation schema, derived from the canonical
+  schema
+
+## Faithfulness and confidence
+
+Guardrails between the model’s output and the deterministic evidence.
+
+- [`check_faithfulness()`](https://smorabit.github.io/llegir/reference/check_faithfulness.md)
+  : Check citation faithfulness of an interpretation against its packet
+- [`is_faithful()`](https://smorabit.github.io/llegir/reference/is_faithful.md)
+  : Is an interpretation faithful to its evidence packet?
+- [`assert_faithfulness()`](https://smorabit.github.io/llegir/reference/assert_faithfulness.md)
+  : Hard-reject an interpretation with any faithfulness violation
+- [`enforce_faithfulness()`](https://smorabit.github.io/llegir/reference/enforce_faithfulness.md)
+  : Flag (rather than reject) an interpretation with faithfulness
+  violations
+- [`compute_evidence_signals()`](https://smorabit.github.io/llegir/reference/compute_evidence_signals.md)
+  : Compute deterministic evidence signals from a packet
+- [`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
+  : Calculate the deterministic fused evidence confidence for a packet
+- [`fuse_confidence()`](https://smorabit.github.io/llegir/reference/fuse_confidence.md)
+  : Fuse model and deterministic confidence into a final score and flags
+- [`needs_review()`](https://smorabit.github.io/llegir/reference/needs_review.md)
+  : Does an interpretation need human review?
+
+## Interpretation objects
+
+- [`interpretation()`](https://smorabit.github.io/llegir/reference/interpretation.md)
+  : Construct an interpretation object
+- [`validate_interpretation()`](https://smorabit.github.io/llegir/reference/validate_interpretation.md)
+  : Validate an interpretation object
+- [`interpretation_to_json()`](https://smorabit.github.io/llegir/reference/interpretation_to_json.md)
+  : Serialize an interpretation to JSON
+- [`interpretation_from_json()`](https://smorabit.github.io/llegir/reference/interpretation_from_json.md)
+  : Parse an interpretation from JSON
+- [`interpretation_hash()`](https://smorabit.github.io/llegir/reference/interpretation_hash.md)
+  : Hash an interpretation
+- [`make_interpretation_provenance()`](https://smorabit.github.io/llegir/reference/make_interpretation_provenance.md)
+  : Build an interpretation's provenance record
+- [`read_interpretation()`](https://smorabit.github.io/llegir/reference/read_interpretation.md)
+  : Read an interpretation from a JSON file
+- [`write_interpretation()`](https://smorabit.github.io/llegir/reference/write_interpretation.md)
+  : Write an interpretation to a JSON file
+
+## Rendering and review
+
+- [`RENDER_TEMPLATE_VERSION`](https://smorabit.github.io/llegir/reference/RENDER_TEMPLATE_VERSION.md)
+  : Render template version
+- [`render_paragraph()`](https://smorabit.github.io/llegir/reference/render_paragraph.md)
+  : Render an interpretation as a paragraph
+- [`describe_flags()`](https://smorabit.github.io/llegir/reference/describe_flags.md)
+  : Describe an interpretation's flags in human-readable form
+- [`build_review_queue()`](https://smorabit.github.io/llegir/reference/build_review_queue.md)
+  : Build the review queue from a batch of interpretations
+- [`write_review_queue()`](https://smorabit.github.io/llegir/reference/write_review_queue.md)
+  : Write the review queue to a TSV file
+- [`build_synthesis_manifest()`](https://smorabit.github.io/llegir/reference/build_synthesis_manifest.md)
+  : Build a run-level synthesis manifest
+- [`write_synthesis_manifest()`](https://smorabit.github.io/llegir/reference/write_synthesis_manifest.md)
+  : Write a synthesis manifest to a JSON file
+- [`write_interpretation_report()`](https://smorabit.github.io/llegir/reference/write_interpretation_report.md)
+  : Write a combined interpretation + evidence HTML report
+
+## Agent workspace
+
+export_agent_workspace() serializes a completed run and renders a static
+launchpad file for an external terminal coding agent to run open-ended,
+read-only queries against it; see docs/agent_workspace.md.
+
+- [`export_agent_workspace()`](https://smorabit.github.io/llegir/reference/export_agent_workspace.md)
+  : Export a self-contained agent workspace and manifest
+- [`read_agent_manifest()`](https://smorabit.github.io/llegir/reference/read_agent_manifest.md)
+  : Read an agent workspace manifest's front-matter
+
+## Statistical helpers
+
+- [`categorical_group_test()`](https://smorabit.github.io/llegir/reference/categorical_group_test.md)
+  : One-vs-rest categorical group test with an omnibus Kruskal-Wallis
+  test
+
+# Articles
+
+### Vignettes
+
+- [Getting started with
+  llegir](https://smorabit.github.io/llegir/articles/getting-started.md):
+- [Using a local open-source
+  LLM](https://smorabit.github.io/llegir/articles/local-llm-backend.md):
