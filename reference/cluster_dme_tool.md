@@ -108,7 +108,7 @@ cluster_dme_tool(list(ms = ms, module_id = modules(ms)[1], params = list(group_b
 #> [1] NA
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-03T19:20:24+0200"
+#> [1] "2026-08-03T19:21:55+0200"
 #> 
 #> 
 #> $plots

@@ -49,7 +49,7 @@ get_tool('top_genes')
 #>             params = list(n_hubs = n_hubs), pkg_versions = pkg_versions(ctx$ms), 
 #>             module_method = ctx$module_method %||% NA_character_))
 #> }
-#> <bytecode: 0x556b10885cc0>
+#> <bytecode: 0x56147013f200>
 #> <environment: namespace:llegir>
 #> 
 #> $type

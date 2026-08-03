@@ -92,6 +92,6 @@ build_synthesis_manifest(list(m1 = interp), desc)
 #> 
 #> 
 #> $created_at
-#> [1] "2026-08-03T19:20:06+0200"
+#> [1] "2026-08-03T19:21:36+0200"
 #> 
 ```

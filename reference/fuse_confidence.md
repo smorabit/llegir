@@ -176,7 +176,7 @@ fuse_confidence(interp, packet)
 #> 
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-03T19:20:31+0200"
+#> [1] "2026-08-03T19:22:01+0200"
 #> 
 #> 
 #> $schema_version

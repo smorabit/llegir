@@ -202,7 +202,7 @@ synthesize_interpretation(packet, desc, mock_backend())
 #> 
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-03T19:20:44+0200"
+#> [1] "2026-08-03T19:22:15+0200"
 #> 
 #> 
 #> $schema_version
