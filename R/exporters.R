@@ -106,6 +106,7 @@ write_interpretation_report <- function(interps, packets, desc,
 #' @param ms A validated `ModuleSet`.
 #' @return A `components_ModuleSet` with `capabilities()$expression` and
 #'   `$counts` `FALSE`.
+#' @keywords internal
 .make_moduleset_lite <- function(ms){
     caps <- capabilities(ms)
     mods <- modules(ms)

@@ -99,6 +99,8 @@ reference:
   - write_evidence_packet
   - read_evidence_packet
   - write_fragment_tables
+  - write_fragment_figures
+  - attach_plots
   - make_provenance
 
 - title: Dataset fragments and context
@@ -147,6 +149,8 @@ reference:
   - ellmer_backend
   - resolve_backend
   - cached_backend
+  - llm_server_status
+  - local_backend
   - model_output_schema_json
 
 - title: Faithfulness and confidence

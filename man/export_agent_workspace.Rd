@@ -51,11 +51,11 @@ manual step. Pure exporter: writes files and returns a path, never calls
 }
 \details{
 The \code{ModuleSet} is serialized twice: \code{artifacts/moduleset_lite.qs2} (a
-[\code{.make_moduleset_lite()}] reduction with the backing expression/counts
+\code{\link[=.make_moduleset_lite]{.make_moduleset_lite()}} reduction with the backing expression/counts
 matrices dropped -- what \code{query_example.R} loads by default) and
 \code{artifacts/moduleset_full.qs2} (\code{ms} unchanged, for the rare
 \code{expression()}/\code{counts()} query). Every cheat-sheet row, tool-registry
 row, and recipe rung is still generated against \code{ms}'s full capabilities
--- nothing is dropped from the docs -- but is tagged \code{(full object only)}
+-- nothing is dropped from the docs -- but is tagged \verb{(full object only)}
 when it needs something the lite object doesn't carry.
 }
