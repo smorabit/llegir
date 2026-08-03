@@ -189,15 +189,45 @@ ellmer_backend <- function(chat_fn = ellmer::chat_google_gemini, model = 'gemini
     }
 }
 
+#' Query a local vLLM server's model list
+#'
+#' GETs `<base_url>/models` and returns the base URL and the served model ids.
+#' Used by [resolve_backend()] for model auto-discovery and by [local_backend()]
+#' for connectivity pre-flight. Throws a clear, actionable error if the server
+#' is unreachable so the failure site is visible at the top of the call stack
+#' rather than buried in an httr2 connection error.
+#'
+#' @param base_url Base URL of the OpenAI-compatible server (no trailing
+#'   slash); defaults to `LLEGIR_LLM_URL` or `http://127.0.0.1:8000/v1`.
+#' @return A list with two elements: `base_url` (character) and `models`
+#'   (character vector of served model ids as reported by the `/models` endpoint).
+#' @examples
+#' \dontrun{
+#' status <- llm_server_status()
+#' cat('Served models:', paste(status$models, collapse = ', '), '\n')
+#' }
+#' @export
+llm_server_status <- function(base_url = Sys.getenv('LLEGIR_LLM_URL', 'http://127.0.0.1:8000/v1')){
+    resp <- tryCatch(
+        httr2::req_perform(httr2::req_url_path_append(httr2::request(base_url), 'models')),
+        error = function(e) stop(
+            'local LLM server not reachable at ', base_url,
+            ' -- is `vllm serve` running and your tunnel/URL correct? (',
+            conditionMessage(e), ')', call. = FALSE
+        )
+    )
+    list(base_url = base_url, models = vapply(httr2::resp_body_json(resp)$data, function(m) m$id, character(1)))
+}
+
 # provider + model as a single config knob: 'github' (gpt-4o-mini, the
 # generous ~150/day tier) is the default dev provider, 'gemini' is kept for
 # occasional quality cross-checks, 'mock' is the offline/CI backend, 'local'
-# points at a vLLM server via LLEGIR_LLM_URL/LLEGIR_LLM_MODEL. All four
-# satisfy the same backend contract above, so callers never branch on provider.
+# points at a vLLM server via LLEGIR_LLM_URL (model auto-discovered via
+# llm_server_status() when model = NULL). All four satisfy the same backend
+# contract above, so callers never branch on provider.
 .default_models <- list(
     github = 'gpt-4o-mini',
-    gemini = 'gemini-3.5-flash',
-    local  = Sys.getenv('LLEGIR_LLM_MODEL', 'qwen')
+    gemini = 'gemini-3.5-flash'
 )
 
 #' Resolve a synthesis backend from a provider name
@@ -210,8 +240,11 @@ ellmer_backend <- function(chat_fn = ellmer::chat_google_gemini, model = 'gemini
 #' variables (see `docs/local_llm_backend.md`). Callers never branch on provider.
 #'
 #' @param provider One of `'github'` (default), `'gemini'`, `'mock'`, `'local'`.
+#'   `'local'` targets an OpenAI-compatible vLLM server at `LLEGIR_LLM_URL`
+#'   (see [llm_server_status()] and [local_backend()]).
 #' @param model Optional model id override; defaults to a per-provider default.
-#'   For `'local'`, defaults to `LLEGIR_LLM_MODEL` env var or `'qwen'`.
+#'   For `'local'`, `NULL` triggers model auto-discovery via [llm_server_status()];
+#'   a hard error is raised if zero or more than one models are served.
 #' @param temperature Sampling temperature (ignored by the mock backend).
 #' @return A backend function; see [mock_backend()] for the contract.
 #' @examples
@@ -227,8 +260,16 @@ resolve_backend <- function(provider = 'github', model = NULL, temperature = 0){
 
     if (provider == 'local') {
         base_url <- Sys.getenv('LLEGIR_LLM_URL', 'http://127.0.0.1:8000/v1')
-        model <- model %||% .default_models[['local']]
-        if (!nzchar(model)) stop("provider 'local' needs a model id (set `model` or LLEGIR_LLM_MODEL)")
+        if (!nzchar(Sys.getenv('VLLM_API_KEY'))) Sys.setenv(VLLM_API_KEY = 'EMPTY')
+        if (is.null(model)) {
+            status <- llm_server_status(base_url)
+            if (length(status$models) == 0)
+                stop('no models served at ', base_url, call. = FALSE)
+            if (length(status$models) > 1)
+                stop('multiple models served at ', base_url, ': ', paste(status$models, collapse = ', '),
+                     ' -- set `model` explicitly', call. = FALSE)
+            model <- status$models[1]
+        }
         chat_fn <- function(credentials = NULL, ...) ellmer::chat_vllm(base_url = base_url, ...)
         return(ellmer_backend(
             chat_fn = chat_fn, model = model,
@@ -275,6 +316,47 @@ cached_backend <- function(backend, provider, model, prompt_template_version,
         saveRDS(result, cache_path)
         result
     }
+}
+
+#' Convenience constructor for the local vLLM backend
+#'
+#' Combines connectivity pre-flight ([llm_server_status()]), model
+#' auto-discovery, [resolve_backend()] for `'local'`, and [cached_backend()]
+#' into a single call. Returns a ready-to-use cached backend suitable for
+#' [synthesize_interpretation()] and [run_synthesis_orchestrator()].
+#'
+#' @param model Model id served by the vLLM server. When `NULL` (default),
+#'   the server's model list is queried via [llm_server_status()]; a hard
+#'   error is raised if zero or more than one models are served so the
+#'   correct id can be specified explicitly.
+#' @param cache If `TRUE` (default), wraps the live backend with
+#'   [cached_backend()] keyed on provider, model, and prompt template version.
+#' @param force_refresh Passed to [cached_backend()]; if `TRUE`, bypasses any
+#'   cached response and always calls the live server.
+#' @param prompt_template_version Cache-key component passed to
+#'   [cached_backend()]; defaults to the package-level [PROMPT_TEMPLATE_VERSION].
+#' @return A backend function; see [mock_backend()] for the contract.
+#' @examples
+#' \dontrun{
+#' backend <- local_backend()
+#' }
+#' @export
+local_backend <- function(model = NULL, cache = TRUE, force_refresh = FALSE,
+                           prompt_template_version = PROMPT_TEMPLATE_VERSION){
+    base_url <- Sys.getenv('LLEGIR_LLM_URL', 'http://127.0.0.1:8000/v1')
+    status <- llm_server_status(base_url)
+    if (is.null(model)) {
+        if (length(status$models) == 0)
+            stop('no models served at ', base_url, call. = FALSE)
+        if (length(status$models) > 1)
+            stop('multiple models served at ', base_url, ': ', paste(status$models, collapse = ', '),
+                 ' -- set `model` explicitly', call. = FALSE)
+        model <- status$models[1]
+    }
+    backend <- resolve_backend('local', model = model)
+    if (!cache) return(backend)
+    cached_backend(backend, provider = 'local', model = model,
+        prompt_template_version = prompt_template_version, force_refresh = force_refresh)
 }
 
 #' Synthesize one evidence packet into an interpretation via a backend
