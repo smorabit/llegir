@@ -191,31 +191,51 @@ ellmer_backend <- function(chat_fn = ellmer::chat_google_gemini, model = 'gemini
 
 # provider + model as a single config knob: 'github' (gpt-4o-mini, the
 # generous ~150/day tier) is the default dev provider, 'gemini' is kept for
-# occasional quality cross-checks, 'mock' is the offline/CI backend. All
-# three satisfy the same backend contract above, so callers (scripts, tests)
-# never branch on provider.
-.default_models <- list(github = 'gpt-4o-mini', gemini = 'gemini-3.5-flash')
+# occasional quality cross-checks, 'mock' is the offline/CI backend, 'local'
+# points at a vLLM server via LLEGIR_LLM_URL/LLEGIR_LLM_MODEL. All four
+# satisfy the same backend contract above, so callers never branch on provider.
+.default_models <- list(
+    github = 'gpt-4o-mini',
+    gemini = 'gemini-3.5-flash',
+    local  = Sys.getenv('LLEGIR_LLM_MODEL', 'qwen')
+)
 
 #' Resolve a synthesis backend from a provider name
 #'
 #' Provider + model as a single config knob. `'mock'` is the offline/CI
 #' backend ([mock_backend()]); `'github'` and `'gemini'` are both built on
 #' [ellmer_backend()] with the matching `ellmer::chat_*()` constructor and a
-#' default model id, so callers never branch on provider.
+#' default model id; `'local'` points at a vLLM OpenAI-compatible server
+#' configured via the `LLEGIR_LLM_URL` and `LLEGIR_LLM_MODEL` environment
+#' variables (see `docs/local_llm_backend.md`). Callers never branch on provider.
 #'
-#' @param provider One of `'github'` (default), `'gemini'`, `'mock'`.
+#' @param provider One of `'github'` (default), `'gemini'`, `'mock'`, `'local'`.
 #' @param model Optional model id override; defaults to a per-provider default.
+#'   For `'local'`, defaults to `LLEGIR_LLM_MODEL` env var or `'qwen'`.
 #' @param temperature Sampling temperature (ignored by the mock backend).
 #' @return A backend function; see [mock_backend()] for the contract.
 #' @examples
 #' backend <- resolve_backend(provider = 'mock')
 #' \dontrun{
 #' backend <- resolve_backend(provider = 'gemini')
+#' backend <- resolve_backend(provider = 'local')
 #' }
 #' @export
 resolve_backend <- function(provider = 'github', model = NULL, temperature = 0){
-    provider <- match.arg(provider, c('github', 'gemini', 'mock'))
+    provider <- match.arg(provider, c('github', 'gemini', 'mock', 'local'))
     if (provider == 'mock') return(mock_backend())
+
+    if (provider == 'local') {
+        base_url <- Sys.getenv('LLEGIR_LLM_URL', 'http://127.0.0.1:8000/v1')
+        model <- model %||% .default_models[['local']]
+        if (!nzchar(model)) stop("provider 'local' needs a model id (set `model` or LLEGIR_LLM_MODEL)")
+        chat_fn <- function(credentials = NULL, ...) ellmer::chat_vllm(base_url = base_url, ...)
+        return(ellmer_backend(
+            chat_fn = chat_fn, model = model,
+            temperature = temperature, schema_transform = identity
+        ))
+    }
+
     chat_fn <- switch(provider, github = ellmer::chat_github, gemini = ellmer::chat_google_gemini)
     schema_transform <- if (provider == 'github') .to_openai_strict_schema else identity
     ellmer_backend(chat_fn = chat_fn, model = model %||% .default_models[[provider]],
