@@ -392,6 +392,7 @@ real `seurat_obj`.
 # aggregate the real seurat_obj counts into a pseudo-bulk SummarizedExperiment
 #---------------------------------------------------------
 
+# Q: is this line still needed?
 source('scripts/pseudobulk_functions.R')
 
 # one pseudobulk unit per sample (replicate_col == group_col collapses the
