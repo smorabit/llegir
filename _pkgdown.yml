@@ -19,6 +19,13 @@ navbar:
     left: [intro, reference, articles]
     right: [search, github]
 
+articles:
+- title: Vignettes
+  navbar: ~
+  contents:
+  - getting-started
+  - local-llm-backend
+
 reference:
 - title: ModuleSet adapter
   desc: >
