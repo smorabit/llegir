@@ -64,81 +64,85 @@
 
     
     
-<p>This vignette assumes you have already read <em>Getting started with
-llegir</em> and run its core workflow. The only thing that changes here
-is the backend. Everything from <code><a href="../reference/run_orchestrator.html">run_orchestrator()</a></code> onward
-is identical.</p>
+<p>In this tutorial, we cover the basics of running
+<strong>llegir</strong> using a local LLM on your own hardware. Unlike
+the chat-based LLM interfaces that many are accustomed to nowadays, API
+calls to LLMs are typically billed per-token and therefore they can be
+prohibitively expensive for researchers. This motivates us to move away
+from the enterprise ecosystems like OpenAI or Antrhropic, towards runing
+open-source LLMs on our own hardware.</p>
 <div class="section level2">
-<h2 id="why-run-locally">Why run locally?<a class="anchor" aria-label="anchor" href="#why-run-locally"></a>
+<h2 id="launching-a-local-model">Launching a local model<a class="anchor" aria-label="anchor" href="#launching-a-local-model"></a>
 </h2>
-<p><strong>llegir</strong> synthesis calls
-<code>chat$chat_structured()</code> and expects the model to return JSON
-that validates against the <code>interpretation</code> schema. That
-means the serving engine must support <strong>grammar-constrained
-(“guided”) decoding</strong> — a model that can chat freely but cannot
-reliably emit schema-constrained JSON will fail
-<code><a href="../reference/validate_interpretation.html">validate_interpretation()</a></code> every time. vLLM provides mature,
-well-tested guided decoding via its OpenAI-compatible API, which is
-exactly what <code><a href="https://ellmer.tidyverse.org/reference/chat_vllm.html" class="external-link">ellmer::chat_vllm()</a></code> targets. Everything
-downstream — faithfulness checking, confidence fusion, caching,
-rendering — is unchanged.</p>
-</div>
-<div class="section level2">
-<h2 id="choosing-a-model">Choosing a model<a class="anchor" aria-label="anchor" href="#choosing-a-model"></a>
-</h2>
+<div class="section level3">
+<h3 id="choosing-a-model">Choosing a model<a class="anchor" aria-label="anchor" href="#choosing-a-model"></a>
+</h3>
 <p>Pick an <strong>instruct-tuned</strong> model from a family with
 strong structured-output behavior. The <strong>Qwen instruct</strong>
 series (e.g. <code>Qwen/Qwen2.5-7B-Instruct</code>) is a reliable
-starting point: it fits comfortably on most modern data-center GPUs,
-serves fast, and handles schema-constrained output well. Start at 7B
-regardless of available VRAM; once the full pipeline works, swapping the
-model id for a 14B or 32B checkpoint is a one-line change. Avoid base
-(non-instruct) checkpoints and “reasoning” models — the latter emit
-chain-of-thought that conflicts with strict JSON decoding.</p>
+starting point: it fits comfortably on most modern data-center GPUs and
+handles schema-constrained output well. Avoid “reasoning” models, since
+they emit chain-of-thought text which conflict with JSON-based
+structured outputs required by <strong>llegir</strong>.</p>
 </div>
-<div class="section level2">
-<h2 id="serving-the-model-with-vllm">Serving the model with vLLM<a class="anchor" aria-label="anchor" href="#serving-the-model-with-vllm"></a>
-</h2>
-<p>The commands below run on a <strong>GPU node</strong>. On an HPC
-cluster they belong inside a GPU job allocation; scheduler headers and
-connection recipes (SSH tunnel, cross-node URL) vary by site — see
-<code>docs/local_llm_backend.md</code> for the full setup guide and a
-validated CNAG example.</p>
-<p><strong>One-time setup (run on a login node that has internet
-access):</strong></p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">micromamba</span> create <span class="at">-n</span> vllm python=3.11 <span class="at">-y</span></span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">micromamba</span> activate vllm</span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="ex">pip</span> install vllm <span class="st">"huggingface_hub[cli]"</span></span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="bu">export</span> <span class="va">HF_HOME</span><span class="op">=</span>/path/to/scratch/hf_cache   <span class="co"># large, shared, GPU-node-visible</span></span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="ex">hf</span> download Qwen/Qwen2.5-7B-Instruct</span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co"># gated models (some Llama/Gemma repos) also need: hf auth login</span></span></code></pre></div>
-<p><strong>Each run (inside the GPU allocation):</strong></p>
+<div class="section level3">
+<h3 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h3>
+<p>In this example, the commands below run on a <strong>GPU
+node</strong> of a HPC cluster. First, we install a new conda
+environment with <em>vLLM</em> which will help us to actually launch the
+local model.</p>
+<p>The following installation step only needs to be run once:</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="co"># create the conda environment and install vllm with pip</span></span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="ex">conda</span> create <span class="at">-n</span> vllm python=3.11 <span class="at">-y</span></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="ex">conda</span> activate vllm</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="ex">pip</span> install vllm <span class="st">"huggingface_hub[cli]"</span></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co"># select the model to download, here we use Qwen-Instruct</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">hf</span> download Qwen/Qwen2.5-7B-Instruct</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co"># define the huggingface cache directory</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="bu">export</span> <span class="va">HF_HOME</span><span class="op">=</span>/path/to/scratch/hf_cache   </span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="launching-the-model">Launching the model<a class="anchor" aria-label="anchor" href="#launching-the-model"></a>
+</h3>
+<p>In the next block, we launch the model using <em>vLLM</em>. This
+should run as-is if you are on a workstation with a GPU. If you are
+working on a cluster, you first need to request a GPU node (we cannot
+provide specific instructions on how to do this, as it highly depends on
+the configuration of your particular cluster).</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="bu">export</span> <span class="va">HF_HOME</span><span class="op">=</span>/path/to/scratch/hf_cache</span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="bu">export</span> <span class="va">HF_HUB_OFFLINE</span><span class="op">=</span>1          <span class="co"># if compute nodes have no outbound internet</span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="bu">export</span> <span class="va">VLLM_API_KEY</span><span class="op">=</span>EMPTY</span>
 <span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="ex">vllm</span> serve Qwen/Qwen2.5-7B-Instruct <span class="dt">\</span></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>    <span class="at">--served-model-name</span> qwen <span class="dt">\</span></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>    <span class="at">--host</span> 127.0.0.1 <span class="dt">\</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>    <span class="at">--port</span> 8000 <span class="dt">\</span></span>
-<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>    <span class="at">--max-model-len</span> 8192 <span class="dt">\</span></span>
-<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>    <span class="at">--gpu-memory-utilization</span> 0.90</span></code></pre></div>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co"># launch the model</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="ex">vllm</span> serve Qwen/Qwen2.5-7B-Instruct <span class="dt">\</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>    <span class="at">--served-model-name</span> qwen <span class="dt">\</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a>    <span class="at">--host</span> 127.0.0.1 <span class="dt">\</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>    <span class="at">--port</span> 8000 <span class="dt">\</span></span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>    <span class="at">--max-model-len</span> 8192 <span class="dt">\</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>    <span class="at">--gpu-memory-utilization</span> 0.90</span></code></pre></div>
 <p><code>--served-model-name qwen</code> is the short alias clients use
 — this is the <code>model</code> value you pass to
 <strong>llegir</strong>. Wait for
 <code>Application startup complete</code> before running R.</p>
 </div>
+</div>
 <div class="section level2">
-<h2 id="connecting-llegir">Connecting llegir<a class="anchor" aria-label="anchor" href="#connecting-llegir"></a>
+<h2 id="connecting-llegir-to-the-local-model">Connecting llegir to the local model<a class="anchor" aria-label="anchor" href="#connecting-llegir-to-the-local-model"></a>
 </h2>
-<p>Set the server URL, then call <code><a href="../reference/local_backend.html">local_backend()</a></code>. That is
-the only change from the getting-started workflow.</p>
+<p>To connect <strong>llegir</strong> with the local model, set the URL
+of the LLM server, and then call the <code><a href="../reference/local_backend.html">local_backend()</a></code>
+function within R. On the <strong>llegir</strong> side, this is
+essentially the only difference between using a local model vs. API
+calls with a remote model.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># optional: point llegir at a non-default URL (defaults to http://127.0.0.1:8000/v1)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>LLEGIR_LLM_URL <span class="op">=</span> <span class="st">'http://127.0.0.1:8000/v1'</span><span class="op">)</span></span></code></pre></div>
-<p><code><a href="../reference/llm_server_status.html">llm_server_status()</a></code> confirms connectivity and returns
-the list of served models:</p>
+<p>We can check that <strong>llegir</strong> detects the LLM server
+using the <code><a href="../reference/llm_server_status.html">llm_server_status()</a></code> funciton, which confirms
+connectivity and returns the list of served models:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/smorabit/llegir" class="external-link">llegir</a></span><span class="op">)</span></span>
 <span></span>
@@ -153,9 +157,8 @@ call:</p>
 <p>If more than one model is served, pass the alias explicitly:</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">backend</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/local_backend.html">local_backend</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">'qwen'</span><span class="op">)</span></span></code></pre></div>
-<p>From here the synthesis call is <strong>identical to
-getting-started</strong> — the <code>backend</code> line above is the
-only difference:</p>
+<p>From here, running the rest of the pipeline is the same as
+before.</p>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">interps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator</a></span><span class="op">(</span></span>
 <span>    <span class="va">packets</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="va">backend</span>,</span>
@@ -169,14 +172,78 @@ only difference:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_paragraph.html">render_paragraph</a></span><span class="op">(</span><span class="va">interp</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="whats-next">What’s next<a class="anchor" aria-label="anchor" href="#whats-next"></a>
+<h2 id="end-to-end-example">End-to-end example<a class="anchor" aria-label="anchor" href="#end-to-end-example"></a>
 </h2>
-<p>Everything downstream — <code><a href="../reference/build_review_queue.html">build_review_queue()</a></code>,
-<code><a href="../reference/write_synthesis_manifest.html">write_synthesis_manifest()</a></code>,
-<code><a href="../reference/export_agent_workspace.html">export_agent_workspace()</a></code> — is identical regardless of which
-backend produced the interpretations. For HPC scheduler setup,
-cross-node URL configuration, SSH tunnels, quantized checkpoints, and
-troubleshooting, see <code>docs/local_llm_backend.md</code>.</p>
+<p>Here we provide a simple end-to-end example of the R code necesarry
+to run <strong>llegir</strong> with a local model.</p>
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://satijalab.org/seurat" class="external-link">Seurat</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://smorabit.github.io/hdWGCNA/" class="external-link">hdWGCNA</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://tidyverse.tidyverse.org" class="external-link">tidyverse</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/smorabit/llegir" class="external-link">llegir</a></span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># point llegir at the local vLLM server</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/Sys.setenv.html" class="external-link">Sys.setenv</a></span><span class="op">(</span>LLEGIR_LLM_URL <span class="op">=</span> <span class="st">'http://127.0.0.1:8000/v1'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># load the CSF dataset, which has already been processed with hdWGCNA</span></span>
+<span><span class="va">seurat_obj</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/readRDS.html" class="external-link">readRDS</a></span><span class="op">(</span><span class="st">'data/CSF_Myeloid_hdWGCNA.rds'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># initialize the ModuleSet</span></span>
+<span><span class="va">ms</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hdWGCNA_ModuleSet.html">hdWGCNA_ModuleSet</a></span><span class="op">(</span><span class="va">seurat_obj</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># describe the dataset for the synthesis prompt</span></span>
+<span><span class="va">desc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/dataset_description.html">dataset_description</a></span><span class="op">(</span></span>
+<span>    species <span class="op">=</span> <span class="st">'human'</span>,</span>
+<span>    tissue <span class="op">=</span> <span class="st">'cerebrospinal fluid (CSF)'</span>,</span>
+<span>    cell_compartment <span class="op">=</span> <span class="st">'myeloid cells'</span>,</span>
+<span>    assay <span class="op">=</span> <span class="st">'single-cell RNA-seq (10x)'</span>,</span>
+<span>    conditions <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>        <span class="st">'Glioblastoma'</span>, <span class="st">'Brain Metastasis'</span>, <span class="st">'Primary CNS lymphoma'</span>,</span>
+<span>        <span class="st">'Secondary CNS lymphoma'</span>, <span class="st">'Inflammatory / other neuroinflammatory'</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    notes <span class="op">=</span> <span class="st">'Modules are CSF-myeloid co-expression programs; interpret in a CNS-myeloid, neuro-oncology / neuroinflammation context.'</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># gather global dataset context once</span></span>
+<span><span class="va">dataset_tool_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">dataset_composition_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group_col <span class="op">=</span> <span class="st">'lv2_annot'</span>, condition_col <span class="op">=</span> <span class="st">'diagnosis'</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">dataset_variance_structure_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        covariates <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'diagnosis'</span>, <span class="st">'nUMI'</span><span class="op">)</span>, condition_col <span class="op">=</span> <span class="st">'diagnosis'</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">dataset_ctx</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_dataset_context.html">run_dataset_context</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">dataset_tool_config</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># run the evidence toolbox over three modules</span></span>
+<span><span class="va">modules_use</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">'MM1'</span>, <span class="st">'MM2'</span>, <span class="st">'MM3'</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tool_config</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">top_genes_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>n_hubs <span class="op">=</span> <span class="fl">25</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">cluster_dme_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>group_by <span class="op">=</span> <span class="st">'lv2_annot'</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>fn <span class="op">=</span> <span class="va">geneset_enrichment_tool</span>, params <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>        n_hubs <span class="op">=</span> <span class="fl">25</span>,</span>
+<span>        db_files <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>            GO_BP <span class="op">=</span> <span class="st">'data/GO_Biological_Process_2026.txt'</span>,</span>
+<span>            Hallmark <span class="op">=</span> <span class="st">'data/h.all.v2026.1.Hs.symbols.gmt'</span></span>
+<span>        <span class="op">)</span></span>
+<span>    <span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">packets</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_orchestrator.html">run_orchestrator</a></span><span class="op">(</span><span class="va">ms</span>, <span class="va">tool_config</span>, output_dir <span class="op">=</span> <span class="st">'output/evidence_packets'</span>, modules_use <span class="op">=</span> <span class="va">modules_use</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># connect to the local model and run synthesis</span></span>
+<span><span class="va">backend</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/local_backend.html">local_backend</a></span><span class="op">(</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">interps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator</a></span><span class="op">(</span></span>
+<span>    <span class="va">packets</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="va">backend</span>,</span>
+<span>    output_dir <span class="op">=</span> <span class="st">'output/interpretations'</span>,</span>
+<span>    dataset_context <span class="op">=</span> <span class="va">dataset_ctx</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># inspect one interpretation</span></span>
+<span><span class="va">interp</span> <span class="op">&lt;-</span> <span class="va">interps</span><span class="op">[[</span><span class="st">'MM1'</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="va">interp</span><span class="op">$</span><span class="va">proposed_label</span></span>
+<span><span class="va">interp</span><span class="op">$</span><span class="va">confidence</span><span class="op">$</span><span class="va">score</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="../reference/render_paragraph.html">render_paragraph</a></span><span class="op">(</span><span class="va">interp</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>
