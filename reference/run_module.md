@@ -226,7 +226,7 @@ run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 #> [1] NA
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-04T18:48:12+0200"
+#> [1] "2026-08-04T18:49:43+0200"
 #> 
 #> 
 #> $plots
@@ -244,7 +244,7 @@ run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
 #> 
 #> $provenance
 #> $provenance$created_at
-#> [1] "2026-08-04T18:48:12+0200"
+#> [1] "2026-08-04T18:49:43+0200"
 #> 
 #> $provenance$input_hash
 #> [1] NA
@@ -405,7 +405,7 @@ run_module(ms, modules(ms)[1], list(list(id = 'top_genes', params = list())))
 #> [1] NA
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-04T18:48:12+0200"
+#> [1] "2026-08-04T18:49:43+0200"
 #> 
 #> 
 #> $plots
@@ -423,7 +423,7 @@ run_module(ms, modules(ms)[1], list(list(id = 'top_genes', params = list())))
 #> 
 #> $provenance
 #> $provenance$created_at
-#> [1] "2026-08-04T18:48:12+0200"
+#> [1] "2026-08-04T18:49:43+0200"
 #> 
 #> $provenance$input_hash
 #> [1] NA

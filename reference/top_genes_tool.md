@@ -171,7 +171,7 @@ top_genes_tool(list(ms = ms, module_id = modules(ms)[1], params = list(n_hubs = 
 #> [1] NA
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-04T18:48:14+0200"
+#> [1] "2026-08-04T18:49:45+0200"
 #> 
 #> 
 #> $plots
