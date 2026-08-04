@@ -1,6 +1,6 @@
 ## End-to-end synthesis run against a local vLLM server. Self-contained:
-## generates MM1's evidence packet, runs synthesis via the local backend,
-## prints the interpretation, and writes an HTML report.
+## generates evidence packets for all modules, runs synthesis via the local
+## backend, prints per-module interpretations, and writes an HTML report.
 ##
 ## Prerequisites (docs/local_llm_backend.md):
 ##   - vLLM server running and accessible (see §5-6 of the guide)
@@ -17,7 +17,7 @@ devtools::load_all(quiet = TRUE)
 # knobs
 #---------------------------------------------------------
 
-module_use <- 'MM1'
+modules_use <- NULL           # NULL -> all modules in the ModuleSet
 force_refresh <- FALSE
 output_dir <- 'output/interpretations'
 packets_dir <- 'output/evidence_packets'
@@ -56,7 +56,7 @@ desc <- dataset_description(
 )
 
 #---------------------------------------------------------
-# evidence: load object, generate MM1 packet
+# evidence: load object, generate packets for all modules
 #---------------------------------------------------------
 
 cat('Loading', data_path, '...\n')
@@ -64,15 +64,16 @@ seurat_obj <- readRDS(data_path)
 ms <- hdWGCNA_ModuleSet(seurat_obj)
 input_hash <- digest::digest(file = data_path, algo = 'sha256')
 
-cat('Running evidence toolbox for', module_use, '...\n')
+cat('Running evidence toolbox for', length(modules(ms)), 'modules...\n')
 packets <- run_orchestrator(
     ms, tool_config, packets_dir,
     tables_dir = 'output/tables',
-    modules_use = module_use,
+    modules_use = modules_use,
     input_hash = input_hash
 )
-if (is.null(packets[[module_use]])) stop('evidence collection failed for ', module_use)
-cat('Evidence packet built:', length(packets[[module_use]]$fragments), 'fragments\n')
+packets <- Filter(Negate(is.null), packets)
+if (length(packets) == 0) stop('evidence collection failed for all modules')
+cat('Evidence packets built for', length(packets), 'modules\n')
 
 #---------------------------------------------------------
 # synthesis: preflight + local vLLM backend via local_backend()
@@ -80,16 +81,23 @@ cat('Evidence packet built:', length(packets[[module_use]]$fragments), 'fragment
 
 backend <- local_backend(force_refresh = force_refresh)
 
-cat('Synthesizing', module_use, '...\n')
+cat('Synthesizing', length(packets), 'modules...\n')
 interps <- run_synthesis_orchestrator(packets, desc, backend, output_dir)
 
-interp <- interps[[module_use]]
-if (is.null(interp)) stop('synthesis failed for ', module_use)
+for (mod in names(interps)) {
+    interp <- interps[[mod]]
+    if (is.null(interp)) {
+        cat('\n--- ', mod, ': synthesis failed ---\n', sep = '')
+        next
+    }
+    cat('\n--- ', mod, ': ', interp$proposed_label, ' ---\n', sep = '')
+    cat(interp$one_line_summary, '\n')
+    cat('Confidence:', interp$confidence$score, '--', interp$confidence$rationale, '\n')
+    cat('Flags:', if (length(interp$flags) == 0) 'none' else paste(interp$flags, collapse = ', '), '\n')
+}
 
-cat('\n--- Interpretation: ', interp$proposed_label, ' ---\n', sep = '')
-cat(interp$one_line_summary, '\n')
-cat('Confidence:', interp$confidence$score, '--', interp$confidence$rationale, '\n')
-cat('Flags:', if (length(interp$flags) == 0) 'none' else paste(interp$flags, collapse = ', '), '\n')
+n_ok <- sum(!vapply(interps, is.null, logical(1)))
+cat('\n', n_ok, '/', length(interps), 'modules synthesized\n')
 
 #---------------------------------------------------------
 # report
