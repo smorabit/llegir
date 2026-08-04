@@ -195,7 +195,7 @@ synthesize_module(packet, desc, mock_backend())
 #> 
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-04T18:45:48+0200"
+#> [1] "2026-08-04T18:48:14+0200"
 #> 
 #> 
 #> $schema_version
