@@ -44,6 +44,73 @@
     state_expression = function(result, params){
         .import_group_test_normalizer(result, params, effect_default = 'avg_log2FC')
     },
+    # a module-vs-signature correlation table (cGEP/program scores, curated
+    # gene-set activities, ...): one row per named signature, mirroring
+    # signature_correlation_tool()'s own top_findings shape (signature, r) so
+    # an imported fragment reads identically to a computed one
+    signature_correlation = function(result, params){
+        sig_col <- params$signature_col %||% 'signature'
+        effect_col <- params$effect_col %||% 'r'
+        p_col <- params$significance_col %||% 'p'
+        required <- c(sig_col, effect_col)
+        missing_cols <- setdiff(required, colnames(result))
+        if (length(missing_cols) > 0) {
+            stop('import_fragment(signature_correlation) missing columns: ', paste(missing_cols, collapse = ', '))
+        }
+
+        ordered <- result[order(-abs(result[[effect_col]])), ]
+        top <- ordered[1, ]
+        top_findings <- lapply(seq_len(min(5, nrow(ordered))), function(i){
+            list(signature = ordered[[sig_col]][i], r = ordered[[effect_col]][i])
+        })
+
+        list(
+            result = ordered,
+            compact_summary = paste0(
+                'user-supplied signature correlation: top |r| signature ', top[[sig_col]],
+                ' (r=', round(top[[effect_col]], 2), ')'
+            ),
+            top_findings = top_findings,
+            effect_strength = abs(top[[effect_col]]),
+            significance = if (p_col %in% colnames(result)) top[[p_col]] else NA_real_,
+            direction = if (top[[effect_col]] > 0) 'up' else 'down'
+        )
+    },
+    # a module's correlation with one (or a few) continuous variable(s) (ASA,
+    # a clinical score, ...) rather than a named signature library; variable_col
+    # is optional since the common case is already scoped to a single variable
+    # (one row per module, e.g. an ASA correlation table)
+    continuous_correlation = function(result, params){
+        var_col <- params$variable_col
+        effect_col <- params$effect_col %||% 'r'
+        p_col <- params$significance_col %||% 'p'
+        n_col <- params$n_col %||% 'n'
+        if (!(effect_col %in% colnames(result))) {
+            stop('import_fragment(continuous_correlation) missing columns: ', effect_col)
+        }
+        has_var_col <- !is.null(var_col) && var_col %in% colnames(result)
+
+        ordered <- if (has_var_col) result[order(-abs(result[[effect_col]])), ] else result
+        top <- ordered[1, ]
+        variable_label <- if (has_var_col) top[[var_col]] else (params$variable_name %||% 'variable')
+        top_findings <- lapply(seq_len(min(5, nrow(ordered))), function(i){
+            entry <- list(r = ordered[[effect_col]][i])
+            if (has_var_col) entry$variable <- ordered[[var_col]][i]
+            if (n_col %in% colnames(result)) entry$n <- ordered[[n_col]][i]
+            entry
+        })
+
+        list(
+            result = ordered,
+            compact_summary = paste0(
+                'user-supplied continuous correlation: ', variable_label, ' (r=', round(top[[effect_col]], 2), ')'
+            ),
+            top_findings = top_findings,
+            effect_strength = abs(top[[effect_col]]),
+            significance = if (p_col %in% colnames(result)) top[[p_col]] else NA_real_,
+            direction = if (top[[effect_col]] > 0) 'up' else 'down'
+        )
+    },
     # a two-condition gene/feature-level DE table (Seurat FindMarkers, DESeq2,
     # edgeR): one row per feature rather than one row per group
     cross_condition_delta = function(result, params){
@@ -123,7 +190,8 @@
 #'
 #' @param module_id The module this fragment describes.
 #' @param type One of the supported fragment types: `'geneset_enrichment'`,
-#'   `'categorical_association'`.
+#'   `'categorical_association'`, `'state_expression'`, `'cross_condition_delta'`,
+#'   `'signature_correlation'`, `'continuous_correlation'`.
 #' @param result A tidy data.frame with the user's result table.
 #' @param fragment_id Unique id within the packet. Defaults to
 #'   `paste0('imported::', type)`.

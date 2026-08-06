@@ -18,7 +18,8 @@ import_fragment(
 \item{module_id}{The module this fragment describes.}
 
 \item{type}{One of the supported fragment types: \code{'geneset_enrichment'},
-\code{'categorical_association'}.}
+\code{'categorical_association'}, \code{'state_expression'}, \code{'cross_condition_delta'},
+\code{'signature_correlation'}, \code{'continuous_correlation'}.}
 
 \item{result}{A tidy data.frame with the user's result table.}
 

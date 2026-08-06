@@ -43,9 +43,63 @@ test_that('import_fragment() respects custom column names via params', {
 
 test_that('import_fragment() errors on an unsupported type', {
     expect_error(
-        import_fragment(module_id = 'MM1', type = 'signature_correlation', result = data.frame(x = 1)),
+        import_fragment(module_id = 'MM1', type = 'ranked_genes', result = data.frame(x = 1)),
         'no normalizer'
     )
+})
+
+## SERPENTINE T-cell milestone Part 3 (docs/milestones/milestone_serpentine_tcell.md):
+## signature_correlation (cGEP-style, many signatures per module) and
+## continuous_correlation (ASA-style, a single continuous variable per module).
+
+test_that('import_fragment() normalizes a signature_correlation table (e.g. a cGEP correlation table)', {
+    user_table <- data.frame(
+        signature = c('Exhaustion', 'Cytotoxic', 'Naive'),
+        r = c(0.45, 0.05, -0.29)
+    )
+    frag <- import_fragment(module_id = 'MM1', type = 'signature_correlation', result = user_table)
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$type, 'signature_correlation')
+    expect_equal(frag$provenance$source, 'user_supplied')
+    expect_equal(frag$direction, 'up')
+    expect_equal(frag$effect_strength, 0.45)
+    expect_equal(frag$top_findings[[1]]$signature, 'Exhaustion')
+})
+
+test_that('import_fragment() respects column_map overrides for signature_correlation (e.g. a cgep column)', {
+    user_table <- data.frame(module = 'MM1', cgep = c('Mito', 'HLA'), r = c(-0.72, 0.55))
+    frag <- import_fragment(
+        module_id = 'MM1', type = 'signature_correlation', result = user_table,
+        params = list(signature_col = 'cgep')
+    )
+    expect_equal(frag$direction, 'down')
+    expect_equal(frag$effect_strength, 0.72)
+    expect_equal(frag$top_findings[[1]]$signature, 'Mito')
+})
+
+test_that('import_fragment() normalizes a single-row continuous_correlation table (e.g. an ASA correlation)', {
+    user_table <- data.frame(r = 0.49, n_samples = 515)
+    frag <- import_fragment(
+        module_id = 'MM1', type = 'continuous_correlation', result = user_table,
+        params = list(n_col = 'n_samples', variable_name = 'ASA')
+    )
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$type, 'continuous_correlation')
+    expect_equal(frag$provenance$source, 'user_supplied')
+    expect_equal(frag$direction, 'up')
+    expect_equal(frag$effect_strength, 0.49)
+    expect_equal(frag$top_findings[[1]]$n, 515)
+})
+
+test_that('import_fragment() normalizes a multi-row continuous_correlation table via variable_col', {
+    user_table <- data.frame(variable = c('ASA', 'clonal_frac'), r = c(-0.6, 0.2))
+    frag <- import_fragment(
+        module_id = 'MM1', type = 'continuous_correlation', result = user_table,
+        params = list(variable_col = 'variable')
+    )
+    expect_equal(frag$direction, 'down')
+    expect_equal(frag$effect_strength, 0.6)
+    expect_equal(frag$top_findings[[1]]$variable, 'ASA')
 })
 
 test_that('import_fragment() errors on a missing required column', {

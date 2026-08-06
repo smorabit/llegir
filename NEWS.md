@@ -1,5 +1,18 @@
 # llegir 0.0.0.9000
 
+* `import_fragment()` gained normalizers for `'signature_correlation'` and
+  `'continuous_correlation'` (`docs/milestones/milestone_serpentine_tcell.md`
+  Part 3), closing a gap where the two schema types existed in the controlled
+  vocab and had a native tool (`signature_correlation_tool()`) but no import
+  path. `signature_correlation` normalizes a many-rows-per-module table (one
+  row per named signature, e.g. a cGEP/program library), with `top_findings`
+  using the same `signature`/`r` field names `signature_correlation_tool()`
+  itself produces; `continuous_correlation` normalizes a module's correlation
+  with a single continuous variable (`variable_col` optional, since the
+  common shape -- one row per module -- is already scoped to one variable).
+  Both follow the existing importer contract: configurable column names via
+  `params`, `effect_strength = max(abs(r))`, direction from the top |r| row's
+  sign, `provenance$source = 'user_supplied'`.
 * Plot ingestion (`docs/milestones/milestone_plot_ingestion.md` Parts 1-2):
   both `evidence_fragment()` and `dataset_fragment()` gained an optional
   `plots` slot -- a named list of pre-rendered figure specs (a live
