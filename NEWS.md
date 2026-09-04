@@ -1,5 +1,22 @@
 # llegir 0.0.0.9000
 
+* New core evidence tool `cluster_expression_profile_tool()` (registered as
+  `'cluster_expression_profile'`), the non-differential companion to
+  `cluster_dme_tool()`. Instead of a one-vs-all winner, it bins every cell's
+  module score into deciles of the module's own global score distribution
+  (all cells in the `ModuleSet`, not re-binned per state) and reports, per
+  cell state, the mean/median decile its cells occupy and the share of its
+  cells in the top bin -- so a state that expresses a module at a medium
+  intensity stays visible instead of being collapsed away by `cluster_dme`'s
+  winner-take-all contrast. Emits a `'state_expression'` fragment with
+  `direction = 'na'` (a graded profile, not a signed effect) and
+  `effect_strength` set to the top state's mean global decile scaled by the
+  realized bin count, so it stays comparable across modules even when heavy
+  ties in the score distribution collapse the requested `n_deciles` to fewer
+  realized bins. Requires the `grouping` and `module_scores` `ModuleSet`
+  capabilities, same as `cluster_dme`; skips gracefully when either is
+  unmet.
+
 * `import_fragment()` gained normalizers for `'signature_correlation'` and
   `'continuous_correlation'` (`docs/milestones/milestone_serpentine_tcell.md`
   Part 3), closing a gap where the two schema types existed in the controlled
