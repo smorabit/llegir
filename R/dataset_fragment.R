@@ -141,6 +141,43 @@ dataset_fragment_from_json <- function(json_str){
     ))
 }
 
+#' Materialize a dataset context's live plots to PNG files
+#'
+#' The dataset-level sibling of [write_fragment_figures()]: renders each
+#' `dataset_fragment`'s live `plot_obj` to
+#' `<figures_dir>/dataset/<fragment_id>__<plot_id>.png` and records that path
+#' back onto the spec as `image_path`, so a report rendered after the live
+#' `plot_obj` has been stripped can still embed the figure. Fragments with no
+#' plots are skipped.
+#'
+#' @param dataset_context A dataset context, as returned by
+#'   [build_dataset_context()] / [run_dataset_context()].
+#' @param figures_dir Output directory.
+#' @return `dataset_context`, with `image_path` filled in on every rendered
+#'   plot spec.
+#' @export
+write_dataset_figures <- function(dataset_context, figures_dir){
+    out_dir <- file.path(figures_dir, 'dataset')
+    dataset_context$dataset_fragments <- lapply(dataset_context$dataset_fragments, function(frag){
+        if (is.null(frag$plots) || length(frag$plots) == 0) return(frag)
+        dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
+        file_stub <- gsub(':', '_', frag$fragment_id)
+        plot_ids <- names(frag$plots)
+        frag$plots <- lapply(plot_ids, function(plot_id){
+            spec <- frag$plots[[plot_id]]
+            if (!is.null(spec$plot_obj)) {
+                path <- file.path(out_dir, paste0(file_stub, '__', plot_id, '.png'))
+                save_plot_to_png(spec$plot_obj, path)
+                spec$image_path <- path
+            }
+            spec
+        })
+        names(frag$plots) <- plot_ids
+        frag
+    })
+    dataset_context
+}
+
 #' Assemble and hash a dataset context
 #'
 #' Validates every fragment, then hashes the content (fragments minus

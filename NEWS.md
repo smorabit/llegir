@@ -1,5 +1,14 @@
 # llegir 0.0.0.9000
 
+* `write_interpretation_report()` gains an optional `dataset_context` argument:
+  when supplied, its `dataset_fragments` render (compact_summary, top_findings
+  table, caveats, and any attached `plots`) in a "Dataset-level evidence"
+  section above the per-module sections. `NULL` (default) omits the section
+  and the report is byte-identical to before. New `write_dataset_figures()`
+  is the dataset-level sibling of `write_fragment_figures()`: materializes a
+  dataset context's live plot objects to PNGs under `<figures_dir>/dataset/`
+  and records `image_path` back on each spec.
+
 * Interpretation schema `0.1` -> `0.2` (core contract). The model now fills a
   single free-text `interpretation` field (1-3 sentences supporting the
   `dominant_biology` call, folding in cell-state localization and condition

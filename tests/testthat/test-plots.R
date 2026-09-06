@@ -259,3 +259,23 @@ test_that('write_fragment_figures() materializes live plots and records image_pa
     expect_equal(result$fragments[[1]]$plots$activity_violin$image_path, expected_path)
     expect_null(result$fragments[[2]]$plots)
 })
+
+test_that('write_dataset_figures() materializes a dataset context\'s live plots and records image_path', {
+    testthat::skip_if_not_installed('ggplot2')
+    p <- ggplot2::ggplot(data.frame(x = 1:3, y = 1:3), ggplot2::aes(x, y)) + ggplot2::geom_point()
+    frag_with_plots <- attach_plots(make_valid_dataset_fragment(), list(
+        composition_umap = list(plot_obj = p, legend = 'a dataset figure')
+    ))
+    frag_no_plots <- make_valid_dataset_fragment()
+    frag_no_plots$fragment_id <- 'milo_abundance'
+    ctx <- build_dataset_context(list(frag_with_plots, frag_no_plots), input_hash = 'abc')
+
+    tmp_dir <- tempfile()
+    on.exit(unlink(tmp_dir, recursive = TRUE))
+    result <- write_dataset_figures(ctx, tmp_dir)
+
+    expected_path <- file.path(tmp_dir, 'dataset', 'composition__composition_umap.png')
+    expect_true(file.exists(expected_path))
+    expect_equal(result$dataset_fragments[[1]]$plots$composition_umap$image_path, expected_path)
+    expect_null(result$dataset_fragments[[2]]$plots)
+})
