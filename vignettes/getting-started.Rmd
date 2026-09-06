@@ -195,7 +195,7 @@ interps <- run_synthesis_orchestrator(
 )
 ```
 
-Inspect one interpretation: its proposed label, fused confidence, and the
+Inspect one interpretation: its proposed label, model confidence, and the
 rendered paragraph.
 
 ```{r, purl = FALSE}

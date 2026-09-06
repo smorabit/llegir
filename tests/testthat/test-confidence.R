@@ -60,35 +60,19 @@ test_that('compute_evidence_signals() requires both significance and effect size
     expect_equal(signals$cross_tool_agreement, 'convergent_null')
 })
 
-test_that('fuse_confidence() separates the pDC positive control from the random negative control', {
+test_that('fuse_confidence() leaves the model score and rationale untouched (fused score shelved, Part 4.5)', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
-    positive_packet <- build_spike_in_packet(positive_ms, 'pdc_module', length(pdc_genes))
     negative_packet <- build_spike_in_packet(negative_ms, 'random_module', length(pdc_genes))
-
-    # both start from an equally (over)confident model self-report; only the
-    # deterministic evidence should be able to tell them apart
-    pos_interp <- make_confident_interpretation('pdc_module', positive_packet$packet_hash, model_score = 0.9)
     neg_interp <- make_confident_interpretation('random_module', negative_packet$packet_hash, model_score = 0.9)
 
-    fused_pos <- fuse_confidence(pos_interp, positive_packet)
     fused_neg <- fuse_confidence(neg_interp, negative_packet)
 
-    expect_true(fused_pos$confidence$score > fused_neg$confidence$score)
-    expect_true(fused_pos$confidence$score > 0.5)
-    expect_true(fused_neg$confidence$score <= 0.35)
-    expect_true('insufficient_evidence' %in% unlist(fused_neg$flags))
-    # the model was equally overconfident on both; disagreement with weak
-    # deterministic evidence must route the negative control for review
-    expect_true('needs_human_review' %in% unlist(fused_neg$flags))
-    expect_true(needs_review(fused_neg))
-})
-
-test_that('fuse_confidence() does not flag insufficient_evidence when the model is well-calibrated to strong evidence', {
-    skip_if_not(csf_data_available, 'CSF dev object not available')
-    positive_packet <- build_spike_in_packet(positive_ms, 'pdc_module', length(pdc_genes))
-    interp <- make_confident_interpretation('pdc_module', positive_packet$packet_hash, model_score = 0.7)
-    fused <- fuse_confidence(interp, positive_packet)
-    expect_false('insufficient_evidence' %in% unlist(fused$flags))
+    # the fused blend is shelved: a confidently-narrated random gene set is no
+    # longer down-scored or auto-flagged by fuse_confidence itself
+    expect_equal(fused_neg$confidence$score, 0.9)
+    expect_equal(fused_neg$confidence$rationale, 'model self-report')
+    expect_false('insufficient_evidence' %in% unlist(fused_neg$flags))
+    expect_false('needs_human_review' %in% unlist(fused_neg$flags))
 })
 
 test_that('fuse_confidence() does not flag tool_conflict when a metadata association is merely absent (docs/dev_economy.md task 4)', {
@@ -113,7 +97,7 @@ test_that('fuse_confidence() does not flag tool_conflict when a metadata associa
     expect_false('tool_conflict' %in% unlist(fused$flags))
 })
 
-test_that('fuse_confidence() still flags tool_conflict when a non-metadata tool disagrees with a significant metadata association', {
+test_that('compute_evidence_signals() still reports conflicting when a non-metadata tool disagrees with a significant metadata association', {
     null_cluster_frag <- evidence_fragment(
         fragment_id = 'cluster_dme', tool_id = 'cluster_dme', module_id = 'MM1', type = 'state_expression',
         result = data.frame(x = 1), compact_summary = 'x', top_findings = list(),
@@ -130,9 +114,11 @@ test_that('fuse_confidence() still flags tool_conflict when a non-metadata tool 
     signals <- compute_evidence_signals(packet)
     expect_equal(signals$cross_tool_agreement, 'conflicting')
 
+    # the fused score is shelved (Part 4.5), so fuse_confidence no longer
+    # turns a conflicting signal into a tool_conflict flag
     interp <- make_confident_interpretation('MM1', packet$packet_hash, model_score = 0.5)
     fused <- fuse_confidence(interp, packet)
-    expect_true('tool_conflict' %in% unlist(fused$flags))
+    expect_false('tool_conflict' %in% unlist(fused$flags))
 })
 
 test_that('fuse_confidence() flags possible_artifact when top genes are dominated by IEG/dissociation markers', {
@@ -271,30 +257,21 @@ test_that('user_weights = 0 mutes a tool\'s contribution to the pooled evidence'
     expect_true(muted$e_pool >= full_weight$e_pool)
 })
 
-test_that('fuse_confidence() flags insufficient_evidence and caps the score when e_evidence is below low_threshold', {
+test_that('fuse_confidence() no longer caps the score or flags insufficient_evidence on weak evidence (Part 4.5)', {
     weak_frag <- make_frag('ranked_genes', 0.05, significance = NA_real_, direction = 'na')
     packet <- build_evidence_packet('MM1', list(weak_frag), input_hash = 'abc')
     interp <- make_confident_interpretation('MM1', packet$packet_hash, model_score = 0.9)
     fused <- fuse_confidence(interp, packet)
-    expect_true('insufficient_evidence' %in% unlist(fused$flags))
-    expect_true(fused$confidence$score <= 0.35)
+    expect_equal(fused$confidence$score, 0.9)
+    expect_false('insufficient_evidence' %in% unlist(fused$flags))
+    expect_false('needs_human_review' %in% unlist(fused$flags))
 })
 
-test_that('fuse_confidence() flags needs_human_review when the model diverges from e_evidence', {
-    weak_frag <- make_frag('ranked_genes', 0.05, significance = NA_real_, direction = 'na')
-    packet <- build_evidence_packet('MM1', list(weak_frag), input_hash = 'abc')
-    interp <- make_confident_interpretation('MM1', packet$packet_hash, model_score = 0.95)
-    fused <- fuse_confidence(interp, packet)
-    expect_true('needs_human_review' %in% unlist(fused$flags))
-})
-
-test_that('fuse_confidence() rationale keeps the deterministic fusion-string shape', {
+test_that('fuse_confidence() leaves the model rationale untouched (no fusion string appended)', {
     signal_frag <- make_frag('state_expression', 0.8, significance = 0.001, direction = 'up', tool_id = 'cluster_dme')
     packet <- build_evidence_packet('MM1', list(signal_frag), input_hash = 'abc')
     interp <- make_confident_interpretation('MM1', packet$packet_hash, model_score = 0.7)
     fused <- fuse_confidence(interp, packet)
-    expect_match(
-        fused$confidence$rationale,
-        '\\[fusion: model=[0-9.]+, evidence=[0-9.]+ \\(E_pool=[0-9.]+, P_agree=[0-9.]+, C_dir=[0-9.]+\\), lambda=[0-9.]+, fused=[0-9.]+\\]$'
-    )
+    expect_equal(fused$confidence$rationale, 'model self-report')
+    expect_false(grepl('fusion:', fused$confidence$rationale))
 })

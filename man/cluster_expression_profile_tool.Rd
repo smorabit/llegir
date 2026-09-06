@@ -29,8 +29,11 @@ test, which can hide a state that expresses the module at a medium intensity.
 This tool instead bins every cell's module score into deciles of the
 module's own global score distribution (all cells in \code{ctx$ms}, not
 re-binned per state) and reports, per state, the mean/median decile its
-cells occupy and the share of its cells in the top bin -- a graded profile,
-not a contrast, so it carries \code{direction = 'na'}. Touches only the
+cells occupy, the mean raw module activity (eigengene) of its cells, and
+the share of its cells in the top bin -- a graded profile, not a contrast,
+so it carries \code{direction = 'na'}. The raw \code{mean_activity} sits alongside
+the rank-based \code{mean_decile} so a reader can tell an absolute activity
+difference from a distributional one. Touches only the
 \code{ModuleSet} adapter contract (\code{\link[=module_scores]{module_scores()}}, \code{\link[=metadata]{metadata()}},
 \code{\link[=pkg_versions]{pkg_versions()}}) plus base R quantile binning, so it works against any
 backend.

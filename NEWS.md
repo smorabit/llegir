@@ -1,5 +1,43 @@
 # llegir 0.0.0.9000
 
+* The deterministic fused evidence score is shelved
+  (`docs/prompts/handoff_prompt_serpentine_tcell.md` Part 4.5). Two known
+  flaws made the blended number misleading: a non-significant dynamics
+  fragment dragged down a genuinely stable module, and `top_genes`' top-kME
+  magnitude stood in for interpretation confidence when it only measures hub
+  tightness. Changes: `PROMPT_TEMPLATE_VERSION` bumped to `0.9`;
+  `build_user_prompt()` no longer injects the EVIDENCE CONFIDENCE MATRIX (its
+  `fusion`/`user_weights` arguments are now ignored) and the internal
+  `.render_confidence_matrix()` is removed; `build_system_prompt()` drops the
+  rules constraining `confidence.score` to `E_evidence` and asks the model
+  for its own calibrated certainty instead. `fuse_confidence()` no longer
+  blends or overwrites `confidence$score` -- it keeps the model's own value
+  and only unions the deterministic `possible_artifact` flag;
+  `enforce_faithfulness()` still sets `needs_human_review`. `calculate_fusion_score()`
+  and `compute_evidence_signals()` are retained (unused) for a future
+  redesign. The HTML summary report drops the Evidence Confidence Matrix
+  section and shows the model's own confidence.
+
+* `cluster_expression_profile_tool()` now carries mean raw module activity
+  (eigengene) per state: the `result` column is `mean_activity` (was
+  `mean_score`), and it is also surfaced in `top_findings` and the
+  `compact_summary` alongside `mean_decile`/`pct_high`, so an absolute
+  activity difference between states is legible next to the rank-based
+  decile.
+
+* New exported `housekeeping_composition_note()`: the fraction of a module's
+  top hub genes that are cytoplasmic ribosomal (`RPS*`/`RPL*`) or
+  mitochondrially encoded (`MT-*`). `render_packet_compact()` appends it to
+  the `ranked_genes` block so a part-housekeeping hub list is visible to
+  synthesis as a co-occurring program rather than quietly diluting the call.
+  Deterministic and packet-only; unlike the IEG artifact pattern it never
+  sets a flag.
+
+* The HTML summary report renders `cross_condition_delta` fragments as the
+  full per-state limma table (effect log2FC, raw and BH-adjusted p, moderated
+  t) pulled from the fragment `result`, with a one-line method caption,
+  instead of the 3-column `top_findings` preview.
+
 * New core evidence tool `cluster_expression_profile_tool()` (registered as
   `'cluster_expression_profile'`), the non-differential companion to
   `cluster_dme_tool()`. Instead of a one-vs-all winner, it bins every cell's

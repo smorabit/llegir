@@ -9,53 +9,7 @@
 #' for reproducibility.
 #'
 #' @export
-PROMPT_TEMPLATE_VERSION <- '0.8'
-
-# net directional sign of the pooled evidence mass, for the matrix's
-# CONSTRAINTS block -- mirrors R/confidence.R's .directional_coherence()
-# numerator (before abs()), so the reported sign always matches the C_dir
-# magnitude computed alongside it
-.net_direction_label <- function(matrix){
-    sign_map <- c(up = 1, down = -1, mixed = 0, na = 0)
-    sigma <- sign_map[matrix$direction]
-    mass <- matrix$weight * matrix$e_score
-    net <- sum(sigma * mass)
-    if (net > 0) 'up' else if (net < 0) 'down' else 'none'
-}
-
-# fixed-width EVIDENCE CONFIDENCE MATRIX block (milestone_fused_confidence.md
-# S6): the model explains this pre-computed matrix rather than inventing its
-# own confidence, and fuse_confidence() re-derives the final score from the
-# same `fusion` object regardless of what the model writes here
-.render_confidence_matrix <- function(fusion){
-    m <- fusion$matrix
-    header <- sprintf('%-18s %-18s %6s %9s %11s %7s %s', 'fragment_id', 'type', 'weight', 'magnitude', 'reliability', 'e_score', 'direction')
-    rows <- vapply(seq_len(nrow(m)), function(i){
-        sprintf(
-            '%-18s %-18s %6.2f %9.2f %11.2f %7.2f %s',
-            m$fragment_id[i], m$type[i], m$weight[i], m$magnitude[i], m$reliability[i], m$e_score[i], m$direction[i]
-        )
-    }, character(1))
-
-    paste(
-        'EVIDENCE CONFIDENCE MATRIX  (computed deterministically upstream -- treat as ground truth, do not recompute or contradict)',
-        '',
-        header,
-        paste(rows, collapse = '\n'),
-        '',
-        sprintf('pooled_evidence  E_pool  = %.2f   (weighted power mean, beta = %.2f)', fusion$e_pool, fusion$params$beta),
-        sprintf('directional      C_dir   = %.2f  ->  P_agree = %.2f', fusion$c_dir, fusion$p_agree),
-        sprintf('empirical        E_evidence      = %.2f', fusion$e_evidence),
-        sprintf('model_trust      lambda          = %.2f', fusion$lambda),
-        '',
-        'CONSTRAINTS:',
-        sprintf('- confidence.score must be consistent with E_evidence; it may not exceed E_evidence + 0.10 (E_evidence = %.2f).', fusion$e_evidence),
-        sprintf('- Any directional claim must agree with the sign of the directional mass above (coherence %.2f, net "%s").', fusion$c_dir, .net_direction_label(m)),
-        sprintf('- If E_evidence < %.2f, set flags to include insufficient_evidence and keep supporting_claims minimal.', 0.35),
-        '- Explain what the numbers mean for this module; do not restate or recompute them.',
-        sep = '\n'
-    )
-}
+PROMPT_TEMPLATE_VERSION <- '0.9'
 
 # a fragment's compact block: one header line (id/type/direction/effect/sig),
 # the compact_summary, and up to `max_findings` top_findings as compact JSON;
@@ -98,6 +52,16 @@ PROMPT_TEMPLATE_VERSION <- '0.8'
 #' @export
 render_packet_compact <- function(packet, max_findings = 8){
     blocks <- vapply(packet$fragments, .render_fragment_compact, character(1), max_findings = max_findings)
+
+    # deterministic housekeeping-composition note, appended to the ranked_genes
+    # block so a part-ribosomal/mitochondrial hub list is visible to the model
+    # rather than silently diluting the biological call (R/confidence.R)
+    note <- housekeeping_composition_note(packet)
+    if (!is.null(note)) {
+        hub_idx <- which(vapply(packet$fragments, function(f) identical(f$type, 'ranked_genes'), logical(1)))
+        if (length(hub_idx) > 0) blocks[hub_idx[1]] <- paste0(blocks[hub_idx[1]], '\n', note)
+    }
+
     paste0(
         'Module ', packet$module_id, ' evidence packet (', length(packet$fragments), ' fragments):\n\n',
         paste(blocks, collapse = '\n\n')
@@ -156,9 +120,11 @@ render_dataset_context_compact <- function(dataset_context, max_findings = 8){
 #' A fixed set of rules governing how a backend must fill the model-facing
 #' interpretation schema: evidence-only claims, citation requirements,
 #' direction consistency, controlled vocabularies, the empty-literature
-#' constraint, and how `confidence.score` must relate to the deterministic
-#' EVIDENCE CONFIDENCE MATRIX ([calculate_fusion_score()]) injected into the
-#' user prompt by [build_user_prompt()].
+#' constraint, and a self-calibrated `confidence.score`. The deterministic
+#' fused evidence score is shelved (`docs/prompts/handoff_prompt_serpentine_tcell.md`
+#' Part 4.5): the EVIDENCE CONFIDENCE MATRIX is no longer injected and the
+#' model reports its own certainty, while [enforce_faithfulness()] and
+#' [fuse_confidence()]'s `possible_artifact` check still set review flags.
 #'
 #' @return A single character string.
 #' @examples
@@ -179,10 +145,7 @@ build_system_prompt <- function(){
         paste0('- Each fragment has a type from a controlled vocabulary: ', paste(.fragment_types, collapse = ', '), '.'),
         paste0('- flags must be drawn only from: ', paste(.interpretation_flags, collapse = ', '), '.'),
         '- If the evidence is weak, sparse, or inconsistent, do not invent a confident story: set flags to include insufficient_evidence, keep supporting_claims minimal (or empty), and give a low confidence score.',
-        '- The user prompt includes an EVIDENCE CONFIDENCE MATRIX computed deterministically upstream: treat it as ground truth, do not recompute or contradict it.',
-        '- confidence.score must be consistent with the matrix\'s E_evidence: it may not exceed E_evidence + 0.10, and must fall below the matrix\'s stated insufficient_evidence threshold when E_evidence does.',
-        '- Every quantitative certainty statement in your response must reference E_evidence rather than restating your own separate estimate.',
-        '- You may not assert a direction (e.g. in dominant_biology or condition_dynamics) that contradicts the sign of the directional coherence reported in the matrix.',
+        '- Set confidence.score (0 to 1) to your own calibrated certainty that proposed_label is the right call given only the evidence in this packet: high when several fragments converge on one identity, low when the packet is thin, the hub genes are non-specific, or the fragments disagree.',
         '- literature must be left empty; literature grounding is not available in this pipeline.',
         '- A DATASET CONTEXT block, when present, is global framing (composition, variance structure, and similar dataset-wide context) for confounder awareness -- it is not a per-module fragment, so never cite it in supporting_claims or metadata_associations.',
         sep = '\n'
@@ -192,29 +155,24 @@ build_system_prompt <- function(){
 #' Build the synthesis user prompt for one module
 #'
 #' Concatenates the rendered [dataset_description()], the optional
-#' [render_dataset_context_compact()] block, the compact evidence packet
-#' ([render_packet_compact()]), and the deterministic EVIDENCE CONFIDENCE
-#' MATRIX ([calculate_fusion_score()]) that grounds the model's
-#' `confidence.score` in the same numbers [fuse_confidence()] later
-#' re-derives the final fused score from.
+#' [render_dataset_context_compact()] block, and the compact evidence packet
+#' ([render_packet_compact()]). The deterministic EVIDENCE CONFIDENCE MATRIX
+#' is no longer injected (Part 4.5: the fused score is shelved); the model
+#' sets `confidence.score` from its own calibrated certainty.
 #'
 #' @param packet An evidence packet, as built by [build_evidence_packet()].
 #' @param desc A `dataset_description`; see [dataset_description()].
-#' @param fusion An optional pre-computed [calculate_fusion_score()] result;
-#'   `NULL` (default) computes it from `packet$fragments` and `user_weights`.
-#'   Pass the same object used later by [fuse_confidence()] so the prompt and
-#'   the final score are guaranteed to agree.
+#' @param fusion Ignored; retained for call-site compatibility. The fused
+#'   evidence matrix is no longer part of the prompt.
 #' @param data_level Observation-unit descriptor of the `ModuleSet` the
 #'   packet was built from; see [render_dataset_description()]. Default `'cell'`.
 #' @param aggregated Whether that `ModuleSet`'s expression/scores are already
 #'   aggregated across cells; see [render_dataset_description()]. Default `FALSE`.
-#' @param user_weights Named list of per-`tool_id` weight multipliers passed
-#'   to [calculate_fusion_score()] when `fusion` is `NULL`. Default `list()`.
+#' @param user_weights Ignored; retained for call-site compatibility.
 #' @param dataset_context An optional dataset context, as built by
 #'   [build_dataset_context()] / [run_dataset_context()]. Rendered via
 #'   [render_dataset_context_compact()] between the dataset description and
-#'   the evidence packet. `NULL` (default) omits the block entirely, matching
-#'   prior prompt output exactly.
+#'   the evidence packet. `NULL` (default) omits the block entirely.
 #' @return A single character string.
 #' @examples
 #' ms <- llegir_example_moduleset()
@@ -224,13 +182,11 @@ build_system_prompt <- function(){
 #' @export
 build_user_prompt <- function(packet, desc, fusion = NULL, data_level = 'cell', aggregated = FALSE,
                                user_weights = list(), dataset_context = NULL){
-    fusion <- fusion %||% calculate_fusion_score(packet$fragments, user_weights = user_weights)
     dataset_block <- if (is.null(dataset_context)) NULL else render_dataset_context_compact(dataset_context)
     blocks <- Filter(Negate(is.null), list(
         render_dataset_description(desc, data_level = data_level, aggregated = aggregated),
         dataset_block,
-        render_packet_compact(packet),
-        .render_confidence_matrix(fusion)
+        render_packet_compact(packet)
     ))
     paste(blocks, collapse = '\n\n')
 }

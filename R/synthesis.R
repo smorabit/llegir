@@ -379,14 +379,10 @@ local_backend <- function(model = NULL, cache = TRUE, force_refresh = FALSE,
 #'   interpretation's provenance.
 #' @param schema_path Path to the interpretation JSON schema; defaults to the
 #'   schema shipped with the package.
-#' @param user_weights Named list of per-`tool_id` weight multipliers passed
-#'   to [calculate_fusion_score()] for the EVIDENCE CONFIDENCE MATRIX injected
-#'   into the user prompt (see [build_user_prompt()]). Default `list()`.
-#' @param fusion An optional pre-computed [calculate_fusion_score()] result to
-#'   inject into the user prompt; `NULL` (default) computes it from
-#'   `packet$fragments` and `user_weights`. [synthesize_module()] computes it
-#'   once and passes the same object here and to [fuse_confidence()], so the
-#'   prompt and the final fused score are guaranteed to agree.
+#' @param user_weights Ignored; retained for call-site compatibility since the
+#'   fused evidence score is shelved (Part 4.5). Default `list()`.
+#' @param fusion Ignored; retained for call-site compatibility. The EVIDENCE
+#'   CONFIDENCE MATRIX is no longer part of the prompt.
 #' @param dataset_context An optional dataset context, as built by
 #'   [build_dataset_context()] / [run_dataset_context()], threaded into
 #'   [build_user_prompt()]. `NULL` (default) omits the DATASET CONTEXT block.
@@ -403,10 +399,9 @@ synthesize_interpretation <- function(packet, desc, backend, temperature = 0, se
                                        schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
                                        user_weights = list(), fusion = NULL, dataset_context = NULL){
     validate_dataset_description(desc)
-    fusion <- fusion %||% calculate_fusion_score(packet$fragments, user_weights = user_weights)
 
     system_prompt <- build_system_prompt()
-    user_prompt <- build_user_prompt(packet, desc, fusion = fusion, dataset_context = dataset_context)
+    user_prompt <- build_user_prompt(packet, desc, dataset_context = dataset_context)
     schema_json <- model_output_schema_json(schema_path)
 
     result <- backend(system_prompt, user_prompt, schema_json, packet_hash = packet$packet_hash)

@@ -14,8 +14,11 @@
 #' This tool instead bins every cell's module score into deciles of the
 #' module's own global score distribution (all cells in `ctx$ms`, not
 #' re-binned per state) and reports, per state, the mean/median decile its
-#' cells occupy and the share of its cells in the top bin -- a graded profile,
-#' not a contrast, so it carries `direction = 'na'`. Touches only the
+#' cells occupy, the mean raw module activity (eigengene) of its cells, and
+#' the share of its cells in the top bin -- a graded profile, not a contrast,
+#' so it carries `direction = 'na'`. The raw `mean_activity` sits alongside
+#' the rank-based `mean_decile` so a reader can tell an absolute activity
+#' difference from a distributional one. Touches only the
 #' `ModuleSet` adapter contract ([module_scores()], [metadata()],
 #' [pkg_versions()]) plus base R quantile binning, so it works against any
 #' backend.
@@ -74,7 +77,7 @@ cluster_expression_profile_tool <- function(ctx){
         dplyr::group_by(.data$group) %>%
         dplyr::summarise(
             n = dplyr::n(),
-            mean_score = mean(.data$score),
+            mean_activity = mean(.data$score),
             mean_decile = mean(.data$decile),
             median_decile = stats::median(.data$decile),
             pct_high = mean(.data$decile == n_bins),
@@ -89,6 +92,7 @@ cluster_expression_profile_tool <- function(ctx){
         list(
             cluster = result$group[i],
             mean_decile = result$mean_decile[i],
+            mean_activity = result$mean_activity[i],
             pct_high = result$pct_high[i]
         )
     })
@@ -96,7 +100,8 @@ cluster_expression_profile_tool <- function(ctx){
     compact_summary <- paste0(
         'global module-score deciles (', n_bins, ' realized bins of ', n_deciles, ' requested): ',
         'highest state ', top$group, ' (mean_decile=', round(top$mean_decile, 1),
-        '/', n_bins, ', ', round(100 * top$pct_high), '% of its cells in the top bin); ',
+        '/', n_bins, ', mean_activity=', format(top$mean_activity, digits = 3),
+        ', ', round(100 * top$pct_high), '% of its cells in the top bin); ',
         nrow(result), ' states profiled'
     )
 

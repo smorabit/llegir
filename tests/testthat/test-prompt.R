@@ -73,37 +73,49 @@ test_that('build_user_prompt() prepends the dataset description before the packe
                     which(grepl('evidence packet', strsplit(txt, '\n')[[1]])))
 })
 
-## EVIDENCE CONFIDENCE MATRIX (docs/milestones/milestone_fused_confidence.md S6)
+## fused evidence score shelved (Part 4.5): no EVIDENCE CONFIDENCE MATRIX in
+## the prompt, model reports its own calibrated confidence
 
-test_that('build_user_prompt() appends the deterministic EVIDENCE CONFIDENCE MATRIX after the packet', {
+test_that('build_user_prompt() does not inject the EVIDENCE CONFIDENCE MATRIX', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 10))
     frag <- top_genes_tool(ctx)
     packet <- build_evidence_packet(mod_test, list(frag), input_hash = 'abc')
     desc <- csf_dataset_description()
     txt <- build_user_prompt(packet, desc)
-    lines <- strsplit(txt, '\n')[[1]]
-    expect_true(any(grepl('EVIDENCE CONFIDENCE MATRIX', lines)))
-    expect_true(which(grepl('evidence packet', lines))[1] < which(grepl('EVIDENCE CONFIDENCE MATRIX', lines))[1])
-    expect_true(any(grepl(frag$fragment_id, lines, fixed = TRUE)))
-    expect_true(any(grepl('E_evidence', lines)))
-    expect_true(any(grepl('CONSTRAINTS', lines)))
+    expect_false(grepl('EVIDENCE CONFIDENCE MATRIX', txt))
+    expect_false(grepl('E_evidence', txt))
+    expect_false(grepl('CONSTRAINTS', txt))
 })
 
-test_that('build_user_prompt() reuses a pre-computed fusion object instead of recomputing it', {
+test_that('build_user_prompt() ignores a passed fusion object', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 10))
     frag <- top_genes_tool(ctx)
     packet <- build_evidence_packet(mod_test, list(frag), input_hash = 'abc')
     desc <- csf_dataset_description()
 
-    fusion <- calculate_fusion_score(packet$fragments, user_weights = list(top_genes = 0.2))
-    txt <- build_user_prompt(packet, desc, fusion = fusion)
-    expect_true(grepl(sprintf('E_evidence      = %.2f', fusion$e_evidence), txt, fixed = TRUE))
+    fusion <- calculate_fusion_score(packet$fragments)
+    expect_identical(build_user_prompt(packet, desc, fusion = fusion), build_user_prompt(packet, desc))
 })
 
-test_that('build_system_prompt() states the confidence-matrix grounding rules', {
+test_that('build_system_prompt() asks the model for its own calibrated confidence, not E_evidence', {
     txt <- build_system_prompt()
-    expect_true(grepl('EVIDENCE CONFIDENCE MATRIX', txt))
-    expect_true(grepl('E_evidence', txt))
+    expect_false(grepl('EVIDENCE CONFIDENCE MATRIX', txt))
+    expect_false(grepl('E_evidence', txt))
+    expect_true(grepl('calibrated certainty', txt))
+})
+
+test_that('render_packet_compact() appends the housekeeping note for a ribosomal-heavy hub list', {
+    ribo_genes <- paste0('RPS', 1:20)
+    frag <- evidence_fragment(
+        fragment_id = 'top_genes', tool_id = 'top_genes', module_id = 'M1', type = 'ranked_genes',
+        result = data.frame(gene_name = ribo_genes, kme = seq(0.9, by = -0.01, length.out = 20)),
+        compact_summary = 'top 20 genes by kME', top_findings = lapply(ribo_genes, function(g) list(gene = g)),
+        effect_strength = 0.9, direction = 'na', provenance = make_provenance(tool_version = '0.1')
+    )
+    packet <- build_evidence_packet('M1', list(frag), input_hash = 'abc')
+    txt <- render_packet_compact(packet)
+    expect_true(grepl('housekeeping note', txt))
+    expect_true(grepl('ribosomal', txt))
 })

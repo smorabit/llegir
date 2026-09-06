@@ -58,7 +58,8 @@ An \code{interpretation} object.
 \description{
 One module's filled schema, produced by the synthesis layer
 (\code{\link[=synthesize_interpretation]{synthesize_interpretation()}}) from a fixed evidence packet.
-\code{confidence$score} starts out equal to \code{confidence$model_score} and is
-overwritten in place by confidence fusion (\code{\link[=fuse_confidence]{fuse_confidence()}});
-\code{provenance} is attached by the orchestrator, never by the model itself.
+\code{confidence$score} equals \code{confidence$model_score} (the deterministic
+fused blend is shelved as of Part 4.5; \code{\link[=fuse_confidence]{fuse_confidence()}} now only adds
+review flags and leaves the score alone); \code{provenance} is attached by the
+orchestrator, never by the model itself.
 }

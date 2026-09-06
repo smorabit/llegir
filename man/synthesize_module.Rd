@@ -35,17 +35,13 @@ interpretation's provenance.}
 \item{schema_path}{Path to the interpretation JSON schema; defaults to the
 schema shipped with the package.}
 
-\item{user_weights}{Named list of per-\code{tool_id} weight multipliers for
-\code{\link[=calculate_fusion_score]{calculate_fusion_score()}}. Computed once here and shared between the
-prompt's EVIDENCE CONFIDENCE MATRIX and \code{\link[=fuse_confidence]{fuse_confidence()}}, so the
-printed fusion string can never drift from what the model was shown.
-Default \code{list()}.}
+\item{user_weights}{Ignored; retained for call-site compatibility since the
+fused evidence score is shelved (Part 4.5). Default \code{list()}.}
 
 \item{dataset_context}{An optional dataset context, as built by
 \code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}, threaded into
 \code{\link[=build_user_prompt]{build_user_prompt()}} as global framing. Never enters
-\code{\link[=calculate_fusion_score]{calculate_fusion_score()}} or \code{\link[=enforce_faithfulness]{enforce_faithfulness()}}. \code{NULL} (default)
-omits the DATASET CONTEXT block.}
+\code{\link[=enforce_faithfulness]{enforce_faithfulness()}}. \code{NULL} (default) omits the DATASET CONTEXT block.}
 }
 \value{
 A validated \code{interpretation} object.

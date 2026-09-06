@@ -207,16 +207,12 @@ run_dataset_context <- function(ms, dataset_tool_config, input_hash = NA_charact
 #'   interpretation's provenance.
 #' @param schema_path Path to the interpretation JSON schema; defaults to the
 #'   schema shipped with the package.
-#' @param user_weights Named list of per-`tool_id` weight multipliers for
-#'   [calculate_fusion_score()]. Computed once here and shared between the
-#'   prompt's EVIDENCE CONFIDENCE MATRIX and [fuse_confidence()], so the
-#'   printed fusion string can never drift from what the model was shown.
-#'   Default `list()`.
+#' @param user_weights Ignored; retained for call-site compatibility since the
+#'   fused evidence score is shelved (Part 4.5). Default `list()`.
 #' @param dataset_context An optional dataset context, as built by
 #'   [build_dataset_context()] / [run_dataset_context()], threaded into
 #'   [build_user_prompt()] as global framing. Never enters
-#'   [calculate_fusion_score()] or [enforce_faithfulness()]. `NULL` (default)
-#'   omits the DATASET CONTEXT block.
+#'   [enforce_faithfulness()]. `NULL` (default) omits the DATASET CONTEXT block.
 #' @return A validated `interpretation` object.
 #' @examples
 #' ms <- llegir_example_moduleset()
@@ -228,14 +224,13 @@ synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_
                                prompt_template_version = PROMPT_TEMPLATE_VERSION,
                                schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
                                user_weights = list(), dataset_context = NULL){
-    fusion <- calculate_fusion_score(packet$fragments, user_weights = user_weights)
     interp <- synthesize_interpretation(
         packet, desc, backend, temperature = temperature, seed = seed,
         prompt_template_version = prompt_template_version, schema_path = schema_path,
-        user_weights = user_weights, fusion = fusion, dataset_context = dataset_context
+        dataset_context = dataset_context
     )
     interp <- enforce_faithfulness(interp, packet)
-    interp <- fuse_confidence(interp, packet, user_weights = user_weights, fusion = fusion)
+    interp <- fuse_confidence(interp, packet)
     validate_interpretation(interp)
     interp
 }

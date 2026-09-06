@@ -66,6 +66,24 @@ findings_table <- function(top_findings) {
     dplyr::bind_rows(rows)
 }
 
+# cross_condition_delta fragments carry the full per-state limma table on
+# `result` (the 3-column top_findings preview drops the raw p-value and
+# moderated t); pull effect + both p-values + t straight from `result`,
+# ordered by adjusted significance, for the report
+ccd_stats_table <- function(result) {
+    if (is.null(result) || !is.data.frame(result) || nrow(result) == 0) return(NULL)
+    col_map <- c(cluster = 'state', logFC = 'log2FC', t = 'moderated_t',
+                 P.Value = 'p_raw', adj.P.Val = 'p_adj')
+    present <- intersect(names(col_map), colnames(result))
+    if (!('logFC' %in% present)) return(NULL)
+    if ('adj.P.Val' %in% colnames(result)) result <- result[order(result$adj.P.Val), , drop = FALSE]
+    out <- result[, present, drop = FALSE]
+    colnames(out) <- unname(col_map[present])
+    num <- vapply(out, is.numeric, logical(1))
+    out[num] <- lapply(out[num], function(x) signif(x, 3))
+    out
+}
+
 # report-only rendering of a dataset_description: one labeled line per
 # attribute, since the compact bullet text from render_dataset_description()
 # is built for the LLM prompt and bunches together when emitted as raw asis
@@ -182,34 +200,13 @@ for (module_id in module_ids) {
         cat('\n')
     }
 
+    # the model's own calibrated confidence -- the deterministic fused
+    # evidence score is shelved (Part 4.5), so no fused number or evidence
+    # confidence matrix is shown; the review flags below still stand
     cat('**Confidence.** ', sprintf('%.2f', interp$confidence$score),
         ' — ', interp$confidence$rationale, '\n\n', sep = '')
     if (length(interp$flags) > 0) {
         cat('**Flags.** ', paste(unlist(interp$flags), collapse = ', '), '\n\n', sep = '')
-    }
-
-    #-----------------------------------------------------------
-    # deterministic evidence confidence matrix, recomputed straight from the
-    # paired packet -- the same calculate_fusion_score() call that produced
-    # the E_pool/P_agree/C_dir terms quoted in the rationale above, rendered
-    # as a table rather than the fixed-width text block used in the prompt
-    #-----------------------------------------------------------
-
-    if (!is.null(packet) && length(packet$fragments) > 0) {
-        fusion <- calculate_fusion_score(packet$fragments)
-        cat('### Evidence Confidence Matrix\n\n')
-        print(knitr::kable(fusion$matrix, format = 'markdown'))
-        cat('\n\n')
-        cat(
-            '<div>',
-            '<strong>E_pool:</strong> ', sprintf('%.2f', fusion$e_pool), ' &nbsp; ',
-            '<strong>C_dir:</strong> ', sprintf('%.2f', fusion$c_dir), ' &nbsp; ',
-            '<strong>P_agree:</strong> ', sprintf('%.2f', fusion$p_agree), ' &nbsp; ',
-            '<strong>E_evidence:</strong> ', sprintf('%.2f', fusion$e_evidence), ' &nbsp; ',
-            '<strong>lambda:</strong> ', sprintf('%.2f', fusion$lambda),
-            '</div>\n\n',
-            sep = ''
-        )
     }
 
     #-----------------------------------------------------------
@@ -225,7 +222,12 @@ for (module_id in module_ids) {
     for (frag in packet$fragments) {
         cat('#### `', frag$fragment_id, '` (', frag$type, ')\n\n', sep = '')
 
-        tbl <- findings_table(frag$top_findings)
+        is_ccd <- identical(frag$type, 'cross_condition_delta')
+        if (is_ccd) {
+            cat('*module-eigengene limma, T1->T2 per state; effect = log2FC, p = BH-adjusted*\n\n')
+        }
+
+        tbl <- if (is_ccd) ccd_stats_table(frag$result) else findings_table(frag$top_findings)
         show_summary <- is.null(tbl) || nrow(tbl) == 0 || !(frag$type %in% redundant_summary_types)
         if (show_summary) cat(frag$compact_summary, '\n\n', sep = '')
 

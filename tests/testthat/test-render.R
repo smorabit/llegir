@@ -132,15 +132,16 @@ test_that('write_synthesis_manifest() writes valid JSON', {
     expect_equal(parsed$n_modules, 1)
 })
 
-test_that('synthesize_module() runs synthesis, faithfulness, and confidence fusion together', {
+test_that('synthesize_module() runs synthesis, faithfulness, and flag application together', {
     packet <- make_render_packet('MM1')
     interp <- synthesize_module(packet, csf_dataset_description(), backend = mock_backend(), schema_path = test_schema_path)
     expect_true(validate_interpretation(interp))
     expect_equal(interp$module_id, 'MM1')
-    # confidence$score must have been overwritten by fuse_confidence(), so it
-    # differs from the mock backend's flat 0.5 self-report post-fusion
+    # the fused score is shelved (Part 4.5): confidence$score stays the mock
+    # backend's own 0.5 self-report, and no fusion string is appended
     expect_equal(interp$confidence$model_score, 0.5)
-    expect_true(grepl('fusion:', interp$confidence$rationale, fixed = TRUE))
+    expect_equal(interp$confidence$score, 0.5)
+    expect_false(grepl('fusion:', interp$confidence$rationale, fixed = TRUE))
 })
 
 test_that('run_synthesis_orchestrator() writes per-module JSON/MD plus a review queue and manifest', {

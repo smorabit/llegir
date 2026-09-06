@@ -2,7 +2,7 @@
 % Please edit documentation in R/confidence.R
 \name{fuse_confidence}
 \alias{fuse_confidence}
-\title{Fuse model and deterministic confidence into a final score and flags}
+\title{Apply deterministic review flags to an interpretation}
 \usage{
 fuse_confidence(
   interp,
@@ -19,37 +19,31 @@ fuse_confidence(
 
 \item{packet}{The evidence packet \code{interp} was synthesized from.}
 
-\item{low_threshold}{\code{e_evidence} floor below which the fused score is
-capped and \code{'insufficient_evidence'} is flagged.}
+\item{low_threshold}{Ignored; retained for call-site compatibility.}
 
-\item{disagreement_threshold}{Minimum \verb{|model_score - e_evidence|} gap
-that flags \code{'needs_human_review'}.}
+\item{disagreement_threshold}{Ignored; retained for call-site compatibility.}
 
-\item{user_weights}{Named list of per-\code{tool_id} weight multipliers passed
-to \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} when \code{fusion} is \code{NULL}. Default \code{list()}.}
+\item{user_weights}{Ignored; retained for call-site compatibility.}
 
-\item{fusion}{An optional pre-computed \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} result
-(the same one shown to the model in the prompt); \code{NULL} (default)
-recomputes it from \code{packet} and \code{user_weights}.}
+\item{fusion}{Ignored; retained for call-site compatibility.}
 }
 \value{
-\code{interp}, with \code{confidence$score}, \code{confidence$rationale}, and
-\code{flags} updated.
+\code{interp}, with \code{flags} possibly extended by \code{'possible_artifact'}.
 }
 \description{
-The model's self-reported confidence (\code{interp$confidence$model_score}) is
-never trusted alone. It's blended with \code{\link[=calculate_fusion_score]{calculate_fusion_score()}}'s
-deterministic \code{e_evidence} via a weighted geometric blend
-(\code{model_score^lambda * e_evidence^(1 - lambda)}), and the blend is what can
-trigger review flags -- so a fluent, confident label over weak evidence
-gets caught even if the model never flags itself. \code{fusion} should be the
-same \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} result already injected into the
-synthesis prompt (see \code{R/prompt.R}), so the printed fusion string can
-never drift from what the model was shown; passing \code{NULL} recomputes it
-from \code{packet} and \code{user_weights}. Mutates and returns \code{interp}:
-\code{confidence$score} is overwritten (\code{model_score} is preserved for audit),
-and \code{flags} are unioned with whatever the model or
-\code{\link[=enforce_faithfulness]{enforce_faithfulness()}} already set.
+The fused evidence score is shelved
+(\code{docs/prompts/handoff_prompt_serpentine_tcell.md} Part 4.5): its two known
+flaws -- a non-significant dynamics fragment dragging down a genuinely
+stable module, and \code{top_genes}' top-kME magnitude standing in for
+interpretation confidence when it only measures hub tightness -- made the
+blended number misleading, so \code{confidence$score} is left as the model's own
+calibrated value. This function now only unions the deterministic
+\code{possible_artifact} flag (hub list dominated by IEG/dissociation-stress
+markers, \code{.artifact_flagged()}) into \code{interp$flags}; \code{\link[=enforce_faithfulness]{enforce_faithfulness()}}
+sets \code{needs_human_review} independently, and the model may still set
+\code{insufficient_evidence} itself. \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} and
+\code{\link[=compute_evidence_signals]{compute_evidence_signals()}} are retained, unused here, for a future
+redesign of the score.
 }
 \examples{
 ms <- llegir_example_moduleset()

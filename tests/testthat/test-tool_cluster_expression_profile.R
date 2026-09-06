@@ -18,6 +18,12 @@ test_that('cluster_expression_profile_tool() returns a valid state_expression fr
     expect_true(all(frag$result$mean_decile >= 1 & frag$result$mean_decile <= n_deciles))
     expect_true(frag$effect_strength >= 0 && frag$effect_strength <= 1)
     expect_equal(frag$direction, 'na')
+
+    # mean raw module activity is carried per state, on result and top_findings
+    expect_true('mean_activity' %in% names(frag$result))
+    expect_true(all(is.finite(frag$result$mean_activity)))
+    expect_true(all(vapply(frag$top_findings, function(f) 'mean_activity' %in% names(f), logical(1))))
+    expect_equal(frag$top_findings[[1]]$mean_activity, frag$result$mean_activity[1])
 })
 
 test_that('cluster_expression_profile_tool() requires params$group_by', {

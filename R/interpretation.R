@@ -10,9 +10,10 @@
 #'
 #' One module's filled schema, produced by the synthesis layer
 #' ([synthesize_interpretation()]) from a fixed evidence packet.
-#' `confidence$score` starts out equal to `confidence$model_score` and is
-#' overwritten in place by confidence fusion ([fuse_confidence()]);
-#' `provenance` is attached by the orchestrator, never by the model itself.
+#' `confidence$score` equals `confidence$model_score` (the deterministic
+#' fused blend is shelved as of Part 4.5; [fuse_confidence()] now only adds
+#' review flags and leaves the score alone); `provenance` is attached by the
+#' orchestrator, never by the model itself.
 #'
 #' @param module_id The module this interpretation describes.
 #' @param proposed_label Short program name, e.g. `'Interferon response'`.
