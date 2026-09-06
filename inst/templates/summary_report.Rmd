@@ -8,6 +8,7 @@ params:
   interps: !r NULL
   packets: !r NULL
   desc: !r NULL
+  dataset_context: !r NULL
 ---
 
 <style>
@@ -36,6 +37,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 interps <- params$interps
 packets <- params$packets
 desc <- params$desc
+dataset_context <- params$dataset_context
 
 # module order is driven by the interpretations; a packet with no matching
 # interpretation is skipped rather than rendered evidence-only
@@ -163,6 +165,37 @@ plots_block_html <- function(plots, placement) {
 
 ```{r dataset, results = 'asis'}
 cat(render_desc_html(desc))
+```
+
+```{r dataset-evidence, results = 'asis'}
+# dataset-level evidence: global framing fragments (composition, abundance
+# shift, module landscape, ...) shown once above the per-module sections. Each
+# renders its compact_summary, top_findings table, and any attached plots.
+# Nothing here is per-module and nothing is cited in a supporting_claim.
+dataset_frags <- if (is.null(dataset_context)) list() else dataset_context$dataset_fragments
+if (length(dataset_frags) > 0) {
+    cat('\n\n# Dataset-level evidence\n\n')
+    cat('*Global framing for the whole dataset -- not tied to any one module and never cited in a supporting claim.*\n\n')
+    for (frag in dataset_frags) {
+        cat('## `', frag$fragment_id, '` (', frag$type, ')\n\n', sep = '')
+        cat(frag$compact_summary, '\n\n', sep = '')
+
+        cat(plots_block_html(frag$plots, 'above'))
+
+        tbl <- findings_table(frag$top_findings)
+        if (!is.null(tbl) && nrow(tbl) > 0) {
+            cat('<div style="max-height: 250px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 4px; padding: 8px; margin-bottom: 15px;">\n\n')
+            print(knitr::kable(tbl, format = 'markdown'))
+            cat('\n\n</div>\n\n')
+        }
+
+        if (length(frag$caveats) > 0) {
+            cat('*Caveats: ', paste(unlist(frag$caveats), collapse = ', '), '*\n\n', sep = '')
+        }
+
+        cat(plots_block_html(frag$plots, 'below'))
+    }
+}
 ```
 
 # Modules {.tabset .tabset-fade}

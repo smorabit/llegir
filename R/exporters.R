@@ -27,15 +27,25 @@
 #' @param packets A named list of evidence packets, keyed by module id (e.g. the
 #'   return value of [run_orchestrator()]).
 #' @param desc The `dataset_description` used for this synthesis run.
+#' @param dataset_context Optional dataset context (as built by
+#'   [build_dataset_context()] / [run_dataset_context()]). When supplied, its
+#'   `dataset_fragments` render in a "Dataset-level evidence" section above the
+#'   per-module sections -- each fragment's `compact_summary`, `top_findings`
+#'   table, and any attached `plots`. `NULL` (default) omits the section, and
+#'   the report is byte-identical to one produced without the argument.
 #' @param output_file Destination HTML path. Default `'output/report.html'`.
 #' @param quiet Suppress the pandoc/knitr progress output. Default `TRUE`.
 #' @return The rendered file path, invisibly.
 #' @export
 write_interpretation_report <- function(interps, packets, desc,
+                                        dataset_context = NULL,
                                         output_file = 'output/report.html',
                                         quiet = TRUE){
     if (!is.list(interps)) stop('interps must be a list of interpretation objects')
     if (!is.list(packets)) stop('packets must be a list of evidence packets')
+    if (!is.null(dataset_context) && !is.list(dataset_context$dataset_fragments)) {
+        stop('dataset_context must be a dataset context with a $dataset_fragments list')
+    }
 
     template <- system.file('templates/summary_report.Rmd', package = 'llegir')
     if (!nzchar(template)) stop('could not locate summary_report.Rmd in the installed llegir package')
@@ -51,7 +61,8 @@ write_interpretation_report <- function(interps, packets, desc,
         input = template,
         output_file = basename(output_file),
         output_dir = output_dir,
-        params = list(interps = interps, packets = packets, desc = desc),
+        params = list(interps = interps, packets = packets, desc = desc,
+                      dataset_context = dataset_context),
         quiet = quiet,
         envir = new.env(parent = globalenv())
     )
