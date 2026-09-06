@@ -103,6 +103,23 @@ validate_evidence_fragment <- function(frag){
     invisible(TRUE)
 }
 
+# jsonlite's simplifyDataFrame collapses a top_findings JSON array of uniform
+# objects into a data.frame on read, but the contract (and every tool, plus
+# the report's findings_table) expects a list with one named-list entry per
+# finding. Undo that simplification so a re-read fragment matches what its
+# tool emitted; a ragged or already-list top_findings, and an empty one, pass
+# through untouched. Shared by fragment_from_json/read_evidence_packet and
+# their dataset_fragment siblings.
+.rowlist_from_simplified <- function(top_findings){
+    if (!is.data.frame(top_findings)) return(top_findings)
+    lapply(seq_len(nrow(top_findings)), function(i){
+        row <- as.list(top_findings[i, , drop = FALSE])
+        # a list-column (e.g. a per-row gene vector) comes back wrapped one
+        # level deep; unwrap so the scalar case matches the tool's output
+        lapply(row, function(v) if (is.list(v) && length(v) == 1) v[[1]] else v)
+    })
+}
+
 # strip volatile fields (timestamps) before hashing so identical evidence
 # hashes identically across reruns; plot_obj is stripped first since a live
 # grob holds environments/external pointers and would make the hash
@@ -144,7 +161,7 @@ fragment_from_json <- function(json_str){
         type = parsed$type,
         result = as.data.frame(parsed$result),
         compact_summary = parsed$compact_summary,
-        top_findings = parsed$top_findings,
+        top_findings = .rowlist_from_simplified(parsed$top_findings),
         effect_strength = parsed$effect_strength,
         significance = ifelse(is.null(parsed$significance), NA_real_, parsed$significance),
         direction = ifelse(is.null(parsed$direction), 'na', parsed$direction),
@@ -248,7 +265,7 @@ read_evidence_packet <- function(path){
             type = f$type[[1]],
             result = as.data.frame(f$result[[1]]),
             compact_summary = f$compact_summary[[1]],
-            top_findings = f$top_findings[[1]],
+            top_findings = .rowlist_from_simplified(f$top_findings[[1]]),
             effect_strength = f$effect_strength[[1]],
             significance = ifelse(is.null(f$significance[[1]]) || length(f$significance[[1]]) == 0, NA_real_, f$significance[[1]]),
             direction = ifelse(is.null(f$direction[[1]]), 'na', f$direction[[1]]),

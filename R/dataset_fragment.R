@@ -134,7 +134,7 @@ dataset_fragment_from_json <- function(json_str){
         type = parsed$type,
         result = as.data.frame(parsed$result),
         compact_summary = parsed$compact_summary,
-        top_findings = parsed$top_findings,
+        top_findings = .rowlist_from_simplified(parsed$top_findings),
         caveats = if (is.null(parsed$caveats)) list() else parsed$caveats,
         provenance = parsed$provenance,
         plots = parsed$plots
@@ -231,7 +231,7 @@ read_dataset_context <- function(path){
             type = f$type[[1]],
             result = as.data.frame(f$result[[1]]),
             compact_summary = f$compact_summary[[1]],
-            top_findings = f$top_findings[[1]],
+            top_findings = .rowlist_from_simplified(f$top_findings[[1]]),
             caveats = if (is.null(f$caveats[[1]])) list() else f$caveats[[1]],
             provenance = as.list(f$provenance),
             plots = if (length(raw_plots) == 0) NULL else raw_plots

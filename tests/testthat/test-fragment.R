@@ -60,6 +60,23 @@ test_that('fragment JSON round-trip preserves fields and result table', {
     expect_true(validate_evidence_fragment(restored))
 })
 
+test_that('fragment JSON round-trip keeps top_findings a list of per-item lists', {
+    # jsonlite simplifies a uniform top_findings array into a data.frame on
+    # read; it must come back as the list-of-named-lists shape every tool
+    # emits (and the report's findings_table expects), not a data.frame
+    frag <- make_valid_fragment()
+    frag$top_findings <- list(
+        list(gene = 'A', score = 0.9),
+        list(gene = 'B', score = 0.5)
+    )
+    restored <- fragment_from_json(fragment_to_json(frag))
+    expect_false(is.data.frame(restored$top_findings))
+    expect_type(restored$top_findings, 'list')
+    expect_length(restored$top_findings, 2)
+    expect_equal(restored$top_findings[[2]]$gene, 'B')
+    expect_equal(restored$top_findings[[2]]$score, 0.5)
+})
+
 test_that('build_evidence_packet() hashes identically regardless of timestamp', {
     frag_a <- make_valid_fragment()
     frag_b <- make_valid_fragment()
@@ -115,4 +132,22 @@ test_that('packet JSON round-trip preserves the hash and fragment count', {
     expect_equal(restored$packet_hash, packet$packet_hash)
     expect_equal(length(restored$fragments), length(packet$fragments))
     expect_true(validate_evidence_fragment(restored$fragments[[1]]))
+})
+
+test_that('read_evidence_packet() keeps top_findings a list of per-item lists', {
+    frag <- make_valid_fragment()
+    frag$top_findings <- list(
+        list(gene = 'A', score = 0.9),
+        list(gene = 'B', score = 0.5)
+    )
+    packet <- build_evidence_packet('MM1', list(frag), input_hash = 'abc')
+    tmp <- tempfile(fileext = '.json')
+    on.exit(unlink(tmp))
+    write_evidence_packet(packet, tmp)
+    restored <- read_evidence_packet(tmp)
+    tf <- restored$fragments[[1]]$top_findings
+    expect_false(is.data.frame(tf))
+    expect_length(tf, 2)
+    expect_equal(tf[[1]]$gene, 'A')
+    expect_equal(tf[[2]]$score, 0.5)
 })

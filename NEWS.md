@@ -1,5 +1,16 @@
 # llegir 0.0.0.9000
 
+* Fix: a fragment read back from disk kept `top_findings` as a data.frame
+  (jsonlite's `simplifyDataFrame` collapses the uniform JSON array on read),
+  where every tool and the HTML report's `findings_table()` expect a list
+  with one named-list entry per finding. `fragment_from_json()`,
+  `read_evidence_packet()`, `dataset_fragment_from_json()` and
+  `read_dataset_context()` now restore the list-of-lists shape; a ragged or
+  empty `top_findings` is unaffected. The report's `findings_table()` also
+  passes a data.frame straight through as a safety net. Without this, a
+  report rendered from a re-read packet transposed every evidence table
+  (genes became column headers).
+
 * The deterministic fused evidence score is shelved
   (`docs/prompts/handoff_prompt_serpentine_tcell.md` Part 4.5). Two known
   flaws made the blended number misleading: a non-significant dynamics

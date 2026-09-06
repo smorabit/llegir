@@ -57,6 +57,18 @@ test_that('dataset_fragment JSON round-trip preserves fields and result table', 
     expect_true(validate_dataset_fragment(restored))
 })
 
+test_that('dataset_fragment JSON round-trip keeps top_findings a list of per-item lists', {
+    frag <- make_valid_dataset_fragment()
+    frag$top_findings <- list(
+        list(group = 'myeloid', n_cells = 120),
+        list(group = 'lymphoid', n_cells = 80)
+    )
+    restored <- dataset_fragment_from_json(dataset_fragment_to_json(frag))
+    expect_false(is.data.frame(restored$top_findings))
+    expect_length(restored$top_findings, 2)
+    expect_equal(restored$top_findings[[2]]$group, 'lymphoid')
+})
+
 test_that('build_dataset_context() hashes identically regardless of timestamp', {
     frag_a <- make_valid_dataset_fragment()
     frag_b <- make_valid_dataset_fragment()

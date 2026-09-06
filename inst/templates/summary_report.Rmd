@@ -56,6 +56,10 @@ redundant_summary_types <- c('ranked_genes', 'geneset_enrichment', 'signature_co
 # scalar string so ragged / nested entries never break the table
 findings_table <- function(top_findings) {
     if (length(top_findings) == 0) return(NULL)
+    # a packet read back by an older reader can hand us top_findings already
+    # simplified to a data.frame (one row per finding); that is the shape we
+    # want, so pass it straight through rather than iterating its columns
+    if (is.data.frame(top_findings)) return(top_findings)
     rows <- lapply(top_findings, function(item) {
         vals <- lapply(item, function(v) {
             if (length(v) == 0) return(NA_character_)
