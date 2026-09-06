@@ -92,15 +92,12 @@ mock_backend <- function(){
             content = list(
                 module_id = 'MOCK',
                 proposed_label = 'Myeloid activation program (mock)',
-                one_line_summary = 'Mock synthesis output for offline testing; not derived from the evidence packet.',
                 dominant_biology = 'Not evaluated by the mock backend.',
+                interpretation = 'Mock synthesis output for offline testing; not derived from the evidence packet.',
                 supporting_claims = list(
                     list(claim = 'Top genes were computed by the deterministic core.', fragment_ids = list('top_genes'), direction = 'na'),
                     list(claim = 'The module has enriched gene-set terms.', fragment_ids = list('geneset_enrichment'), direction = 'up')
                 ),
-                cell_state = NA_character_,
-                condition_dynamics = NA_character_,
-                metadata_associations = list(),
                 flags = list(),
                 confidence = list(score = 0.5, rationale = 'Mock backend: fixed neutral confidence, not evidence-derived.')
             ),
@@ -432,14 +429,11 @@ synthesize_interpretation <- function(packet, desc, backend, temperature = 0, se
     interp <- interpretation(
         module_id = packet$module_id,
         proposed_label = raw$proposed_label,
-        one_line_summary = raw$one_line_summary,
         dominant_biology = raw$dominant_biology,
+        interpretation = raw$interpretation,
         supporting_claims = lapply(raw$supporting_claims, to_claim),
         confidence = confidence,
         provenance = provenance,
-        cell_state = raw$cell_state %||% NA_character_,
-        condition_dynamics = raw$condition_dynamics %||% NA_character_,
-        metadata_associations = raw$metadata_associations %||% list(),
         literature = list(),
         flags = unlist(raw$flags) %||% list()
     )

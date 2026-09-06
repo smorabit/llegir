@@ -10,9 +10,7 @@
 #' run-level manifest ([build_synthesis_manifest()]).
 #'
 #' @export
-RENDER_TEMPLATE_VERSION <- '0.1'
-
-.na_or_empty <- function(x) is.null(x) || (length(x) == 1 && is.na(x))
+RENDER_TEMPLATE_VERSION <- '0.2'
 
 #' Render an interpretation as a paragraph
 #'
@@ -34,30 +32,17 @@ render_paragraph <- function(interp){
     lines <- c(
         sprintf('**%s** (%s)', interp$proposed_label, interp$module_id),
         '',
-        interp$one_line_summary,
+        'Synthesized biological interpretation:',
+        sprintf('Dominant biology: %s', interp$dominant_biology),
         '',
-        sprintf('Dominant biology: %s', interp$dominant_biology)
+        interp$interpretation
     )
-
-    if (!.na_or_empty(interp$cell_state)) {
-        lines <- c(lines, sprintf('Primarily expressed in: %s', interp$cell_state))
-    }
-    if (!.na_or_empty(interp$condition_dynamics)) {
-        lines <- c(lines, sprintf('Condition dynamics: %s', interp$condition_dynamics))
-    }
 
     if (length(interp$supporting_claims) > 0) {
         claim_lines <- vapply(interp$supporting_claims, function(claim){
             sprintf('- %s (%s; direction: %s)', claim$claim, paste(claim$fragment_ids, collapse = ', '), claim$direction)
         }, character(1))
         lines <- c(lines, '', 'Supporting evidence:', claim_lines)
-    }
-
-    if (length(interp$metadata_associations) > 0) {
-        assoc_lines <- vapply(interp$metadata_associations, function(assoc){
-            sprintf('- %s: %s (%s)', assoc$variable, assoc$summary, assoc$fragment_id)
-        }, character(1))
-        lines <- c(lines, '', 'Metadata associations:', assoc_lines)
     }
 
     lines <- c(

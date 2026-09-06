@@ -4,13 +4,10 @@
 make_faithful_interpretation <- function(packet){
     interpretation(
         module_id = packet$module_id,
-        proposed_label = 'x', one_line_summary = 'x', dominant_biology = 'x',
+        proposed_label = 'x', dominant_biology = 'x', interpretation = 'x',
         supporting_claims = list(
             list(claim = 'top genes claim', fragment_ids = 'top_genes', direction = 'na'),
             list(claim = 'enrichment claim', fragment_ids = 'geneset_enrichment', direction = 'up')
-        ),
-        metadata_associations = list(
-            list(variable = 'cell_state', summary = 'x', fragment_id = 'cluster_dme')
         ),
         confidence = list(score = 0.7, model_score = 0.7, rationale = 'x'),
         provenance = make_interpretation_provenance('mock', '0.1', 0, packet$packet_hash)
@@ -24,6 +21,15 @@ test_that('check_faithfulness() finds no violations for correctly-cited claims',
     expect_equal(check_faithfulness(interp, packet), list())
     expect_true(is_faithful(interp, packet))
     expect_true(assert_faithfulness(interp, packet))
+})
+
+test_that('check_faithfulness() only inspects supporting_claims', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
+    packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
+    interp <- make_faithful_interpretation(packet)
+    # a stray field the model can no longer emit must not be walked
+    interp$metadata_associations <- list(list(fragment_id = 'not_a_real_fragment'))
+    expect_equal(check_faithfulness(interp, packet), list())
 })
 
 test_that('a fabricated fragment_id in supporting_claims is caught', {
@@ -57,18 +63,6 @@ test_that('a wrong claim direction is caught', {
 
     flagged <- enforce_faithfulness(interp, packet)
     expect_true('needs_human_review' %in% unlist(flagged$flags))
-})
-
-test_that('a fabricated fragment_id in metadata_associations is caught', {
-    skip_if_not(csf_data_available, 'CSF dev object not available')
-    packet <- run_module(ms_test, mod_test, csf_tool_config, input_hash = 'abc')
-    interp <- make_faithful_interpretation(packet)
-    interp$metadata_associations[[1]]$fragment_id <- 'metadata::not_a_real_column'
-
-    violations <- check_faithfulness(interp, packet)
-    expect_equal(length(violations), 1)
-    expect_equal(violations[[1]]$location, 'metadata_associations')
-    expect_equal(violations[[1]]$issue, 'missing_fragment')
 })
 
 test_that('enforce_faithfulness() leaves flags untouched when the interpretation is faithful', {

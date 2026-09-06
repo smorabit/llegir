@@ -2,11 +2,11 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "interpretation.schema.json",
   "title": "interpretation",
-  "schema_version": "0.1",
-  "description": "Produced by the synthesis layer (Milestone 2). Finalized from the M1 draft: confidence now separates the model's raw score from the fused final score, and provenance is required (attached by the synthesis orchestrator, never filled by the model).",
+  "schema_version": "0.2",
+  "description": "Produced by the synthesis layer. As of schema 0.2 the model fills a single free-text `interpretation` field (1-3 sentences supporting the dominant-biology call, folding in cell-state localization and condition dynamics where relevant) in place of the former `one_line_summary` / `cell_state` / `condition_dynamics` / `metadata_associations` fields. `confidence` still separates the model's raw score from the (currently shelved) fused final score; `provenance` is required and attached by the synthesis orchestrator, never filled by the model.",
   "type": "object",
   "required": [
-    "module_id", "proposed_label", "one_line_summary", "dominant_biology",
+    "module_id", "proposed_label", "dominant_biology", "interpretation",
     "supporting_claims", "confidence", "provenance"
   ],
   "properties": {
@@ -15,8 +15,11 @@
       "type": "string",
       "description": "short program name, e.g. 'Interferon response'"
     },
-    "one_line_summary": { "type": "string" },
-    "dominant_biology": { "type": "string", "description": "the main program" },
+    "dominant_biology": { "type": "string", "description": "the main program, as a short label" },
+    "interpretation": {
+      "type": "string",
+      "description": "1-3 sentences of prose supporting the dominant-biology call, grounded in the cited fragments; folds in where the module is expressed and how its activity shifts across the tested condition where relevant"
+    },
     "supporting_claims": {
       "type": "array",
       "description": "every fragment_id cited here must exist in the module's packet and its direction must match (faithfulness invariant); may be empty only when flags includes insufficient_evidence",
@@ -32,23 +35,6 @@
           },
           "direction": { "enum": ["up", "down", "mixed", "na"] },
           "strength": { "type": ["number", "null"] }
-        }
-      }
-    },
-    "cell_state": {
-      "type": ["string", "null"],
-      "description": "where expressed, from cluster_dme"
-    },
-    "condition_dynamics": { "type": ["string", "null"] },
-    "metadata_associations": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["variable", "summary", "fragment_id"],
-        "properties": {
-          "variable": { "type": "string" },
-          "summary": { "type": "string" },
-          "fragment_id": { "type": "string" }
         }
       }
     },
@@ -70,7 +56,7 @@
       "properties": {
         "score": {
           "type": "number", "minimum": 0, "maximum": 1,
-          "description": "final fused confidence (docs/milestone_2.md task 4); equal to model_score until fusion runs"
+          "description": "final confidence; equals model_score while the deterministic fusion is shelved (Part 4.5)"
         },
         "model_score": {
           "type": "number", "minimum": 0, "maximum": 1,

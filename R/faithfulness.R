@@ -1,23 +1,21 @@
 ## faithfulness auto-check (docs/milestone_2.md task 3): every fragment_id
-## cited in supporting_claims / metadata_associations must exist in the
-## module's evidence packet, and a supporting_claims direction must match the
-## direction actually reported by the fragment it cites. A mismatch is a hard
-## failure, not a warning.
+## cited in supporting_claims must exist in the module's evidence packet, and
+## a supporting_claims direction must match the direction actually reported by
+## the fragment it cites. A mismatch is a hard failure, not a warning.
 
 #' Check citation faithfulness of an interpretation against its packet
 #'
-#' Every fragment_id cited in `supporting_claims` / `metadata_associations`
-#' must exist in the module's evidence packet, and a `supporting_claims`
-#' entry's `direction` must match the direction actually reported by the
-#' fragment(s) it cites. Pure and non-throwing; see [assert_faithfulness()]
-#' for the hard-rejecting variant.
+#' Every fragment_id cited in `supporting_claims` must exist in the module's
+#' evidence packet, and a `supporting_claims` entry's `direction` must match
+#' the direction actually reported by the fragment(s) it cites. Pure and
+#' non-throwing; see [assert_faithfulness()] for the hard-rejecting variant.
 #'
 #' @param interp An `interpretation` object.
 #' @param packet The evidence packet `interp` was synthesized from.
 #' @return A list of violation records (empty if faithful); each record is a
-#'   list with `location`, `index`, `fragment_id`, `issue`
-#'   (`'missing_fragment'` or `'direction_mismatch'`), and, for
-#'   `'direction_mismatch'`, `claim_direction`/`fragment_direction`.
+#'   list with `location` (always `'supporting_claims'`), `index`,
+#'   `fragment_id`, `issue` (`'missing_fragment'` or `'direction_mismatch'`),
+#'   and, for `'direction_mismatch'`, `claim_direction`/`fragment_direction`.
 #' @examples
 #' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
@@ -42,15 +40,6 @@ check_faithfulness <- function(interp, packet){
                     claim_direction = claim$direction, fragment_direction = frag_by_id[[fid]]$direction
                 )
             }
-        }
-    }
-
-    for (i in seq_along(interp$metadata_associations)) {
-        fid <- interp$metadata_associations[[i]]$fragment_id
-        if (!(fid %in% names(frag_by_id))) {
-            violations[[length(violations) + 1]] <- list(
-                location = 'metadata_associations', index = i, fragment_id = fid, issue = 'missing_fragment'
-            )
         }
     }
 

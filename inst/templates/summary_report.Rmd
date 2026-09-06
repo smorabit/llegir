@@ -173,17 +173,10 @@ for (module_id in module_ids) {
     packet <- packets[[module_id]]
 
     cat('\n\n## ', module_id, ' — ', interp$proposed_label, '\n\n', sep = '')
-    cat('*', interp$one_line_summary, '*\n\n', sep = '')
 
-    cat('### Synthesized Biological Interpretation\n\n')
+    cat('### Synthesized biological interpretation\n\n')
     cat('**Dominant biology.** ', interp$dominant_biology, '\n\n', sep = '')
-
-    if (!is.null(interp$cell_state) && !is.na(interp$cell_state)) {
-        cat('**Cell state.** ', interp$cell_state, '\n\n', sep = '')
-    }
-    if (!is.null(interp$condition_dynamics) && !is.na(interp$condition_dynamics)) {
-        cat('**Condition dynamics.** ', interp$condition_dynamics, '\n\n', sep = '')
-    }
+    cat(interp$interpretation, '\n\n', sep = '')
 
     if (length(interp$supporting_claims) > 0) {
         cat('**Supporting evidence.**\n\n')
@@ -191,15 +184,6 @@ for (module_id in module_ids) {
             cat('- ', claim$claim,
                 ' (', paste(claim$fragment_ids, collapse = ', '),
                 '; direction: ', claim$direction, ')\n', sep = '')
-        }
-        cat('\n')
-    }
-
-    if (length(interp$metadata_associations) > 0) {
-        cat('**Metadata associations.**\n\n')
-        for (assoc in interp$metadata_associations) {
-            cat('- ', assoc$variable, ': ', assoc$summary,
-                ' (', assoc$fragment_id, ')\n', sep = '')
         }
         cat('\n')
     }

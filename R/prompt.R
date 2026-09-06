@@ -9,7 +9,7 @@
 #' for reproducibility.
 #'
 #' @export
-PROMPT_TEMPLATE_VERSION <- '0.9'
+PROMPT_TEMPLATE_VERSION <- '1.0'
 
 # a fragment's compact block: one header line (id/type/direction/effect/sig),
 # the compact_summary, and up to `max_findings` top_findings as compact JSON;
@@ -140,14 +140,13 @@ build_system_prompt <- function(){
         '- Use only the evidence given below. Do not invent genes, terms, or results, and do not run or imagine any analysis.',
         '- Every entry in supporting_claims must cite the fragment_id(s) it is based on, and its direction must match the direction reported by those fragments.',
         '- A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report. Concrete example of what NOT to do: {"claim": "genes X/Y/Z indicate cytotoxicity, consistent with geneset_enrichment", "fragment_ids": ["top_genes", "geneset_enrichment"], "direction": "up"} is INVALID because top_genes reports direction na, not up. Instead write two entries: {"claim": "the module\'s hub genes (X, Y, Z) mark a cytotoxicity program", "fragment_ids": ["top_genes"], "direction": "na"} and {"claim": "consistent with this, geneset_enrichment shows cytotoxicity terms enriched", "fragment_ids": ["geneset_enrichment"], "direction": "up"}.',
-        '- metadata_associations entries must cite a real fragment_id the same way.',
-        '- Fill cell_state from a state_expression fragment when one is present (which cell state(s) the module is expressed in), and condition_dynamics from a cross_condition_delta fragment when one is present (how the module\'s activity shifts across the tested condition) -- leave either NA only when no such fragment is in the packet.',
+        '- Write the interpretation field as 1 to 3 sentences of plain prose that support the dominant_biology call, grounded only in the fragments you cite in supporting_claims. Fold in where the module is expressed (from a state_expression fragment, if one is present) and how its activity shifts across the tested condition (from a cross_condition_delta fragment, if one is present) when that context is relevant; do not add localization or dynamics claims the packet does not contain. Keep it consistent with supporting_claims -- do not introduce a program, gene, or term that no cited fragment supports.',
         paste0('- Each fragment has a type from a controlled vocabulary: ', paste(.fragment_types, collapse = ', '), '.'),
         paste0('- flags must be drawn only from: ', paste(.interpretation_flags, collapse = ', '), '.'),
         '- If the evidence is weak, sparse, or inconsistent, do not invent a confident story: set flags to include insufficient_evidence, keep supporting_claims minimal (or empty), and give a low confidence score.',
         '- Set confidence.score (0 to 1) to your own calibrated certainty that proposed_label is the right call given only the evidence in this packet: high when several fragments converge on one identity, low when the packet is thin, the hub genes are non-specific, or the fragments disagree.',
         '- literature must be left empty; literature grounding is not available in this pipeline.',
-        '- A DATASET CONTEXT block, when present, is global framing (composition, variance structure, and similar dataset-wide context) for confounder awareness -- it is not a per-module fragment, so never cite it in supporting_claims or metadata_associations.',
+        '- A DATASET CONTEXT block, when present, is global framing (composition, variance structure, and similar dataset-wide context) for confounder awareness -- it is not a per-module fragment, so never cite it in supporting_claims.',
         sep = '\n'
     )
 }

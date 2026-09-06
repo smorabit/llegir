@@ -17,38 +17,33 @@
 #'
 #' @param module_id The module this interpretation describes.
 #' @param proposed_label Short program name, e.g. `'Interferon response'`.
-#' @param one_line_summary A one-line summary of the module.
-#' @param dominant_biology Description of the main program.
+#' @param dominant_biology The main program, as a short label.
+#' @param interpretation 1-3 sentences of prose supporting the
+#'   `dominant_biology` call, grounded in the cited fragments; folds in where
+#'   the module is expressed and how its activity shifts across the tested
+#'   condition where relevant.
 #' @param supporting_claims A list of claims, each
 #'   `list(claim, fragment_ids, direction, strength)`.
 #' @param confidence A confidence list: `list(score, model_score, rationale)`.
 #' @param provenance A provenance list, typically built with
 #'   [make_interpretation_provenance()].
-#' @param cell_state Where the module is expressed (from `cluster_dme`), if known.
-#' @param condition_dynamics Condition-dependent dynamics, if applicable.
-#' @param metadata_associations A list of `list(variable, summary, fragment_id)`.
 #' @param literature A list of `list(statement, pmids)`. Always empty in the
 #'   current synthesis layer.
 #' @param flags A subset of the flag vocabulary: `'insufficient_evidence'`,
 #'   `'needs_human_review'`, `'possible_artifact'`, `'tool_conflict'`,
 #'   `'label_low_specificity'`.
-#' @param schema_version Schema version tag. Default `'0.1'`.
+#' @param schema_version Schema version tag. Default `'0.2'`.
 #' @return An `interpretation` object.
 #' @export
-interpretation <- function(module_id, proposed_label, one_line_summary, dominant_biology,
+interpretation <- function(module_id, proposed_label, dominant_biology, interpretation,
                             supporting_claims, confidence, provenance,
-                            cell_state = NA_character_, condition_dynamics = NA_character_,
-                            metadata_associations = list(), literature = list(),
-                            flags = list(), schema_version = '0.1'){
+                            literature = list(), flags = list(), schema_version = '0.2'){
     interp <- list(
         module_id = module_id,
         proposed_label = proposed_label,
-        one_line_summary = one_line_summary,
         dominant_biology = dominant_biology,
+        interpretation = interpretation,
         supporting_claims = supporting_claims,
-        cell_state = cell_state,
-        condition_dynamics = condition_dynamics,
-        metadata_associations = metadata_associations,
         literature = literature,
         confidence = confidence,
         flags = flags,
@@ -96,7 +91,7 @@ make_interpretation_provenance <- function(model, prompt_template_version, tempe
 #' @export
 validate_interpretation <- function(interp){
     required <- c(
-        'module_id', 'proposed_label', 'one_line_summary', 'dominant_biology',
+        'module_id', 'proposed_label', 'dominant_biology', 'interpretation',
         'supporting_claims', 'confidence', 'provenance'
     )
     missing_fields <- setdiff(required, names(interp))
@@ -106,8 +101,8 @@ validate_interpretation <- function(interp){
     if (!inherits(interp, 'interpretation')) stop('object is not class interpretation')
     if (!is.character(interp$module_id) || length(interp$module_id) != 1) stop('module_id must be a single string')
     if (!is.character(interp$proposed_label) || length(interp$proposed_label) != 1) stop('proposed_label must be a single string')
-    if (!is.character(interp$one_line_summary) || length(interp$one_line_summary) != 1) stop('one_line_summary must be a single string')
     if (!is.character(interp$dominant_biology) || length(interp$dominant_biology) != 1) stop('dominant_biology must be a single string')
+    if (!is.character(interp$interpretation) || length(interp$interpretation) != 1) stop('interpretation must be a single string')
 
     flags <- interp$flags
     if (is.null(flags)) flags <- list()
@@ -127,13 +122,6 @@ validate_interpretation <- function(interp){
         if (!is.character(claim$claim) || length(claim$claim) != 1) stop('supporting_claims$claim must be a single string')
         if (!is.character(claim$fragment_ids) || length(claim$fragment_ids) == 0) stop('supporting_claims$fragment_ids must be a non-empty character vector')
         if (!(claim$direction %in% .direction_types)) stop('invalid supporting_claims$direction: ', claim$direction)
-    }
-
-    if (!is.list(interp$metadata_associations)) stop('metadata_associations must be a list')
-    for (assoc in interp$metadata_associations) {
-        assoc_required <- c('variable', 'summary', 'fragment_id')
-        assoc_missing <- setdiff(assoc_required, names(assoc))
-        if (length(assoc_missing) > 0) stop('metadata_associations entry missing fields: ', paste(assoc_missing, collapse = ', '))
     }
 
     if (!is.list(interp$literature)) stop('literature must be a list')
@@ -223,17 +211,14 @@ interpretation_from_json <- function(json_str){
     interpretation(
         module_id = parsed$module_id,
         proposed_label = parsed$proposed_label,
-        one_line_summary = parsed$one_line_summary,
         dominant_biology = parsed$dominant_biology,
+        interpretation = parsed$interpretation,
         supporting_claims = lapply(parsed$supporting_claims, to_claim),
         confidence = parsed$confidence,
         provenance = parsed$provenance,
-        cell_state = parsed$cell_state %||% NA_character_,
-        condition_dynamics = parsed$condition_dynamics %||% NA_character_,
-        metadata_associations = parsed$metadata_associations %||% list(),
         literature = parsed$literature %||% list(),
         flags = unlist(parsed$flags) %||% list(),
-        schema_version = parsed$schema_version %||% '0.1'
+        schema_version = parsed$schema_version %||% '0.2'
     )
 }
 

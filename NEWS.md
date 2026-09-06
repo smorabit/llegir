@@ -1,5 +1,22 @@
 # llegir 0.0.0.9000
 
+* Interpretation schema `0.1` -> `0.2` (core contract). The model now fills a
+  single free-text `interpretation` field (1-3 sentences supporting the
+  `dominant_biology` call, folding in cell-state localization and condition
+  dynamics where relevant) in place of `one_line_summary`, `cell_state`,
+  `condition_dynamics`, and `metadata_associations`, which are removed.
+  `interpretation()` / `validate_interpretation()` / `interpretation_from_json()`
+  and the model-facing schema (`model_output_schema_json()`) follow the new
+  field set. `check_faithfulness()` now inspects only `supporting_claims` (the
+  `metadata_associations` loop is gone; `supporting_claims` checking is
+  unchanged). `build_system_prompt()` drops the `cell_state` /
+  `condition_dynamics` / `metadata_associations` fill rules and instructs the
+  model to write the grounded `interpretation` prose;
+  `PROMPT_TEMPLATE_VERSION` -> `1.0` (invalidates the synthesis cache).
+  `render_paragraph()` and the HTML report render a "Synthesized biological
+  interpretation" block (dominant-biology label + prose);
+  `RENDER_TEMPLATE_VERSION` -> `0.2`.
+
 * Fix: a fragment read back from disk kept `top_findings` as a data.frame
   (jsonlite's `simplifyDataFrame` collapses the uniform JSON array on read),
   where every tool and the HTML report's `findings_table()` expect a list

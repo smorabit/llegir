@@ -5,8 +5,8 @@ make_valid_interpretation <- function(){
     interpretation(
         module_id = 'MM1',
         proposed_label = 'Border TAM / complement program',
-        one_line_summary = 'Complement and phagocytic program enriched in border-associated macrophages.',
         dominant_biology = 'Complement activation and synaptic pruning.',
+        interpretation = 'The hub genes and enriched terms mark a complement and phagocytic program in border-associated macrophages.',
         supporting_claims = list(
             list(claim = 'Top genes include complement components.', fragment_ids = 'top_genes', direction = 'na'),
             list(claim = 'Enriched for synapse pruning and complement terms.', fragment_ids = 'geneset_enrichment', direction = 'up')
@@ -20,7 +20,7 @@ make_valid_interpretation <- function(){
 
 test_that('validate_interpretation() rejects an invalid claim direction', {
     interp <- interpretation(
-        module_id = 'MM1', proposed_label = 'x', one_line_summary = 'x', dominant_biology = 'x',
+        module_id = 'MM1', proposed_label = 'x', dominant_biology = 'x', interpretation = 'x',
         supporting_claims = list(list(claim = 'x', fragment_ids = 'top_genes', direction = 'sideways')),
         confidence = list(score = 0.5, model_score = 0.5, rationale = 'x'),
         provenance = make_interpretation_provenance('mock', '0.1', 0, 'abc')
@@ -36,6 +36,15 @@ test_that('validate_interpretation() catches missing required fields', {
     interp <- make_valid_interpretation()
     interp$dominant_biology <- NULL
     expect_error(validate_interpretation(interp), 'missing required fields')
+})
+
+test_that('validate_interpretation() requires the interpretation prose field', {
+    interp <- make_valid_interpretation()
+    interp$interpretation <- NULL
+    expect_error(validate_interpretation(interp), 'missing required fields')
+
+    interp$interpretation <- c('two', 'strings')
+    expect_error(validate_interpretation(interp), 'interpretation must be a single string')
 })
 
 test_that('validate_interpretation() rejects invalid flags', {
@@ -76,6 +85,7 @@ test_that('interpretation JSON round-trip preserves fields, including single-ele
     restored <- interpretation_from_json(interpretation_to_json(interp))
     expect_equal(restored$module_id, interp$module_id)
     expect_equal(restored$proposed_label, interp$proposed_label)
+    expect_equal(restored$interpretation, interp$interpretation)
     expect_equal(restored$supporting_claims[[1]]$fragment_ids, 'top_genes')
     expect_equal(restored$confidence$score, interp$confidence$score)
     expect_true(validate_interpretation(restored))

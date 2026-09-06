@@ -6,7 +6,7 @@
 
 make_confident_interpretation <- function(module_id, packet_hash, model_score = 0.9){
     interpretation(
-        module_id = module_id, proposed_label = 'x', one_line_summary = 'x', dominant_biology = 'x',
+        module_id = module_id, proposed_label = 'x', dominant_biology = 'x', interpretation = 'x',
         supporting_claims = list(list(claim = 'x', fragment_ids = 'top_genes', direction = 'na')),
         confidence = list(score = model_score, model_score = model_score, rationale = 'model self-report'),
         provenance = make_interpretation_provenance('mock', '0.1', 0, packet_hash)

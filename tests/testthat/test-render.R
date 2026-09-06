@@ -26,14 +26,13 @@ make_render_packet <- function(module_id){
 
 make_render_interpretation <- function(module_id, packet_hash, model_score = 0.9){
     interpretation(
-        module_id = module_id, proposed_label = 'Complement/phagocytic program', one_line_summary = 'x',
+        module_id = module_id, proposed_label = 'Complement/phagocytic program',
         dominant_biology = 'Complement activation and phagocytosis.',
+        interpretation = 'The hub genes and enriched terms mark a complement and phagocytosis program, expressed in microglia and elevated in glioblastoma.',
         supporting_claims = list(
             list(claim = 'Top genes include complement components.', fragment_ids = 'top_genes', direction = 'na'),
             list(claim = 'Enriched for complement/phagocytosis terms.', fragment_ids = 'geneset_enrichment', direction = 'up')
         ),
-        cell_state = 'microglia', condition_dynamics = 'elevated in glioblastoma',
-        metadata_associations = list(list(variable = 'diagnosis', summary = 'higher in GBM', fragment_id = 'geneset_enrichment')),
         confidence = list(score = model_score, model_score = model_score, rationale = 'model self-report'),
         provenance = make_interpretation_provenance('mock', '0.1', 0, packet_hash)
     )
@@ -44,29 +43,23 @@ test_that('render_paragraph() is byte-identical across repeated calls on the sam
     expect_identical(render_paragraph(interp), render_paragraph(interp))
 })
 
-test_that('render_paragraph() includes label, summary, claims, and confidence', {
+test_that('render_paragraph() includes label, interpretation prose, claims, and confidence', {
     interp <- make_render_interpretation('MM1', 'abc')
     txt <- render_paragraph(interp)
     expect_true(grepl('Complement/phagocytic program', txt, fixed = TRUE))
     expect_true(grepl('MM1', txt, fixed = TRUE))
-    expect_true(grepl('Primarily expressed in: microglia', txt, fixed = TRUE))
-    expect_true(grepl('Condition dynamics: elevated in glioblastoma', txt, fixed = TRUE))
+    expect_true(grepl('Synthesized biological interpretation:', txt, fixed = TRUE))
+    expect_true(grepl('Dominant biology: Complement activation and phagocytosis.', txt, fixed = TRUE))
+    expect_true(grepl(interp$interpretation, txt, fixed = TRUE))
     expect_true(grepl('Top genes include complement components', txt, fixed = TRUE))
-    expect_true(grepl('Metadata associations:', txt, fixed = TRUE))
     expect_true(grepl(sprintf('Confidence: %.2f', interp$confidence$score), txt))
 })
 
-test_that('render_paragraph() omits optional sections when fields are NA/empty', {
+test_that('render_paragraph() omits the supporting-evidence section when there are no claims', {
     interp <- make_render_interpretation('MM1', 'abc')
-    interp$cell_state <- NA_character_
-    interp$condition_dynamics <- NA_character_
-    interp$metadata_associations <- list()
     interp$supporting_claims <- list()
     interp$flags <- list('insufficient_evidence')
     txt <- render_paragraph(interp)
-    expect_false(grepl('Primarily expressed in', txt, fixed = TRUE))
-    expect_false(grepl('Condition dynamics', txt, fixed = TRUE))
-    expect_false(grepl('Metadata associations', txt, fixed = TRUE))
     expect_false(grepl('Supporting evidence', txt, fixed = TRUE))
     expect_true(grepl('Flags: insufficient_evidence', txt, fixed = TRUE))
 })

@@ -7,17 +7,14 @@
 interpretation(
   module_id,
   proposed_label,
-  one_line_summary,
   dominant_biology,
+  interpretation,
   supporting_claims,
   confidence,
   provenance,
-  cell_state = NA_character_,
-  condition_dynamics = NA_character_,
-  metadata_associations = list(),
   literature = list(),
   flags = list(),
-  schema_version = "0.1"
+  schema_version = "0.2"
 )
 }
 \arguments{
@@ -25,9 +22,12 @@ interpretation(
 
 \item{proposed_label}{Short program name, e.g. \code{'Interferon response'}.}
 
-\item{one_line_summary}{A one-line summary of the module.}
+\item{dominant_biology}{The main program, as a short label.}
 
-\item{dominant_biology}{Description of the main program.}
+\item{interpretation}{1-3 sentences of prose supporting the
+\code{dominant_biology} call, grounded in the cited fragments; folds in where
+the module is expressed and how its activity shifts across the tested
+condition where relevant.}
 
 \item{supporting_claims}{A list of claims, each
 \code{list(claim, fragment_ids, direction, strength)}.}
@@ -37,12 +37,6 @@ interpretation(
 \item{provenance}{A provenance list, typically built with
 \code{\link[=make_interpretation_provenance]{make_interpretation_provenance()}}.}
 
-\item{cell_state}{Where the module is expressed (from \code{cluster_dme}), if known.}
-
-\item{condition_dynamics}{Condition-dependent dynamics, if applicable.}
-
-\item{metadata_associations}{A list of \code{list(variable, summary, fragment_id)}.}
-
 \item{literature}{A list of \code{list(statement, pmids)}. Always empty in the
 current synthesis layer.}
 
@@ -50,7 +44,7 @@ current synthesis layer.}
 \code{'needs_human_review'}, \code{'possible_artifact'}, \code{'tool_conflict'},
 \code{'label_low_specificity'}.}
 
-\item{schema_version}{Schema version tag. Default \code{'0.1'}.}
+\item{schema_version}{Schema version tag. Default \code{'0.2'}.}
 }
 \value{
 An \code{interpretation} object.

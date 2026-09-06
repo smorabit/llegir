@@ -13,16 +13,15 @@ check_faithfulness(interp, packet)
 }
 \value{
 A list of violation records (empty if faithful); each record is a
-list with \code{location}, \code{index}, \code{fragment_id}, \code{issue}
-(\code{'missing_fragment'} or \code{'direction_mismatch'}), and, for
-\code{'direction_mismatch'}, \code{claim_direction}/\code{fragment_direction}.
+list with \code{location} (always \code{'supporting_claims'}), \code{index},
+\code{fragment_id}, \code{issue} (\code{'missing_fragment'} or \code{'direction_mismatch'}),
+and, for \code{'direction_mismatch'}, \code{claim_direction}/\code{fragment_direction}.
 }
 \description{
-Every fragment_id cited in \code{supporting_claims} / \code{metadata_associations}
-must exist in the module's evidence packet, and a \code{supporting_claims}
-entry's \code{direction} must match the direction actually reported by the
-fragment(s) it cites. Pure and non-throwing; see \code{\link[=assert_faithfulness]{assert_faithfulness()}}
-for the hard-rejecting variant.
+Every fragment_id cited in \code{supporting_claims} must exist in the module's
+evidence packet, and a \code{supporting_claims} entry's \code{direction} must match
+the direction actually reported by the fragment(s) it cites. Pure and
+non-throwing; see \code{\link[=assert_faithfulness]{assert_faithfulness()}} for the hard-rejecting variant.
 }
 \examples{
 ms <- llegir_example_moduleset()

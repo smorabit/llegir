@@ -20,8 +20,8 @@ make_stub_interpretation <- function(module_id){
     interpretation(
         module_id = module_id,
         proposed_label = 'test label',
-        one_line_summary = 'test summary',
         dominant_biology = 'test biology',
+        interpretation = 'test interpretation prose',
         supporting_claims = list(),
         confidence = list(score = 0.5, model_score = 0.5, rationale = 'stub'),
         provenance = make_interpretation_provenance(
