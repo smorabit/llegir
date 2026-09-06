@@ -71,16 +71,16 @@ cluster_expression_profile_tool <- function(ctx){
     decile <- cut(scores, breaks = breaks, labels = FALSE, include.lowest = TRUE)
 
     result <- data.frame(group = groups, decile = decile, score = scores) %>%
-        dplyr::group_by(group) %>%
+        dplyr::group_by(.data$group) %>%
         dplyr::summarise(
             n = dplyr::n(),
-            mean_score = mean(score),
-            mean_decile = mean(decile),
-            median_decile = stats::median(decile),
-            pct_high = mean(decile == n_bins),
+            mean_score = mean(.data$score),
+            mean_decile = mean(.data$decile),
+            median_decile = stats::median(.data$decile),
+            pct_high = mean(.data$decile == n_bins),
             .groups = 'drop'
         ) %>%
-        dplyr::arrange(dplyr::desc(mean_decile)) %>%
+        dplyr::arrange(dplyr::desc(.data$mean_decile)) %>%
         as.data.frame()
 
     top <- result[1, ]
