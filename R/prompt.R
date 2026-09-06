@@ -9,7 +9,7 @@
 #' for reproducibility.
 #'
 #' @export
-PROMPT_TEMPLATE_VERSION <- '0.4'
+PROMPT_TEMPLATE_VERSION <- '0.8'
 
 # net directional sign of the pooled evidence mass, for the matrix's
 # CONSTRAINTS block -- mirrors R/confidence.R's .directional_coherence()
@@ -60,14 +60,21 @@ PROMPT_TEMPLATE_VERSION <- '0.4'
 # a fragment's compact block: one header line (id/type/direction/effect/sig),
 # the compact_summary, and up to `max_findings` top_findings as compact JSON;
 # already-curated fragments (tools only keep the top few) rarely hit the cap,
-# it's a backstop for token efficiency, not the primary truncation
+# it's a backstop for token efficiency, not the primary truncation -- true for
+# every core tool except top_genes_tool(), whose ranked_genes fragment
+# deliberately carries the tool's full requested n_hubs (25 by default, often
+# more), not "the top few"; capping it at the same max_findings as a 5-item
+# signature list would silently hide lower-ranked-but-biologically-important
+# hub genes from the model (confirmed doing exactly that for a real module:
+# checkpoint/exhaustion markers ranked 9-16 by kME never reached the prompt),
+# so ranked_genes fragments are exempt from the cap
 .render_fragment_compact <- function(frag, max_findings = 8){
     sig <- if (is.null(frag$significance) || is.na(frag$significance)) 'NA' else format(frag$significance, digits = 4)
     header <- sprintf(
         '[%s] type=%s direction=%s effect_strength=%s significance=%s',
         frag$fragment_id, frag$type, frag$direction, format(frag$effect_strength, digits = 4), sig
     )
-    findings <- utils::head(frag$top_findings, max_findings)
+    findings <- if (identical(frag$type, 'ranked_genes')) frag$top_findings else utils::head(frag$top_findings, max_findings)
     findings_json <- jsonlite::toJSON(findings, auto_unbox = TRUE, na = 'null')
     paste(header, frag$compact_summary, paste0('top_findings: ', findings_json), sep = '\n')
 }
@@ -163,10 +170,12 @@ build_system_prompt <- function(){
         'from a fixed evidence packet produced by a deterministic analysis pipeline.',
         '',
         'Rules:',
+        '- FIRST STEP, before drafting anything else: find the ranked_genes fragment (e.g. top_genes) and read its top_findings gene list. Using your own biological knowledge of those specific gene symbols, identify the single most specific cell state or program they mark as a set (e.g. a named checkpoint/exhaustion program, a cytotoxicity program, a naive/memory state, a proliferation program, a signaling pathway) -- this gene-identity call is the module\'s core biological identity and must anchor proposed_label and dominant_biology. Only after that, use the other fragments (state_expression, differential_module_activity, signature_correlation, geneset_enrichment, etc.) to add supporting context, cell-state localization, and condition dynamics around that identity -- never let a different fragment\'s numeric ranking override or replace the gene-identity call, and do not default to whichever fragment happens to report the single largest effect_strength number: a top-ranked item within one fragment\'s top_findings can reflect a small-sample statistical artifact rather than the module\'s dominant biology, so weigh a fragment\'s top_findings list as a whole rather than only its top-ranked entry.',
         '- Use only the evidence given below. Do not invent genes, terms, or results, and do not run or imagine any analysis.',
         '- Every entry in supporting_claims must cite the fragment_id(s) it is based on, and its direction must match the direction reported by those fragments.',
-        '- A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report.',
+        '- A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report. Concrete example of what NOT to do: {"claim": "genes X/Y/Z indicate cytotoxicity, consistent with geneset_enrichment", "fragment_ids": ["top_genes", "geneset_enrichment"], "direction": "up"} is INVALID because top_genes reports direction na, not up. Instead write two entries: {"claim": "the module\'s hub genes (X, Y, Z) mark a cytotoxicity program", "fragment_ids": ["top_genes"], "direction": "na"} and {"claim": "consistent with this, geneset_enrichment shows cytotoxicity terms enriched", "fragment_ids": ["geneset_enrichment"], "direction": "up"}.',
         '- metadata_associations entries must cite a real fragment_id the same way.',
+        '- Fill cell_state from a state_expression fragment when one is present (which cell state(s) the module is expressed in), and condition_dynamics from a cross_condition_delta fragment when one is present (how the module\'s activity shifts across the tested condition) -- leave either NA only when no such fragment is in the packet.',
         paste0('- Each fragment has a type from a controlled vocabulary: ', paste(.fragment_types, collapse = ', '), '.'),
         paste0('- flags must be drawn only from: ', paste(.interpretation_flags, collapse = ', '), '.'),
         '- If the evidence is weak, sparse, or inconsistent, do not invent a confident story: set flags to include insufficient_evidence, keep supporting_claims minimal (or empty), and give a low confidence score.',

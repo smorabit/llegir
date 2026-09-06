@@ -24,18 +24,35 @@ test_that('render_dataset_description() includes every required field', {
     expect_true(grepl('Glioblastoma', txt))
 })
 
-test_that('render_packet_compact() includes compact_summary but caps top_findings instead of dumping the full result table', {
+test_that('render_packet_compact() includes compact_summary and caps top_findings for a typical (non-ranked_genes) fragment', {
+    top_findings <- lapply(1:10, function(i) list(term = paste0('term', i), fdr = i / 100))
+    frag <- evidence_fragment(
+        fragment_id = 'go', tool_id = 'go', module_id = 'M1', type = 'geneset_enrichment',
+        result = data.frame(term = paste0('term', 1:10)), compact_summary = 'ten enriched terms',
+        top_findings = top_findings, effect_strength = 1, direction = 'up',
+        provenance = make_provenance(tool_version = '0.1')
+    )
+    packet <- build_evidence_packet('M1', list(frag), input_hash = 'abc')
+    txt <- render_packet_compact(packet, max_findings = 8)
+    expect_true(grepl(frag$fragment_id, txt, fixed = TRUE))
+    expect_true(grepl(frag$compact_summary, txt, fixed = TRUE))
+    # rank 1 term is within the cap; rank 10 is not
+    expect_true(grepl('"term1"', txt, fixed = TRUE))
+    expect_false(grepl('"term10"', txt, fixed = TRUE))
+})
+
+test_that('render_packet_compact() exempts ranked_genes fragments from the top_findings cap', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 25))
     frag <- top_genes_tool(ctx)
     packet <- build_evidence_packet(mod_test, list(frag), input_hash = 'abc')
     txt <- render_packet_compact(packet, max_findings = 8)
-    expect_true(grepl(frag$fragment_id, txt, fixed = TRUE))
-    expect_true(grepl(frag$compact_summary, txt, fixed = TRUE))
-    # rank 1 hub gene is within the cap; the full 25-gene result table would
-    # also include rank 25, which the capped rendering must exclude
-    expect_true(grepl(frag$result$gene_name[1], txt, fixed = TRUE))
-    expect_false(grepl(frag$result$gene_name[25], txt, fixed = TRUE))
+    # top_genes_tool() deliberately carries all n_hubs genes (not "the top
+    # few" like every other core tool), so rank 25 must still reach the
+    # prompt -- a synthesis-time regression test for a real failure mode:
+    # capping this fragment hid checkpoint/exhaustion marker genes ranked
+    # 9-16 by kME from the model on a real SERPENTINE module
+    expect_true(grepl(frag$result$gene_name[25], txt, fixed = TRUE))
 })
 
 test_that('build_system_prompt() states the faithfulness rule and controlled vocabularies', {
