@@ -147,8 +147,10 @@ dataset_fragment_from_json <- function(json_str){
 #' `dataset_fragment`'s live `plot_obj` to
 #' `<figures_dir>/dataset/<fragment_id>__<plot_id>.png` and records that path
 #' back onto the spec as `image_path`, so a report rendered after the live
-#' `plot_obj` has been stripped can still embed the figure. Fragments with no
-#' plots are skipped.
+#' `plot_obj` has been stripped can still embed the figure. A spec's own
+#' `width`/`height`/`dpi` (see [attach_plots()]) are honored when set;
+#' otherwise [save_plot_to_png()]'s `7`/`4`/`150` defaults apply. Fragments
+#' with no plots are skipped.
 #'
 #' @param dataset_context A dataset context, as returned by
 #'   [build_dataset_context()] / [run_dataset_context()].
@@ -167,7 +169,7 @@ write_dataset_figures <- function(dataset_context, figures_dir){
             spec <- frag$plots[[plot_id]]
             if (!is.null(spec$plot_obj)) {
                 path <- file.path(out_dir, paste0(file_stub, '__', plot_id, '.png'))
-                save_plot_to_png(spec$plot_obj, path)
+                .save_plot_spec_png(spec, path)
                 spec$image_path <- path
             }
             spec

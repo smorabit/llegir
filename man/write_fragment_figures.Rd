@@ -19,6 +19,8 @@ The graphical sibling of \code{\link[=write_fragment_tables]{write_fragment_tabl
 live \code{plot_obj} to \verb{<figures_dir>/<module_id>/<fragment_id>__<plot_id>.png}
 and records that path back onto the spec as \code{image_path}, so a report
 rendered from a re-read packet (where \code{plot_obj} has already been stripped;
-see \code{\link[=attach_plots]{attach_plots()}}) can still embed the figure. Fragments with no plots
-are skipped.
+see \code{\link[=attach_plots]{attach_plots()}}) can still embed the figure. A spec's own
+\code{width}/\code{height}/\code{dpi} (see \code{\link[=attach_plots]{attach_plots()}}) are honored when set;
+otherwise \code{\link[=save_plot_to_png]{save_plot_to_png()}}'s \code{7}/\code{4}/\code{150} defaults apply. Fragments
+with no plots are skipped.
 }

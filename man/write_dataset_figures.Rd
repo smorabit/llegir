@@ -21,6 +21,8 @@ The dataset-level sibling of \code{\link[=write_fragment_figures]{write_fragment
 \code{dataset_fragment}'s live \code{plot_obj} to
 \verb{<figures_dir>/dataset/<fragment_id>__<plot_id>.png} and records that path
 back onto the spec as \code{image_path}, so a report rendered after the live
-\code{plot_obj} has been stripped can still embed the figure. Fragments with no
-plots are skipped.
+\code{plot_obj} has been stripped can still embed the figure. A spec's own
+\code{width}/\code{height}/\code{dpi} (see \code{\link[=attach_plots]{attach_plots()}}) are honored when set;
+otherwise \code{\link[=save_plot_to_png]{save_plot_to_png()}}'s \code{7}/\code{4}/\code{150} defaults apply. Fragments
+with no plots are skipped.
 }

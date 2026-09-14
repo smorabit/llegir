@@ -50,6 +50,12 @@
         if (!is.null(spec$placement) && !(spec$placement %in% c('above', 'below'))) {
             stop(context, ': plot \'', plot_id, '\' placement must be \'above\' or \'below\'')
         }
+        for (dim in c('width', 'height', 'dpi')) {
+            val <- spec[[dim]]
+            if (!is.null(val) && (!is.numeric(val) || length(val) != 1 || val <= 0)) {
+                stop(context, ': plot \'', plot_id, '\' ', dim, ' must be a single positive number')
+            }
+        }
     }
     invisible(TRUE)
 }
@@ -77,6 +83,18 @@ save_plot_to_png <- function(p, path, width = 7, height = 4, dpi = 150){
     invisible(path)
 }
 
+# shared by write_fragment_figures() / write_dataset_figures(): renders one
+# spec's live plot_obj to path, honoring the spec's own width/height/dpi
+# (validated positive numbers by .validate_plots(), inches/inches/ppi) over
+# save_plot_to_png()'s 7/4/150 defaults when the spec sets them
+.save_plot_spec_png <- function(spec, path){
+    args <- list(p = spec$plot_obj, path = path)
+    if (!is.null(spec$width)) args$width <- spec$width
+    if (!is.null(spec$height)) args$height <- spec$height
+    if (!is.null(spec$dpi)) args$dpi <- spec$dpi
+    do.call(save_plot_to_png, args)
+}
+
 #' Attach plots to an evidence or dataset fragment
 #'
 #' Decorates an existing fragment with one or more pre-rendered figures
@@ -89,8 +107,11 @@ save_plot_to_png <- function(p, path, width = 7, height = 4, dpi = 150){
 #' @param plots A named list of plot specs. Each spec is a list with either a
 #'   live `plot_obj` (a `ggplot`/`grob`/`gtable`/`patchwork`/`recordedplot`/
 #'   `trellis` object) or a character `image_path`, plus optional `legend`
-#'   (a single string) and `placement` (`'above'` or `'below'`, default
-#'   `'below'`).
+#'   (a single string), `placement` (`'above'` or `'below'`, default
+#'   `'below'`), and `width`/`height`/`dpi` (single positive numbers,
+#'   inches/inches/pixels-per-inch) honored by [write_fragment_figures()] /
+#'   [write_dataset_figures()] when rendering a live `plot_obj` to PNG --
+#'   default `7`/`4`/`150` (see [save_plot_to_png()]) when omitted.
 #' @return `frag` with `plots` merged in.
 #' @export
 attach_plots <- function(frag, plots){

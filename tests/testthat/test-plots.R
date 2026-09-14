@@ -86,6 +86,19 @@ test_that('.validate_plots() rejects an invalid placement', {
     expect_error(.validate_plots(plots, 'evidence_fragment'), 'placement must be')
 })
 
+test_that('.validate_plots() accepts a spec with width/height/dpi and rejects a non-positive one', {
+    ok <- list(sized = list(plot_obj = fake_plot(), width = 10, height = 8, dpi = 200))
+    expect_true(.validate_plots(ok, 'evidence_fragment'))
+
+    for (dim in c('width', 'height', 'dpi')) {
+        bad <- list(sized = list(plot_obj = fake_plot()))
+        bad$sized[[dim]] <- 0
+        expect_error(.validate_plots(bad, 'evidence_fragment'), paste0(dim, ' must be a single positive number'))
+        bad$sized[[dim]] <- c(1, 2)
+        expect_error(.validate_plots(bad, 'evidence_fragment'), paste0(dim, ' must be a single positive number'))
+    }
+})
+
 test_that('.strip_plot_objs() drops plot_obj and leaves a plotless fragment unchanged', {
     frag <- make_valid_fragment()
     expect_identical(.strip_plot_objs(frag), frag)
@@ -258,6 +271,24 @@ test_that('write_fragment_figures() materializes live plots and records image_pa
     expect_true(file.exists(expected_path))
     expect_equal(result$fragments[[1]]$plots$activity_violin$image_path, expected_path)
     expect_null(result$fragments[[2]]$plots)
+})
+
+test_that('write_fragment_figures() honors a spec\'s own width/height/dpi over the 7/4/150 defaults', {
+    testthat::skip_if_not_installed('ggplot2')
+    testthat::skip_if_not_installed('png')
+    p <- ggplot2::ggplot(data.frame(x = 1:3, y = 1:3), ggplot2::aes(x, y)) + ggplot2::geom_point()
+    frag <- attach_plots(make_valid_fragment(), list(
+        sized = list(plot_obj = p, width = 3, height = 2, dpi = 100)
+    ))
+    packet <- build_evidence_packet('MM1', list(frag), input_hash = 'abc')
+
+    tmp_dir <- tempfile()
+    on.exit(unlink(tmp_dir, recursive = TRUE))
+    result <- write_fragment_figures(packet, tmp_dir)
+
+    dims <- dim(png::readPNG(result$fragments[[1]]$plots$sized$image_path))
+    expect_equal(dims[2], 300)
+    expect_equal(dims[1], 200)
 })
 
 test_that('write_dataset_figures() materializes a dataset context\'s live plots and records image_path', {

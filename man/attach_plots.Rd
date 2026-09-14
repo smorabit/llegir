@@ -12,8 +12,11 @@ attach_plots(frag, plots)
 \item{plots}{A named list of plot specs. Each spec is a list with either a
 live \code{plot_obj} (a \code{ggplot}/\code{grob}/\code{gtable}/\code{patchwork}/\code{recordedplot}/
 \code{trellis} object) or a character \code{image_path}, plus optional \code{legend}
-(a single string) and \code{placement} (\code{'above'} or \code{'below'}, default
-\code{'below'}).}
+(a single string), \code{placement} (\code{'above'} or \code{'below'}, default
+\code{'below'}), and \code{width}/\code{height}/\code{dpi} (single positive numbers,
+inches/inches/pixels-per-inch) honored by \code{\link[=write_fragment_figures]{write_fragment_figures()}} /
+\code{\link[=write_dataset_figures]{write_dataset_figures()}} when rendering a live \code{plot_obj} to PNG --
+default \code{7}/\code{4}/\code{150} (see \code{\link[=save_plot_to_png]{save_plot_to_png()}}) when omitted.}
 }
 \value{
 \code{frag} with \code{plots} merged in.

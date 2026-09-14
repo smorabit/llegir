@@ -313,8 +313,10 @@ write_fragment_tables <- function(packet, tables_dir){
 #' live `plot_obj` to `<figures_dir>/<module_id>/<fragment_id>__<plot_id>.png`
 #' and records that path back onto the spec as `image_path`, so a report
 #' rendered from a re-read packet (where `plot_obj` has already been stripped;
-#' see [attach_plots()]) can still embed the figure. Fragments with no plots
-#' are skipped.
+#' see [attach_plots()]) can still embed the figure. A spec's own
+#' `width`/`height`/`dpi` (see [attach_plots()]) are honored when set;
+#' otherwise [save_plot_to_png()]'s `7`/`4`/`150` defaults apply. Fragments
+#' with no plots are skipped.
 #'
 #' @param packet An evidence packet, as returned by [build_evidence_packet()].
 #' @param figures_dir Output directory.
@@ -331,7 +333,7 @@ write_fragment_figures <- function(packet, figures_dir){
             spec <- frag$plots[[plot_id]]
             if (!is.null(spec$plot_obj)) {
                 path <- file.path(module_dir, paste0(file_stub, '__', plot_id, '.png'))
-                save_plot_to_png(spec$plot_obj, path)
+                .save_plot_spec_png(spec, path)
                 spec$image_path <- path
             }
             spec

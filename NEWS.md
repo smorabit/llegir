@@ -1,5 +1,14 @@
 # llegir 0.0.0.9000
 
+* `write_fragment_figures()` / `write_dataset_figures()` now honor a plot
+  spec's own `width`/`height`/`dpi` (already part of the documented on-disk
+  plots-slot shape in `docs/schemas.md` / `inst/schemas/evidence_fragment.schema.json`,
+  but silently ignored at render time until now) instead of always using
+  `save_plot_to_png()`'s `7`/`4`/`150` defaults -- surfaced by a Part 6
+  dotplot with 19 rows that needed more room than the default canvas.
+  `.validate_plots()` now rejects a non-positive or non-scalar `width`/
+  `height`/`dpi`, matching the existing `legend`/`placement` checks.
+
 * `write_interpretation_report()` gains an optional `dataset_context` argument:
   when supplied, its `dataset_fragments` render (compact_summary, top_findings
   table, caveats, and any attached `plots`) in a "Dataset-level evidence"
