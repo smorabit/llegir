@@ -19,7 +19,12 @@
             stop('import_fragment(geneset_enrichment) missing columns: ', paste(missing_cols, collapse = ', '))
         }
 
-        ordered <- result[order(result[[p_col]]), ]
+        # tie-break by descending absolute effect: an imported overlap table
+        # (e.g. CancerSEA) can have identical significance across every row,
+        # and order()'s stable sort would otherwise silently keep whatever
+        # rows came first in the input (alphabetical by term) instead of the
+        # strongest ones
+        ordered <- result[order(result[[p_col]], -abs(result[[effect_col]])), ]
         top <- utils::head(ordered, params$n_top %||% 20)
         top_findings <- lapply(seq_len(min(5, nrow(top))), function(i){
             list(term = top[[term_col]][i], significance = top[[p_col]][i], effect = top[[effect_col]][i])

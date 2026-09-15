@@ -31,6 +31,18 @@ test_that('import_fragment() normalizes a categorical_association table (e.g. a 
     expect_equal(frag$effect_strength, 0.71)
 })
 
+test_that('import_fragment() breaks geneset_enrichment significance ties by descending effect', {
+    user_table <- data.frame(
+        term = c('Angiogenesis', 'DNA Repair', 'Hypoxia', 'Inflammation', 'Invasion', 'Quiescence'),
+        odds_ratio = c(1.1, 1.3, 9.4, 1.0, 1.2, 0.9),
+        fdr = rep(1, 6)
+    )
+    frag <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = user_table)
+    expect_equal(frag$top_findings[[1]]$term, 'Hypoxia')
+    expect_true(frag$top_findings[[1]]$effect >= frag$top_findings[[2]]$effect)
+    expect_false(identical(frag$top_findings[[1]]$term, 'Angiogenesis'))
+})
+
 test_that('import_fragment() respects custom column names via params', {
     user_table <- data.frame(pathway = c('A', 'B'), OR = c(5, 2), padj = c(0.01, 0.3))
     frag <- import_fragment(
