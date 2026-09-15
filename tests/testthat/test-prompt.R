@@ -62,6 +62,34 @@ test_that('build_system_prompt() states the faithfulness rule and controlled voc
     expect_true(grepl('ranked_genes', txt))
 })
 
+## compartment-neutral exemplars (Part 6, SERPENTINE tumor milestone): the
+## gene-identity instruction previously hardcoded T-cell-flavored exemplars
+## (checkpoint/exhaustion, cytotoxicity, naive/memory), which steer an
+## unannotated malignant compartment toward population-style labels it
+## should not produce. The instruction's real content (anchor the label on
+## the gene-identity call, scan the whole top_findings list rather than just
+## rank 1) must survive; compartment framing now comes from the rendered
+## dataset_description instead of a hardcoded exemplar list.
+
+test_that('build_system_prompt() no longer hardcodes T-cell-flavored exemplars', {
+    txt <- build_system_prompt()
+    expect_false(grepl('checkpoint/exhaustion', txt))
+    expect_false(grepl('cytotoxicity program', txt))
+    expect_false(grepl('naive/memory state', txt))
+})
+
+test_that('build_system_prompt() still anchors the label on the gene-identity call and scans the whole findings list', {
+    txt <- build_system_prompt()
+    expect_true(grepl('gene-identity call', txt))
+    expect_true(grepl('Scan the whole top_findings gene list', txt, fixed = TRUE))
+    expect_true(grepl('proposed_label and dominant_biology', txt, fixed = TRUE))
+})
+
+test_that('build_system_prompt() points to the dataset context for compartment-specific framing', {
+    txt <- build_system_prompt()
+    expect_true(grepl('DATASET CONTEXT', txt, fixed = TRUE))
+})
+
 test_that('build_user_prompt() prepends the dataset description before the packet', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 10))
@@ -104,6 +132,61 @@ test_that('build_system_prompt() asks the model for its own calibrated confidenc
     expect_false(grepl('EVIDENCE CONFIDENCE MATRIX', txt))
     expect_false(grepl('E_evidence', txt))
     expect_true(grepl('calibrated certainty', txt))
+})
+
+## render_max_findings (Part 4.5): a dataset fragment can opt out of the
+## top_findings render cap when its findings are a census (one entry per
+## group) rather than a top-N ranking -- the dataset-context sibling of
+## render_packet_compact()'s ranked_genes exemption, but declared per
+## fragment via dataset_fragment(render_max_findings = ...) rather than by
+## type, since composition_summary covers both shapes in the SERPENTINE
+## tumor milestone (cluster_reference is a census; composition and
+## milo_abundance are not).
+
+test_that('render_dataset_context_compact() caps a dataset fragment that does not set render_max_findings', {
+    top_findings <- lapply(1:10, function(i) list(cluster = paste0('Tumor-', i)))
+    frag <- dataset_fragment(
+        fragment_id = 'composition', tool_id = 'x', type = 'composition_summary',
+        result = data.frame(cluster = paste0('Tumor-', 1:10)), compact_summary = 'ten clusters',
+        top_findings = top_findings, provenance = make_provenance(tool_version = '0.1')
+    )
+    ctx <- build_dataset_context(list(frag), input_hash = 'abc')
+    txt <- render_dataset_context_compact(ctx, max_findings = 8)
+    expect_true(grepl('"Tumor-1"', txt, fixed = TRUE))
+    expect_false(grepl('"Tumor-10"', txt, fixed = TRUE))
+})
+
+test_that('render_dataset_context_compact() renders every finding for a fragment that sets render_max_findings', {
+    top_findings <- lapply(1:22, function(i) list(cluster = paste0('Tumor-', i)))
+    frag <- dataset_fragment(
+        fragment_id = 'cluster_reference', tool_id = 'x', type = 'composition_summary',
+        result = data.frame(cluster = paste0('Tumor-', 1:22)), compact_summary = 'census of 22 clusters',
+        top_findings = top_findings, provenance = make_provenance(tool_version = '0.1'),
+        render_max_findings = 22
+    )
+    ctx <- build_dataset_context(list(frag), input_hash = 'abc')
+    txt <- render_dataset_context_compact(ctx, max_findings = 8)
+    expect_true(grepl('"Tumor-22"', txt, fixed = TRUE))
+})
+
+test_that('render_dataset_context_compact() applies the per-fragment override independently within one context', {
+    capped_findings <- lapply(1:10, function(i) list(cluster = paste0('A-', i)))
+    census_findings <- lapply(1:12, function(i) list(cluster = paste0('B-', i)))
+    capped <- dataset_fragment(
+        fragment_id = 'composition', tool_id = 'x', type = 'composition_summary',
+        result = data.frame(cluster = paste0('A-', 1:10)), compact_summary = 'a',
+        top_findings = capped_findings, provenance = make_provenance(tool_version = '0.1')
+    )
+    census <- dataset_fragment(
+        fragment_id = 'cluster_reference', tool_id = 'x', type = 'composition_summary',
+        result = data.frame(cluster = paste0('B-', 1:12)), compact_summary = 'b',
+        top_findings = census_findings, provenance = make_provenance(tool_version = '0.1'),
+        render_max_findings = 12
+    )
+    ctx <- build_dataset_context(list(capped, census), input_hash = 'abc')
+    txt <- render_dataset_context_compact(ctx, max_findings = 8)
+    expect_false(grepl('"A-10"', txt, fixed = TRUE))
+    expect_true(grepl('"B-12"', txt, fixed = TRUE))
 })
 
 test_that('render_packet_compact() appends the housekeeping note for a ribosomal-heavy hub list', {

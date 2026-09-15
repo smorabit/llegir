@@ -5,6 +5,16 @@
 ## significance/direction) and adds caveats. docs/schemas.md,
 ## inst/schemas/dataset_fragment.schema.json
 
+# when a dataset context mixes fragments that set render_max_findings with
+# ones that don't, jsonlite's simplifyDataFrame can turn the sparse column
+# into a numeric vector padded with NA for the fragments that omitted it,
+# rather than leaving the field absent -- collapse both "absent" and "NA" to
+# a true NULL so the round trip matches dataset_fragment()'s own omit-if-NULL
+# treatment
+.null_if_absent <- function(x){
+    if (is.null(x) || length(x) == 0 || (length(x) == 1 && is.na(x))) NULL else x
+}
+
 # controlled vocab for dataset_fragment$type (docs/schemas.md); mirrors
 # .fragment_types in R/fragment.R but is its own list -- extend deliberately
 .dataset_fragment_types <- c(
@@ -39,10 +49,19 @@
 #' @param provenance A provenance list, typically built with [make_provenance()].
 #' @param plots Optional named list of plot specs to attach; see
 #'   [attach_plots()]. Default `NULL`.
+#' @param render_max_findings Optional override for how many `top_findings`
+#'   entries [.render_dataset_fragment_compact()] renders for this fragment,
+#'   for a fragment whose findings are a census (one entry per group) rather
+#'   than a top-N ranking, e.g. a cluster reference card with one row per
+#'   cluster. `NULL` (default) means "use the caller's cap"; see
+#'   [build_user_prompt()]. Never added to `required`, so a fragment that
+#'   omits it validates, serializes, and hashes exactly as one built before
+#'   this field existed.
 #' @return A `dataset_fragment` object.
 #' @export
 dataset_fragment <- function(fragment_id, tool_id, type, result, compact_summary,
-                              top_findings, caveats = list(), provenance = list(), plots = NULL){
+                              top_findings, caveats = list(), provenance = list(), plots = NULL,
+                              render_max_findings = NULL){
     type <- match.arg(type, .dataset_fragment_types)
     frag <- list(
         fragment_id = fragment_id,
@@ -55,6 +74,10 @@ dataset_fragment <- function(fragment_id, tool_id, type, result, compact_summary
         provenance = provenance,
         plots = plots
     )
+    # omitted (not set to NULL) when unused, unlike `plots`, so the on-disk
+    # and hashed shape of a fragment that never opts in is byte-identical to
+    # one built before this field existed
+    if (!is.null(render_max_findings)) frag$render_max_findings <- render_max_findings
     structure(frag, class = 'dataset_fragment')
 }
 
@@ -92,6 +115,10 @@ validate_dataset_fragment <- function(frag){
         stop('provenance missing fields: ', paste(prov_missing, collapse = ', '))
     }
     .validate_plots(frag$plots, 'dataset_fragment')
+    rmf <- frag$render_max_findings
+    if (!is.null(rmf) && (!is.numeric(rmf) || length(rmf) != 1 || is.na(rmf) || rmf <= 0)) {
+        stop('render_max_findings must be a single positive number')
+    }
     invisible(TRUE)
 }
 
@@ -137,7 +164,8 @@ dataset_fragment_from_json <- function(json_str){
         top_findings = .rowlist_from_simplified(parsed$top_findings),
         caveats = if (is.null(parsed$caveats)) list() else parsed$caveats,
         provenance = parsed$provenance,
-        plots = parsed$plots
+        plots = parsed$plots,
+        render_max_findings = .null_if_absent(parsed$render_max_findings)
     ))
 }
 
@@ -273,7 +301,8 @@ read_dataset_context <- function(path){
             top_findings = .rowlist_from_simplified(f$top_findings[[1]]),
             caveats = if (is.null(f$caveats[[1]])) list() else f$caveats[[1]],
             provenance = as.list(f$provenance),
-            plots = if (length(raw_plots) == 0) NULL else raw_plots
+            plots = if (length(raw_plots) == 0) NULL else raw_plots,
+            render_max_findings = .null_if_absent(f$render_max_findings[[1]])
         ))
     })
     list(

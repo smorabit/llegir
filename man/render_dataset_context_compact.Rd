@@ -10,7 +10,10 @@ render_dataset_context_compact(dataset_context, max_findings = 8)
 \item{dataset_context}{A dataset context, as built by \code{\link[=build_dataset_context]{build_dataset_context()}}.}
 
 \item{max_findings}{Maximum number of \code{top_findings} entries rendered per
-fragment. Default \code{8}.}
+fragment. Default \code{8}. A fragment carrying its own
+\code{render_max_findings} (see \code{\link[=dataset_fragment]{dataset_fragment()}}) overrides this cap for
+itself only, e.g. a census-style fragment with one entry per group that
+must never be head-truncated.}
 }
 \value{
 A single character string.

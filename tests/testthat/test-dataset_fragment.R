@@ -57,6 +57,89 @@ test_that('dataset_fragment JSON round-trip preserves fields and result table', 
     expect_true(validate_dataset_fragment(restored))
 })
 
+## render_max_findings (Part 4.5): optional per-fragment override of the
+## top_findings render cap, so a census-style fragment (one entry per group,
+## e.g. the SERPENTINE tumor cluster reference card) is never head-truncated.
+## Never added to `required`; must be omitted entirely (not written as a
+## literal null) when unset so a fragment without it hashes and serializes
+## exactly as one built before this field existed.
+
+test_that('dataset_fragment() omits render_max_findings entirely when unset', {
+    frag <- make_valid_dataset_fragment()
+    expect_false('render_max_findings' %in% names(frag))
+    expect_true(is.null(frag$render_max_findings))
+    expect_false(grepl('render_max_findings', dataset_fragment_to_json(frag), fixed = TRUE))
+})
+
+test_that('a fragment without render_max_findings hashes and serializes exactly as one built before the field existed', {
+    frag <- make_valid_dataset_fragment()
+    # the exact field list dataset_fragment() produced before this Part, with
+    # no render_max_findings name at all -- not merely a NULL value for it
+    pre_shape <- structure(list(
+        fragment_id = frag$fragment_id,
+        tool_id = frag$tool_id,
+        type = frag$type,
+        result = frag$result,
+        compact_summary = frag$compact_summary,
+        top_findings = frag$top_findings,
+        caveats = frag$caveats,
+        provenance = frag$provenance,
+        plots = frag$plots
+    ), class = 'dataset_fragment')
+    expect_identical(names(unclass(frag)), names(unclass(pre_shape)))
+    expect_equal(
+        digest::digest(.dataset_fragment_hashable(pre_shape), algo = 'sha256'),
+        digest::digest(.dataset_fragment_hashable(frag), algo = 'sha256')
+    )
+    expect_equal(dataset_fragment_to_json(pre_shape), dataset_fragment_to_json(frag))
+})
+
+test_that('dataset_fragment() with render_max_findings set carries, validates, and round-trips the field', {
+    frag <- dataset_fragment(
+        fragment_id = 'cluster_reference', tool_id = 'cluster_reference_dataset_tool',
+        type = 'composition_summary',
+        result = data.frame(cluster = c('Tumor-0', 'Tumor-1')),
+        compact_summary = 'census of 2 clusters',
+        top_findings = list(list(cluster = 'Tumor-0'), list(cluster = 'Tumor-1')),
+        provenance = make_provenance(tool_version = '0.1', pkg_versions = list(dummy = '1.0')),
+        render_max_findings = 100
+    )
+    expect_true(validate_dataset_fragment(frag))
+    expect_equal(frag$render_max_findings, 100)
+    restored <- dataset_fragment_from_json(dataset_fragment_to_json(frag))
+    expect_equal(restored$render_max_findings, 100)
+    expect_true(validate_dataset_fragment(restored))
+})
+
+test_that('validate_dataset_fragment() rejects a non-positive render_max_findings', {
+    frag <- make_valid_dataset_fragment()
+    frag$render_max_findings <- -1
+    expect_error(validate_dataset_fragment(frag), 'render_max_findings')
+})
+
+test_that('validate_dataset_fragment() rejects a non-scalar render_max_findings', {
+    frag <- make_valid_dataset_fragment()
+    frag$render_max_findings <- c(5, 10)
+    expect_error(validate_dataset_fragment(frag), 'render_max_findings')
+})
+
+test_that('dataset context JSON round-trip preserves render_max_findings across a mix of capped and uncapped fragments', {
+    census_frag <- dataset_fragment(
+        fragment_id = 'cluster_reference', tool_id = 'x', type = 'composition_summary',
+        result = data.frame(cluster = 'Tumor-0'), compact_summary = 'x',
+        top_findings = list(list(cluster = 'Tumor-0')),
+        provenance = make_provenance(tool_version = '0.1'), render_max_findings = 50
+    )
+    capped_frag <- make_valid_dataset_fragment()
+    context <- build_dataset_context(list(census_frag, capped_frag), input_hash = 'abc')
+    tmp <- tempfile(fileext = '.json')
+    on.exit(unlink(tmp))
+    write_dataset_context(context, tmp)
+    restored <- read_dataset_context(tmp)
+    expect_equal(restored$dataset_fragments[[1]]$render_max_findings, 50)
+    expect_true(is.null(restored$dataset_fragments[[2]]$render_max_findings))
+})
+
 test_that('dataset_fragment JSON round-trip keeps top_findings a list of per-item lists', {
     frag <- make_valid_dataset_fragment()
     frag$top_findings <- list(

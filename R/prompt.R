@@ -9,7 +9,7 @@
 #' for reproducibility.
 #'
 #' @export
-PROMPT_TEMPLATE_VERSION <- '1.0'
+PROMPT_TEMPLATE_VERSION <- '1.2'
 
 # a fragment's compact block: one header line (id/type/direction/effect/sig),
 # the compact_summary, and up to `max_findings` top_findings as compact JSON;
@@ -70,10 +70,16 @@ render_packet_compact <- function(packet, max_findings = 8){
 
 # a dataset_fragment's compact block: mirrors .render_fragment_compact() but
 # there's no direction/effect_strength/significance (dataset_fragment drops
-# the fusion fields), and caveats are appended when present
+# the fusion fields), and caveats are appended when present. A fragment can
+# declare its own render_max_findings (e.g. a cluster reference card, one
+# entry per cluster, a census rather than a top-N ranking) to override the
+# caller's cap -- the dataset_fragment analog of .render_fragment_compact()'s
+# ranked_genes exemption, but per-fragment rather than per-type, since every
+# dataset_fragment type here (composition_summary) can be either shape
 .render_dataset_fragment_compact <- function(frag, max_findings = 8){
     header <- sprintf('[%s] type=%s', frag$fragment_id, frag$type)
-    findings <- utils::head(frag$top_findings, max_findings)
+    cap <- if (is.null(frag$render_max_findings)) max_findings else frag$render_max_findings
+    findings <- utils::head(frag$top_findings, cap)
     findings_json <- jsonlite::toJSON(findings, auto_unbox = TRUE, na = 'null')
     lines <- c(header, frag$compact_summary, paste0('top_findings: ', findings_json))
     if (length(frag$caveats) > 0) {
@@ -93,7 +99,10 @@ render_packet_compact <- function(packet, max_findings = 8){
 #'
 #' @param dataset_context A dataset context, as built by [build_dataset_context()].
 #' @param max_findings Maximum number of `top_findings` entries rendered per
-#'   fragment. Default `8`.
+#'   fragment. Default `8`. A fragment carrying its own
+#'   `render_max_findings` (see [dataset_fragment()]) overrides this cap for
+#'   itself only, e.g. a census-style fragment with one entry per group that
+#'   must never be head-truncated.
 #' @return A single character string.
 #' @examples
 #' frag <- dataset_fragment(
@@ -136,10 +145,10 @@ build_system_prompt <- function(){
         'from a fixed evidence packet produced by a deterministic analysis pipeline.',
         '',
         'Rules:',
-        '- FIRST STEP, before drafting anything else: find the ranked_genes fragment (e.g. top_genes) and read its top_findings gene list. Using your own biological knowledge of those specific gene symbols, identify the single most specific cell state or program they mark as a set (e.g. a named checkpoint/exhaustion program, a cytotoxicity program, a naive/memory state, a proliferation program, a signaling pathway) -- this gene-identity call is the module\'s core biological identity and must anchor proposed_label and dominant_biology. Only after that, use the other fragments (state_expression, differential_module_activity, signature_correlation, geneset_enrichment, etc.) to add supporting context, cell-state localization, and condition dynamics around that identity -- never let a different fragment\'s numeric ranking override or replace the gene-identity call, and do not default to whichever fragment happens to report the single largest effect_strength number: a top-ranked item within one fragment\'s top_findings can reflect a small-sample statistical artifact rather than the module\'s dominant biology, so weigh a fragment\'s top_findings list as a whole rather than only its top-ranked entry.',
+        '- FIRST STEP, before drafting anything else: find the ranked_genes fragment (e.g. top_genes) and read its top_findings gene list. Using your own biological knowledge of those specific gene symbols, identify the single most specific biological state or program they mark as a set (e.g. a named signaling pathway, a metabolic program, a cell-cycle or proliferation program, a differentiation or response program) -- this gene-identity call is the module\'s core biological identity and must anchor proposed_label and dominant_biology. Scan the whole top_findings gene list, not just the top-ranked gene: the identity of a coherent set of hub genes is rarely captured by any single entry. Only after that, use the other fragments (state_expression, differential_module_activity, signature_correlation, geneset_enrichment, etc.) to add supporting context, localization, and condition dynamics around that identity -- never let a different fragment\'s numeric ranking override or replace the gene-identity call, and do not default to whichever fragment happens to report the single largest effect_strength number: a top-ranked item within one fragment\'s top_findings can reflect a small-sample statistical artifact rather than the module\'s dominant biology, so weigh a fragment\'s top_findings list as a whole rather than only its top-ranked entry. A DATASET CONTEXT block, when present, may state the compartment being profiled and whether a proposed_label should name a program rather than a population -- follow that framing when it is given.',
         '- Use only the evidence given below. Do not invent genes, terms, or results, and do not run or imagine any analysis.',
         '- Every entry in supporting_claims must cite the fragment_id(s) it is based on, and its direction must match the direction reported by those fragments.',
-        '- A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report. Concrete example of what NOT to do: {"claim": "genes X/Y/Z indicate cytotoxicity, consistent with geneset_enrichment", "fragment_ids": ["top_genes", "geneset_enrichment"], "direction": "up"} is INVALID because top_genes reports direction na, not up. Instead write two entries: {"claim": "the module\'s hub genes (X, Y, Z) mark a cytotoxicity program", "fragment_ids": ["top_genes"], "direction": "na"} and {"claim": "consistent with this, geneset_enrichment shows cytotoxicity terms enriched", "fragment_ids": ["geneset_enrichment"], "direction": "up"}.',
+        '- A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report. Concrete example of what NOT to do: {"claim": "genes X/Y/Z indicate a hypoxia program, consistent with geneset_enrichment", "fragment_ids": ["top_genes", "geneset_enrichment"], "direction": "up"} is INVALID because top_genes reports direction na, not up. Instead write two entries: {"claim": "the module\'s hub genes (X, Y, Z) mark a hypoxia program", "fragment_ids": ["top_genes"], "direction": "na"} and {"claim": "consistent with this, geneset_enrichment shows hypoxia-related terms enriched", "fragment_ids": ["geneset_enrichment"], "direction": "up"}.',
         '- Write the interpretation field as 1 to 3 sentences of plain prose that support the dominant_biology call, grounded only in the fragments you cite in supporting_claims. Fold in where the module is expressed (from a state_expression fragment, if one is present) and how its activity shifts across the tested condition (from a cross_condition_delta fragment, if one is present) when that context is relevant; do not add localization or dynamics claims the packet does not contain. Keep it consistent with supporting_claims -- do not introduce a program, gene, or term that no cited fragment supports.',
         paste0('- Each fragment has a type from a controlled vocabulary: ', paste(.fragment_types, collapse = ', '), '.'),
         paste0('- flags must be drawn only from: ', paste(.interpretation_flags, collapse = ', '), '.'),

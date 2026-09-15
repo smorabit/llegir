@@ -13,7 +13,8 @@ dataset_fragment(
   top_findings,
   caveats = list(),
   provenance = list(),
-  plots = NULL
+  plots = NULL,
+  render_max_findings = NULL
 )
 }
 \arguments{
@@ -38,6 +39,15 @@ controlled vocab. Default \code{list()}.}
 
 \item{plots}{Optional named list of plot specs to attach; see
 \code{\link[=attach_plots]{attach_plots()}}. Default \code{NULL}.}
+
+\item{render_max_findings}{Optional override for how many \code{top_findings}
+entries \code{\link[=.render_dataset_fragment_compact]{.render_dataset_fragment_compact()}} renders for this fragment,
+for a fragment whose findings are a census (one entry per group) rather
+than a top-N ranking, e.g. a cluster reference card with one row per
+cluster. \code{NULL} (default) means "use the caller's cap"; see
+\code{\link[=build_user_prompt]{build_user_prompt()}}. Never added to \code{required}, so a fragment that
+omits it validates, serializes, and hashes exactly as one built before
+this field existed.}
 }
 \value{
 A \code{dataset_fragment} object.
