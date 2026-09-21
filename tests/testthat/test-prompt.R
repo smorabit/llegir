@@ -55,6 +55,14 @@ test_that('render_packet_compact() exempts ranked_genes fragments from the top_f
     expect_true(grepl(frag$result$gene_name[25], txt, fixed = TRUE))
 })
 
+test_that('build_system_prompt() ties significance wording to the reported significance', {
+    txt <- build_system_prompt()
+    expect_true(grepl('Only call a result "significant"', txt, fixed = TRUE))
+    expect_true(grepl('never use it as support', txt, fixed = TRUE))
+    expect_true(grepl('n_overlap', txt, fixed = TRUE))
+    expect_equal(PROMPT_TEMPLATE_VERSION, '1.3')
+})
+
 test_that('build_system_prompt() states the faithfulness rule and controlled vocabularies', {
     txt <- build_system_prompt()
     expect_true(grepl('fragment_id', txt))

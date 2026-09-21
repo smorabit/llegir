@@ -4,24 +4,45 @@
 \alias{check_faithfulness}
 \title{Check citation faithfulness of an interpretation against its packet}
 \usage{
-check_faithfulness(interp, packet)
+check_faithfulness(interp, packet, alpha = 0.05)
 }
 \arguments{
 \item{interp}{An \code{interpretation} object.}
 
 \item{packet}{The evidence packet \code{interp} was synthesized from.}
+
+\item{alpha}{Significance threshold for the wording check. Default 0.05.}
 }
 \value{
 A list of violation records (empty if faithful); each record is a
-list with \code{location} (always \code{'supporting_claims'}), \code{index},
-\code{fragment_id}, \code{issue} (\code{'missing_fragment'} or \code{'direction_mismatch'}),
-and, for \code{'direction_mismatch'}, \code{claim_direction}/\code{fragment_direction}.
+list with \code{location} (\code{'supporting_claims'} or \code{'interpretation'}),
+\code{index} (claim or sentence number), \code{fragment_id}, \code{issue}
+(\code{'missing_fragment'}, \code{'direction_mismatch'} or
+\code{'unsupported_significance'}), and, for \code{'direction_mismatch'},
+\code{claim_direction}/\code{fragment_direction}.
 }
 \description{
 Every fragment_id cited in \code{supporting_claims} must exist in the module's
 evidence packet, and a \code{supporting_claims} entry's \code{direction} must match
-the direction actually reported by the fragment(s) it cites. Pure and
-non-throwing; see \code{\link[=assert_faithfulness]{assert_faithfulness()}} for the hard-rejecting variant.
+the direction actually reported by the fragment(s) it cites. Significance
+wording ("significant", "enriched", "over-represented"; negated uses such
+as "not significant" are allowed) must be backed by a fragment whose
+\code{significance} is below \code{alpha}:
+\itemize{
+\item in a \code{supporting_claims} entry, when none of its cited fragments passes
+\code{alpha} and at least one of them is a tested result (non-\code{NA}
+significance, or a \code{geneset_enrichment} fragment) -- so a claim that the
+hub genes are "enriched for ribosomal proteins", citing only a
+\code{ranked_genes} fragment, is not flagged;
+\item in each sentence of the \code{interpretation} text, when the fragments that
+sentence names (by \code{fragment_id}, or every \code{geneset_enrichment} fragment
+when it speaks of enrichment without naming one) include none that passes
+\code{alpha}.
+}
+}
+\details{
+Pure and non-throwing; see \code{\link[=assert_faithfulness]{assert_faithfulness()}} for the hard-rejecting
+variant.
 }
 \examples{
 ms <- llegir_example_moduleset()

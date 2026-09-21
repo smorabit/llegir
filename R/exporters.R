@@ -76,12 +76,48 @@ write_interpretation_report <- function(interps, packets, desc,
 # creates the two top-level workspace directories export_agent_workspace()
 # writes into: artifacts/ (serialized run) and scratch/ (empty, reserved for
 # the guest agent's own derived output -- never written to by llegir itself)
-.scaffold_workspace <- function(out_dir){
+.scaffold_workspace <- function(out_dir, mode = 'explore'){
     art_dir <- file.path(out_dir, 'artifacts')
     scratch_dir <- file.path(out_dir, 'scratch')
     dir.create(art_dir, showWarnings = FALSE, recursive = TRUE)
     dir.create(scratch_dir, showWarnings = FALSE, recursive = TRUE)
-    list(art_dir = art_dir, scratch_dir = scratch_dir)
+    # label mode only: labels/ is the one directory the guest agent writes its
+    # deliverable into (one model-facing interpretation JSON per module)
+    labels_dir <- NULL
+    if (identical(mode, 'label')) {
+        labels_dir <- file.path(out_dir, 'labels')
+        dir.create(file.path(labels_dir, 'notes'), showWarnings = FALSE, recursive = TRUE)
+    }
+    list(art_dir = art_dir, scratch_dir = scratch_dir, labels_dir = labels_dir)
+}
+
+# label mode only: the extra read-only inputs a labelling agent needs, written
+# alongside the standard artifacts. label_evidence/<module_id>.md is each
+# packet rendered exactly as the synthesis model sees it (render_packet_compact()),
+# so an agent and an LLM label from the same evidence, followed by the
+# deterministic artifact screen for the label-mode artifact gate; the label
+# schema is the model-facing one with the review block required; the dataset
+# description is serialized so collect_agent_labels() can rebuild the
+# synthesis inputs from the workspace alone
+.write_label_artifacts <- function(ms, packets, desc, art_dir, sample_col = NULL){
+    desc_path <- file.path(art_dir, 'dataset_description.qs2')
+    qs2::qs_save(desc, desc_path)
+
+    schema_path <- file.path(art_dir, 'interpretation_model_output.schema.json')
+    writeLines(jsonlite::prettify(model_output_schema_json(include_review = TRUE)), schema_path)
+
+    evidence_dir <- file.path(art_dir, 'label_evidence')
+    dir.create(evidence_dir, showWarnings = FALSE)
+    for (mid in names(packets)) {
+        evidence <- paste0(render_packet_compact(packets[[mid]]), '\n\n', .label_artifact_screen(ms, mid, sample_col))
+        writeLines(evidence, file.path(evidence_dir, paste0(mid, '.md')))
+    }
+
+    lapply(list(
+        dataset_description = desc_path,
+        label_schema = schema_path,
+        label_evidence_dir = evidence_dir
+    ), normalizePath, mustWork = TRUE)
 }
 
 # the declared grouping / sample-id column name for a ModuleSet, if any --
@@ -244,7 +280,11 @@ read_agent_manifest <- function(path){
 # TRUE when `need` is something the full ms reports but the lite object
 # doesn't -- the signal a cheat-sheet row/recipe rung must tell the agent it
 # needs moduleset_full.qs2, not the default moduleset_lite.qs2
-.capability_gap <- function(need, full_caps, lite_caps) isTRUE(full_caps[[need]]) && !isTRUE(lite_caps[[need]])
+# single-bracket indexing, as in has_capability(): a custom tool's `requires`
+# can name something that isn't a ModuleSet capability at all (e.g. a
+# 'tool::param' requirement a tool raises for a missing param), which must
+# read as "no gap" rather than a "subscript out of bounds" error
+.capability_gap <- function(need, full_caps, lite_caps) isTRUE(full_caps[need]) && !isTRUE(lite_caps[need])
 
 .any_capability_gap <- function(needs, full_caps, lite_caps){
     length(needs) > 0 && any(vapply(needs, .capability_gap, logical(1), full_caps = full_caps, lite_caps = lite_caps))
@@ -460,7 +500,10 @@ read_agent_manifest <- function(path){
         interpretations = 'list[interpretation]',
         dataset_context_json = 'json',
         packets_dir_json = 'directory[json]',
-        interpretations_dir_json = 'directory[json]'
+        interpretations_dir_json = 'directory[json]',
+        dataset_description = 'dataset_description',
+        label_schema = 'json schema',
+        label_evidence_dir = 'directory[md]'
     )
     notes <- list(
         moduleset_lite = 'default -- load this. qs2::qs_read() to a ModuleSet with expression()/counts() dropped; every other getter/tool works unchanged',
@@ -470,7 +513,10 @@ read_agent_manifest <- function(path){
         interpretations = 'qs2::qs_read() to a named list of interpretation objects, keyed by module id',
         dataset_context_json = 'text mirror of dataset_context; hashable, readable without R',
         packets_dir_json = 'one <module_id>.json per evidence packet; text mirror of packets',
-        interpretations_dir_json = 'one <module_id>.json per interpretation; text mirror of interpretations'
+        interpretations_dir_json = 'one <module_id>.json per interpretation; text mirror of interpretations',
+        dataset_description = 'qs2::qs_read() to the dataset_description (label mode)',
+        label_schema = 'the schema every labels/<module_id>.json must fill (label mode)',
+        label_evidence_dir = 'one <module_id>.md per module: its packet rendered exactly as the synthesis model sees it (label mode)'
     )
     lapply(names(paths), function(nm){
         list(
@@ -537,7 +583,7 @@ read_agent_manifest <- function(path){
 # portable if zipped/moved, resolvable against the absolute workspace_root
 # also recorded here. capabilities are always the FULL ms's -- nothing is
 # dropped from the docs just because the default load is the lite object.
-.build_front_matter <- function(ms, desc, paths, workspace_root){
+.build_front_matter <- function(ms, desc, paths, workspace_root, mode = 'explore'){
     front <- list(
         llegir_manifest_version = .llegir_manifest_version,
         generated_at = .iso8601_now(),
@@ -551,6 +597,13 @@ read_agent_manifest <- function(path){
         data_level = ms$data_level,
         aggregated = ms$aggregated
     )
+    # label-mode keys are appended only in label mode, so an explore-mode
+    # manifest stays exactly what it was before the mode existed
+    if (identical(mode, 'label')) {
+        front$mode <- 'label'
+        front$labels_dir <- 'labels'
+        front$prompt_template_version <- PROMPT_TEMPLATE_VERSION
+    }
     yaml::as.yaml(front, handlers = .yaml_bool_handler)
 }
 
@@ -588,10 +641,31 @@ read_agent_manifest <- function(path){
 #' @param out_dir Destination workspace directory. Default `'agent_workspace'`.
 #' @param write_json Also emit portable JSON copies of the context, packets,
 #'   and (if present) interpretations. Default `TRUE`.
+#' @param mode `'explore'` (default) exports the read-only query workspace
+#'   described above, unchanged. `'label'` additionally commissions the agent
+#'   to write module labels: the manifest gains a Labeling Task section
+#'   carrying the synthesis prompt's rules ([build_system_prompt()]) and the
+#'   model-facing schema, each module's packet is rendered to
+#'   `artifacts/label_evidence/<module_id>.md` exactly as the synthesis model
+#'   sees it, a `labels/` directory is created for the agent's output (one
+#'   `<module_id>.json` per module), and `validate_labels.R` is shipped so the
+#'   agent can check its labels with [check_agent_labels()]. The manifest
+#'   also sets a refinement protocol (artifact gate, evidence hierarchy,
+#'   falsification against expected markers, anchored confidence, unique
+#'   labels), each label must carry the interpretation's `review` block, and
+#'   each evidence file ends with a deterministic artifact screen. Supplying
+#'   `interps` in label mode ships them as drafts for the agent to refine.
+#'   Collect the result with [collect_agent_labels()].
+#' @param sample_col Label mode only: metadata column naming the biological
+#'   sample (e.g. patient) for the artifact screen's single-sample share of a
+#'   module's top-decile activity. Defaults to the `ModuleSet`'s declared
+#'   sample-id column, if any; `NULL` skips that line.
 #' @return The absolute path to the written manifest, invisibly.
 #' @export
 export_agent_workspace <- function(ms, dataset_context, packets, desc, interps = NULL,
-                                   out_dir = 'agent_workspace', write_json = TRUE){
+                                   out_dir = 'agent_workspace', write_json = TRUE,
+                                   mode = c('explore', 'label'), sample_col = .ms_sample_col(ms)){
+    mode <- match.arg(mode)
     validate_moduleset(ms)
     validate_dataset_description(desc)
 
@@ -602,12 +676,13 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc, interps =
     # command below -- basename(out_dir) would truncate a nested path like
     # 'output/agent_workspace' down to just 'agent_workspace'
     out_dir_display <- out_dir
-    scaffold <- .scaffold_workspace(out_dir)
+    scaffold <- .scaffold_workspace(out_dir, mode = mode)
     out_dir <- normalizePath(out_dir, mustWork = TRUE)
 
     ms_lite <- .make_moduleset_lite(ms)
     lite_caps <- capabilities(ms_lite)
     paths <- .write_workspace_artifacts(ms, ms_lite, dataset_context, packets, interps, scaffold$art_dir, write_json)
+    if (identical(mode, 'label')) paths <- c(paths, .write_label_artifacts(ms, packets, desc, scaffold$art_dir, sample_col))
 
     provenance <- make_provenance(
         tool_version = as.character(utils::packageVersion('llegir')),
@@ -621,11 +696,22 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc, interps =
     # derive the sections that must track the live registry/adapter
     #---------------------------------------------------------
     manifest_model <- list(
-        front_matter = .build_front_matter(ms, desc, paths, out_dir),
+        front_matter = .build_front_matter(ms, desc, paths, out_dir, mode = mode),
         desc_block = render_dataset_description(desc, ms$data_level, ms$aggregated),
         context_block = render_dataset_context_compact(dataset_context),
         topography_block = .render_data_topography_block(.build_data_topography(ms, ms_lite, dataset_context, paths, out_dir)),
-        interpretations_missing = is.null(interps),
+        # the "do not invent labels" guardrail belongs to explore mode only;
+        # label mode replaces it with the Labeling Task section
+        interpretations_missing = is.null(interps) && identical(mode, 'explore'),
+        label_mode = identical(mode, 'label'),
+        label_refine = identical(mode, 'label') && !is.null(interps),
+        n_modules = length(packets),
+        prompt_template_version = PROMPT_TEMPLATE_VERSION,
+        labeling_rules = paste0('> ', strsplit(build_system_prompt(), '\n')[[1]], collapse = '\n'),
+        stress_genes = paste(.dissociation_stress_genes, collapse = ', '),
+        display_excluded = paste(.display_hub_excluded, collapse = ', '),
+        support_rank = .review_max_support_rank,
+        display_rank = .review_max_display_rank,
         api_cheatsheet = .build_api_cheatsheet(ms, lite_caps),
         tool_cheatsheet = .build_tool_cheatsheet(ms, lite_caps),
         recipes = .build_safe_recipes(ms, lite_caps),
@@ -646,8 +732,29 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc, interps =
     if (!nzchar(query_example_src)) stop('could not locate query_example.R in the installed llegir package')
     file.copy(query_example_src, file.path(out_dir, 'query_example.R'), overwrite = TRUE)
 
+    if (identical(mode, 'label')) {
+        validate_src <- system.file('templates/validate_labels.R', package = 'llegir')
+        if (!nzchar(validate_src)) stop('could not locate validate_labels.R in the installed llegir package')
+        file.copy(validate_src, file.path(out_dir, 'validate_labels.R'), overwrite = TRUE)
+    }
+
     artifact_summary <- 'moduleset_lite.qs2 (default), moduleset_full.qs2, dataset_context.qs2, evidence_packets.qs2'
     if (!is.null(interps)) artifact_summary <- paste0(artifact_summary, ', interpretations.qs2')
+
+    if (identical(mode, 'label')) {
+        message(
+            '\u2714 Agent labelling workspace exported (mode = "label").\n\n',
+            '  Manifest : ', file.path(out_dir_display, '.llegir_agent_manifest.md'), '\n',
+            '  Evidence : ', file.path(out_dir_display, 'artifacts', 'label_evidence'), '/  (one <module_id>.md per module)\n',
+            '  Labels   : ', file.path(out_dir_display, 'labels'), '/  (the agent writes one <module_id>.json per module)\n\n',
+            'Start your terminal coding agent in this folder and point it at the manifest:\n\n',
+            '  cd ', out_dir_display, '\n',
+            '  claude   "Read .llegir_agent_manifest.md, then complete its Labeling Task, following its Mission & Guardrails and Execution Protocol."\n\n',
+            'Then collect the labels as validated interpretations:\n\n',
+            '  collect_agent_labels(\'', out_dir_display, '\', output_dir = ..., agent = ...)'
+        )
+        return(invisible(manifest_path))
+    }
 
     message(
         '\u2714 Agent workspace exported.\n\n',

@@ -32,12 +32,17 @@
 #' @param flags A subset of the flag vocabulary: `'insufficient_evidence'`,
 #'   `'needs_human_review'`, `'possible_artifact'`, `'tool_conflict'`,
 #'   `'label_low_specificity'`.
-#' @param schema_version Schema version tag. Default `'0.2'`.
+#' @param review Optional structured self-review (schema 0.3), attached by
+#'   an agent labelling run (see [export_agent_workspace()] with
+#'   `mode = 'label'`); `NULL` (default) for LLM synthesis.
+#' @param schema_version Schema version tag. Defaults to `'0.2'`, or `'0.3'`
+#'   when `review` is supplied (the only 0.3 addition).
 #' @return An `interpretation` object.
 #' @export
 interpretation <- function(module_id, proposed_label, dominant_biology, interpretation,
                             supporting_claims, confidence, provenance,
-                            literature = list(), flags = list(), schema_version = '0.2'){
+                            literature = list(), flags = list(), review = NULL,
+                            schema_version = if (is.null(review)) '0.2' else '0.3'){
     interp <- list(
         module_id = module_id,
         proposed_label = proposed_label,
@@ -46,10 +51,13 @@ interpretation <- function(module_id, proposed_label, dominant_biology, interpre
         supporting_claims = supporting_claims,
         literature = literature,
         confidence = confidence,
-        flags = flags,
-        provenance = provenance,
-        schema_version = schema_version
+        flags = flags
     )
+    # added only when present, so an interpretation without one serializes and
+    # hashes exactly as it did under schema 0.2
+    if (!is.null(review)) interp$review <- review
+    interp$provenance <- provenance
+    interp$schema_version <- schema_version
     structure(interp, class = 'interpretation')
 }
 
@@ -140,12 +148,65 @@ validate_interpretation <- function(interp){
     if (!is.numeric(confidence$model_score) || confidence$model_score < 0 || confidence$model_score > 1) stop('confidence$model_score must be a number in [0, 1]')
     if (!is.character(confidence$rationale) || length(confidence$rationale) != 1) stop('confidence$rationale must be a single string')
 
+    if (!is.null(interp$review)) .validate_review(interp$review)
+
     provenance <- interp$provenance
     if (!is.list(provenance)) stop('provenance must be a list')
     prov_required <- c('model', 'prompt_template_version', 'temperature', 'input_packet_hash', 'timestamp')
     prov_missing <- setdiff(prov_required, names(provenance))
     if (length(prov_missing) > 0) stop('interpretation provenance missing fields: ', paste(prov_missing, collapse = ', '))
 
+    invisible(TRUE)
+}
+
+# parsed JSON (simplifyVector = FALSE) gives display_hubs as a list; the
+# object carries a character vector, whichever door the review came in by
+.normalize_review <- function(review){
+    if (is.null(review)) return(NULL)
+    review$display_hubs <- unlist(review$display_hubs)
+    review
+}
+
+# shape check for the optional review block (inst/schemas/interpretation.schema.json);
+# whether its genes, kMEs and marker calls are TRUE is checked against the
+# ModuleSet by check_agent_labels(), not here
+.review_tiers <- c('hub_genes', 'geneset_enrichment', 'technical_artifact', 'insufficient')
+.review_gate_status <- c('pass', 'technical', 'uncertain')
+.review_confidence_levels <- c('high', 'moderate', 'low', 'very_low')
+
+.validate_review <- function(review){
+    if (!is.list(review)) stop('review must be a list')
+    required <- c('evidence_tier', 'artifact_gate', 'supporting_hubs', 'expected_markers',
+                  'contradicting_evidence', 'alternative_label', 'confidence_level', 'display_hubs')
+    missing_fields <- setdiff(required, names(review))
+    if (length(missing_fields) > 0) stop('review missing fields: ', paste(missing_fields, collapse = ', '))
+
+    is_string <- function(x) is.character(x) && length(x) == 1
+    if (!(is_string(review$evidence_tier) && review$evidence_tier %in% .review_tiers)) {
+        stop('review$evidence_tier must be one of: ', paste(.review_tiers, collapse = ', '))
+    }
+    if (!(is_string(review$artifact_gate$status) && review$artifact_gate$status %in% .review_gate_status)) {
+        stop('review$artifact_gate$status must be one of: ', paste(.review_gate_status, collapse = ', '))
+    }
+    if (!is_string(review$artifact_gate$reasons)) stop('review$artifact_gate$reasons must be a single string')
+    if (!(is_string(review$confidence_level) && review$confidence_level %in% .review_confidence_levels)) {
+        stop('review$confidence_level must be one of: ', paste(.review_confidence_levels, collapse = ', '))
+    }
+    if (!is_string(review$contradicting_evidence)) stop('review$contradicting_evidence must be a single string')
+    if (!is_string(review$alternative_label$label) || !is_string(review$alternative_label$reason_rejected)) {
+        stop('review$alternative_label needs a label and a reason_rejected string')
+    }
+
+    if (!is.list(review$supporting_hubs) || length(review$supporting_hubs) < 3) stop('review$supporting_hubs needs at least 3 genes')
+    for (hub in review$supporting_hubs) {
+        if (!is_string(hub$gene) || !is.numeric(hub$kme) || length(hub$kme) != 1) stop('each review$supporting_hubs entry needs a gene and a numeric kme')
+    }
+    if (!is.list(review$expected_markers) || length(review$expected_markers) < 1) stop('review$expected_markers needs at least 1 gene')
+    for (marker in review$expected_markers) {
+        if (!is_string(marker$gene) || !is.logical(marker$present) || length(marker$present) != 1) stop('each review$expected_markers entry needs a gene and a logical present')
+    }
+    display_hubs <- unlist(review$display_hubs)
+    if (!is.character(display_hubs) || length(display_hubs) != 3) stop('review$display_hubs must be exactly 3 genes')
     invisible(TRUE)
 }
 
@@ -178,6 +239,7 @@ interpretation_hash <- function(interp){
         lit$pmids <- I(unlist(lit$pmids) %||% character(0))
         lit
     })
+    if (!is.null(interp$review)) interp$review$display_hubs <- I(unlist(interp$review$display_hubs))
     interp
 }
 
@@ -218,6 +280,7 @@ interpretation_from_json <- function(json_str){
         provenance = parsed$provenance,
         literature = parsed$literature %||% list(),
         flags = unlist(parsed$flags) %||% list(),
+        review = .normalize_review(parsed$review),
         schema_version = parsed$schema_version %||% '0.2'
     )
 }

@@ -18,6 +18,90 @@ test_that('import_fragment() normalizes a geneset_enrichment table and tags it u
     expect_equal(frag$top_findings[[1]]$term, 'Interferon Response')
 })
 
+test_that('a non-significant geneset_enrichment summary lists fewer terms than a significant one', {
+    non_sig <- data.frame(
+        term = paste0('T', 1:6), odds_ratio = 6:1, fdr = rep(1, 6),
+        size_intersection = c(4, 3, 3, 2, 2, 1)
+    )
+    frag <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = non_sig)
+    expect_equal(lengths(regmatches(frag$compact_summary, gregexpr('genes overlap', frag$compact_summary)))[[1]], 3)
+
+    sig <- transform(non_sig, fdr = c(rep(0.001, 5), 1))
+    frag_sig <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = sig)
+    expect_equal(lengths(regmatches(frag_sig$compact_summary, gregexpr('genes overlap', frag_sig$compact_summary)))[[1]], 5)
+})
+
+test_that('import_fragment() states when no geneset_enrichment term is significant and drops the direction', {
+    user_table <- data.frame(
+        term = c('Angiogenesis', 'DNA_damage', 'Apoptosis'),
+        odds_ratio = c(1.1, 4.05, 3.31),
+        fdr = c(1, 1, 1)
+    )
+    frag <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = user_table)
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$direction, 'na')
+    expect_match(frag$compact_summary, 'no term reaches FDR < 0.05', fixed = TRUE)
+    expect_match(frag$compact_summary, 'NOT significant', fixed = TRUE)
+    expect_false(grepl('top terms', frag$compact_summary))
+})
+
+test_that('import_fragment() counts significant geneset_enrichment terms against alpha', {
+    user_table <- data.frame(
+        term = c('Interferon Response', 'Dendritic Cell Activation', 'Cell Cycle'),
+        odds_ratio = c(12.5, 8.1, 1.2),
+        fdr = c(0.001, 0.02, 0.6)
+    )
+    frag <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = user_table)
+    expect_match(frag$compact_summary, '2 of 3 tested terms reach FDR < 0.05', fixed = TRUE)
+    expect_false(grepl('Cell Cycle', frag$compact_summary))
+
+    strict <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = user_table, params = list(alpha = 0.01))
+    expect_match(strict$compact_summary, '1 of 3 tested terms reach FDR < 0.01', fixed = TRUE)
+
+    none <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = user_table, params = list(alpha = 1e-4))
+    expect_equal(none$direction, 'na')
+})
+
+test_that('import_fragment() carries overlap size and Jaccard into geneset_enrichment findings and summary', {
+    user_table <- data.frame(
+        modules2 = c('DNA_damage', 'Apoptosis'),
+        odds_ratio = c(4.05, 3.31),
+        fdr = c(1, 1),
+        size_intersection = c(2, 1),
+        Jaccard = c(0.0106, 0.0052)
+    )
+    frag <- import_fragment(
+        module_id = 'MM1', type = 'geneset_enrichment', result = user_table,
+        params = list(term_col = 'modules2')
+    )
+    expect_equal(frag$top_findings[[1]]$n_overlap, 2)
+    expect_equal(frag$top_findings[[1]]$jaccard, 0.0106)
+    # Jaccard stays in top_findings; the prose keeps the overlap count and odds ratio
+    expect_match(frag$compact_summary, 'DNA_damage (2 genes overlap, OR 4.05, FDR 1)', fixed = TRUE)
+    expect_false(grepl('Jaccard', frag$compact_summary, fixed = TRUE))
+})
+
+test_that('import_enrichr() reduces an Overlap k/n string to the overlap count', {
+    user_table <- data.frame(
+        Term = c('Hypoxia', 'Glycolysis'),
+        Overlap = c('7/200', '3/150'),
+        Odds.Ratio = c(6.2, 2.1),
+        Adjusted.P.value = c(0.004, 0.3)
+    )
+    frag <- import_enrichr(module_id = 'MM1', result = user_table)
+    expect_equal(frag$top_findings[[1]]$n_overlap, 7)
+    expect_null(frag$top_findings[[1]]$jaccard)
+    expect_match(frag$compact_summary, 'Hypoxia (7 genes overlap, OR 6.2, FDR 0.004)', fixed = TRUE)
+    expect_length(frag$top_findings, 2)
+})
+
+test_that('import_fragment() leaves geneset_enrichment findings unchanged when no overlap columns exist', {
+    user_table <- data.frame(term = c('A', 'B'), odds_ratio = c(5, 2), fdr = c(0.01, 0.3))
+    frag <- import_fragment(module_id = 'MM1', type = 'geneset_enrichment', result = user_table)
+    expect_setequal(names(frag$top_findings[[1]]), c('term', 'significance', 'effect'))
+    expect_match(frag$compact_summary, 'A (OR 5, FDR 0.01)', fixed = TRUE)
+})
+
 test_that('import_fragment() normalizes a categorical_association table (e.g. a pre-computed DME)', {
     user_table <- data.frame(
         group = c('pDC', 'Monocyte', 'Macrophage'),

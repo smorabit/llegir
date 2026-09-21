@@ -11,7 +11,9 @@ export_agent_workspace(
   desc,
   interps = NULL,
   out_dir = "agent_workspace",
-  write_json = TRUE
+  write_json = TRUE,
+  mode = c("explore", "label"),
+  sample_col = .ms_sample_col(ms)
 )
 }
 \arguments{
@@ -35,6 +37,27 @@ mock-synthesize one.}
 
 \item{write_json}{Also emit portable JSON copies of the context, packets,
 and (if present) interpretations. Default \code{TRUE}.}
+
+\item{mode}{\code{'explore'} (default) exports the read-only query workspace
+described above, unchanged. \code{'label'} additionally commissions the agent
+to write module labels: the manifest gains a Labeling Task section
+carrying the synthesis prompt's rules (\code{\link[=build_system_prompt]{build_system_prompt()}}) and the
+model-facing schema, each module's packet is rendered to
+\verb{artifacts/label_evidence/<module_id>.md} exactly as the synthesis model
+sees it, a \verb{labels/} directory is created for the agent's output (one
+\verb{<module_id>.json} per module), and \code{validate_labels.R} is shipped so the
+agent can check its labels with \code{\link[=check_agent_labels]{check_agent_labels()}}. The manifest
+also sets a refinement protocol (artifact gate, evidence hierarchy,
+falsification against expected markers, anchored confidence, unique
+labels), each label must carry the interpretation's \code{review} block, and
+each evidence file ends with a deterministic artifact screen. Supplying
+\code{interps} in label mode ships them as drafts for the agent to refine.
+Collect the result with \code{\link[=collect_agent_labels]{collect_agent_labels()}}.}
+
+\item{sample_col}{Label mode only: metadata column naming the biological
+sample (e.g. patient) for the artifact screen's single-sample share of a
+module's top-decile activity. Defaults to the \code{ModuleSet}'s declared
+sample-id column, if any; \code{NULL} skips that line.}
 }
 \value{
 The absolute path to the written manifest, invisibly.

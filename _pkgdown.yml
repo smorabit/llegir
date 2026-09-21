@@ -191,10 +191,16 @@ reference:
   desc: >
     export_agent_workspace() serializes a completed run and renders a static
     launchpad file for an external terminal coding agent to run open-ended,
-    read-only queries against it; see docs/agent_workspace.md.
+    read-only queries against it; see docs/agent_workspace.md. With
+    mode = 'label' the workspace instead commissions the agent to write (or
+    refine) module labels, which collect_agent_labels() runs through the same
+    checks as LLM synthesis.
   contents:
   - export_agent_workspace
   - read_agent_manifest
+  - check_agent_labels
+  - collect_agent_labels
+  - agent_label_backend
 
 - title: Statistical helpers
   contents:

@@ -48,15 +48,26 @@
 #' asking the model to fill it twice invites drift. Derived from the one
 #' canonical schema file (rather than hand-duplicated) so the two never
 #' diverge, and normalized to a schema dialect supported across providers.
+#' The optional `review` block (schema 0.3) is dropped by default: it is the
+#' agent-labelling self-review, which LLM synthesis never fills.
 #'
 #' @param schema_path Path to the canonical `interpretation.schema.json`;
 #'   defaults to the schema shipped with the package.
+#' @param include_review Keep the `review` block and make it required, as the
+#'   label schema of `export_agent_workspace(mode = 'label')` does. Default
+#'   `FALSE`.
 #' @return A JSON string (a `jsonlite::toJSON()` scalar) of the model-facing schema.
 #' @examples
 #' model_output_schema_json()
 #' @export
-model_output_schema_json <- function(schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir')){
+model_output_schema_json <- function(schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
+                                     include_review = FALSE){
     schema <- jsonlite::fromJSON(schema_path, simplifyVector = FALSE)
+    if (isTRUE(include_review)) {
+        schema$required <- c(schema$required, 'review')
+    } else {
+        schema$properties$review <- NULL
+    }
     schema$`$schema` <- NULL
     schema$`$id` <- NULL
     schema$schema_version <- NULL
@@ -73,11 +84,11 @@ model_output_schema_json <- function(schema_path = system.file('schemas', 'inter
 #'
 #' A canned, fixed-response backend: the first-class offline backend used by
 #' tests and CI, and never touches the network. It cites fragment_ids
-#' (`'top_genes'`, `'geneset_enrichment'`) and directions (`'na'`, `'up'`)
-#' that hold on every packet produced by the core tools (`top_genes` is
-#' always direction `'na'`, `geneset_enrichment` is always direction
-#' `'up'`), so it passes [check_faithfulness()] against any real evidence
-#' packet without per-module logic.
+#' `'top_genes'` (always direction `'na'`) and `'geneset_enrichment'`, whose
+#' direction (`'up'` only when a term reaches significance, else `'na'`) is
+#' read back from the rendered packet in the user prompt, and its claim text
+#' avoids significance wording, so it passes [check_faithfulness()] against
+#' any real evidence packet without per-module logic.
 #'
 #' @return A backend function with the signature
 #'   `function(system_prompt, user_prompt, schema_json, packet_hash) -> list(content, meta)`,
@@ -88,6 +99,9 @@ model_output_schema_json <- function(schema_path = system.file('schemas', 'inter
 #' @export
 mock_backend <- function(){
     function(system_prompt, user_prompt, schema_json, packet_hash = NA_character_){
+        # render_packet_compact() writes '[fragment_id] type=... direction=...' headers
+        enrich_header <- regmatches(user_prompt, regexpr('\\[geneset_enrichment\\] type=\\S+ direction=\\w+', user_prompt))
+        enrich_direction <- if (length(enrich_header) == 1) sub('^.*direction=', '', enrich_header) else 'up'
         list(
             content = list(
                 module_id = 'MOCK',
@@ -96,7 +110,7 @@ mock_backend <- function(){
                 interpretation = 'Mock synthesis output for offline testing; not derived from the evidence packet.',
                 supporting_claims = list(
                     list(claim = 'Top genes were computed by the deterministic core.', fragment_ids = list('top_genes'), direction = 'na'),
-                    list(claim = 'The module has enriched gene-set terms.', fragment_ids = list('geneset_enrichment'), direction = 'up')
+                    list(claim = 'Gene-set overlap was tested for the hub genes.', fragment_ids = list('geneset_enrichment'), direction = enrich_direction)
                 ),
                 flags = list(),
                 confidence = list(score = 0.5, rationale = 'Mock backend: fixed neutral confidence, not evidence-derived.')
@@ -435,7 +449,10 @@ synthesize_interpretation <- function(packet, desc, backend, temperature = 0, se
         confidence = confidence,
         provenance = provenance,
         literature = list(),
-        flags = unlist(raw$flags) %||% list()
+        flags = unlist(raw$flags) %||% list(),
+        # only an agent label (export_agent_workspace(mode = 'label')) carries
+        # one; the LLM-facing schema omits it, so this is NULL for LLM output
+        review = .normalize_review(raw$review)
     )
     validate_interpretation(interp)
     interp

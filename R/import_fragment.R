@@ -8,6 +8,13 @@
 ## from tool-computed fragments. The synthesis layer (M2) treats them
 ## identically. No adapter/backend dependency -- this only touches a table.
 
+# an overlap column is either a count or an Enrichr/hdWGCNA-style 'k/n' or
+# 'k|n' string; only the overlapping count k is kept
+.overlap_count <- function(x){
+    if (is.numeric(x)) return(x)
+    suppressWarnings(as.numeric(sub('[/|].*$', '', as.character(x))))
+}
+
 .import_normalizers <- list(
     geneset_enrichment = function(result, params){
         term_col <- params$term_col %||% 'term'
@@ -26,17 +33,36 @@
         # strongest ones
         ordered <- result[order(result[[p_col]], -abs(result[[effect_col]])), ]
         top <- utils::head(ordered, params$n_top %||% 20)
-        top_findings <- lapply(seq_len(min(5, nrow(top))), function(i){
-            list(term = top[[term_col]][i], significance = top[[p_col]][i], effect = top[[effect_col]][i])
+        alpha <- params$alpha %||% 0.05
+
+        # overlap statistics are optional: common column names across GeneOverlap,
+        # hdWGCNA and Enrichr exports are picked up unless the caller names one
+        overlap_col <- params$overlap_col %||%
+            utils::head(intersect(c('size_intersection', 'ngenes', 'n_overlap', 'overlap_size', 'Overlap', 'overlap'), colnames(top)), 1)
+        jaccard_col <- params$jaccard_col %||% utils::head(intersect(c('jaccard', 'Jaccard'), colnames(top)), 1)
+        n_overlap <- if (length(overlap_col) == 1) .overlap_count(top[[overlap_col]]) else NULL
+        jaccard <- if (length(jaccard_col) == 1) as.numeric(top[[jaccard_col]]) else NULL
+
+        # 3 rather than 5, matching geneset_enrichment_tool(): the overlap
+        # statistics make each entry longer, and compact_summary names the same terms
+        top_findings <- lapply(seq_len(min(3, nrow(top))), function(i){
+            finding <- list(term = top[[term_col]][i], significance = top[[p_col]][i], effect = top[[effect_col]][i])
+            if (!is.null(n_overlap)) finding$n_overlap <- n_overlap[i]
+            if (!is.null(jaccard)) finding$jaccard <- jaccard[i]
+            finding
         })
 
         list(
             result = top,
-            compact_summary = paste0('user-supplied enrichment: top terms: ', paste(utils::head(top[[term_col]], 5), collapse = '; ')),
+            compact_summary = .enrichment_compact_summary(
+                top[[term_col]], top[[p_col]], n_overlap = n_overlap, jaccard = jaccard,
+                odds_ratio = top[[effect_col]], n_tested = nrow(result), alpha = alpha,
+                prefix = 'user-supplied enrichment: '
+            ),
             top_findings = top_findings,
             effect_strength = if (nrow(top) > 0) max(abs(top[[effect_col]]), na.rm = TRUE) else 0,
             significance = if (nrow(top) > 0) min(top[[p_col]], na.rm = TRUE) else NA_real_,
-            direction = 'up'
+            direction = .enrichment_direction(top[[p_col]], alpha)
         )
     },
     # shared by categorical_association and state_expression: both are a
@@ -204,7 +230,13 @@
 #' @param params Named list of column-name overrides (e.g. `term_col`,
 #'   `significance_col`, `effect_col`) and other normalizer options (e.g.
 #'   `n_top`), since a user-supplied table won't share this package's exact
-#'   column names.
+#'   column names. For `'geneset_enrichment'`: `alpha` (default 0.05) is the
+#'   significance threshold stated in `compact_summary` (and `direction` is
+#'   `'na'` when no term passes it); `overlap_col` and `jaccard_col` name the
+#'   overlap-size and Jaccard columns, auto-detected from common names
+#'   (`size_intersection`, `ngenes`, `n_overlap`, `overlap_size`, `Overlap`,
+#'   `overlap`; `jaccard`, `Jaccard`) when not given. `'k/n'` or `'k|n'`
+#'   overlap strings are reduced to the count `k`.
 #' @param source_file Optional path to the file `result` was originally read
 #'   from (e.g. a `FindMarkers()` CSV export). Recorded in
 #'   `provenance$params$source_file`, and content-hashed into
@@ -334,7 +366,9 @@ import_hdwgcna_dme <- function(module_id, result, column_map = list(), source_fi
 #' @param result A tidy enrichment result data.frame.
 #' @param column_map Named list of column overrides: `term_col` (default
 #'   `'Term'`), `effect_col` (default `'Odds.Ratio'`), `significance_col`
-#'   (default `'Adjusted.P.value'`).
+#'   (default `'Adjusted.P.value'`), plus optional `overlap_col` / `jaccard_col`
+#'   / `alpha` (see [import_fragment()]); EnrichR's `Overlap` (`'k/n'`) column
+#'   is picked up automatically.
 #' @param source_file Optional path `result` was read from; see
 #'   [import_fragment()].
 #' @param ... Passed to [import_fragment()] (e.g. `fragment_id`, `tool_id`).

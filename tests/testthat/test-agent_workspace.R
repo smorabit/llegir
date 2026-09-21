@@ -518,3 +518,299 @@ test_that('export_agent_workspace() does not mutate its inputs', {
     expect_identical(run$dctx, dctx_before)
     expect_identical(run$packets, packets_before)
 })
+
+test_that('export_agent_workspace() tolerates a custom tool whose requires names a non-capability', {
+    run <- make_full_workspace_run()
+    register_tool(
+        'test_param_gated_tool', function(ctx) NULL, type = 'geneset_enrichment',
+        description = 'gated on a param rather than a ModuleSet capability',
+        requires = function(params) if (is.null(params$table)) 'test_param_gated_tool::table' else character(0)
+    )
+    on.exit(rm('test_param_gated_tool', envir = llegir:::.tool_registry), add = TRUE)
+
+    manifest_path <- suppressMessages(
+        export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = tempfile())
+    )
+    manifest_txt <- readLines(manifest_path)
+    row <- grep('`test_param_gated_tool`', manifest_txt, value = TRUE, fixed = TRUE)
+    expect_length(row, 1)
+    expect_match(row, 'test_param_gated_tool::table', fixed = TRUE)
+    expect_false(grepl('full object only', row, fixed = TRUE))
+})
+
+#---------------------------------------------------------
+# agent workspace: label mode (export_agent_workspace(mode = 'label'))
+#---------------------------------------------------------
+
+# a small components ModuleSet with realistic symbols (the synthetic example's
+# GENEA1..GENEA10 would all read as one gene family): module_a is a clean
+# 30-gene program, module_b carries dissociation-stress genes at the top, and
+# module_a's activity sits almost entirely in one sample
+make_label_moduleset <- function(){
+    set.seed(1)
+    genes_a <- c('IFIT1', 'ISG15', 'MX1', 'STAT1', 'IRF7', 'OAS2', paste0('ALPHA', LETTERS[1:24]))
+    genes_b <- c('FOS', 'JUN', 'EGR1', 'ATF3', 'CLDN4', 'KRT8', paste0('BRAVO', LETTERS[1:24]))
+    gene_table <- data.frame(
+        module = rep(c('module_a', 'module_b'), each = 30),
+        gene_name = c(genes_a, genes_b),
+        weight = c(seq(0.9, 0.32, length.out = 30), seq(0.8, 0.22, length.out = 30))
+    )
+    n_cells <- 100
+    metadata <- data.frame(
+        cell_type = rep(c('t1', 't2'), each = 50),
+        sample = rep(c('s1', 's2', 's3', 's4'), times = 25)
+    )
+    scores <- data.frame(module_a = stats::rnorm(n_cells), module_b = stats::rnorm(n_cells))
+    scores$module_a[metadata$sample == 's1'] <- scores$module_a[metadata$sample == 's1'] + 5
+    expr <- Matrix::Matrix(0, nrow = 60, ncol = n_cells, sparse = TRUE, dimnames = list(gene_table$gene_name, NULL))
+    components_ModuleSet(gene_table = gene_table, expression = expr, metadata = metadata, scores = scores,
+                         group_col = 'cell_type', sample_col = 'sample')
+}
+
+make_label_workspace_run <- function(n_modules = 2){
+    ms <- make_label_moduleset()
+    mods <- utils::head(modules(ms), n_modules)
+    packets <- run_orchestrator(ms, list(list(fn = top_genes_tool, params = list())),
+                                output_dir = tempfile(), modules_use = mods)
+    dctx <- make_stub_workspace_dataset_context()
+    desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq', conditions = c('MS', 'control'))
+    list(ms = ms, packets = packets, dctx = dctx, desc = desc, mods = mods)
+}
+
+# a model-facing label file with a review block that holds up against the
+# example ModuleSet (real top hubs and kMEs), plus its working notes, as an
+# agent would write them; arguments break one piece at a time
+write_agent_label <- function(ws_dir, module_id, label = 'Myeloid program', score = 0.6,
+                              fragment_ids = 'top_genes', direction = 'na', file_module_id = module_id,
+                              ms = make_label_moduleset(), review_edit = identity, notes = TRUE){
+    gm <- gene_membership(ms, if (module_id %in% modules(ms)) module_id else modules(ms)[1])
+    review <- list(
+        evidence_tier = 'hub_genes',
+        artifact_gate = list(status = 'pass', reasons = 'no stress genes among the top hubs'),
+        supporting_hubs = lapply(1:3, function(i) list(gene = gm$gene_name[i], kme = round(gm$kme[i], 4))),
+        expected_markers = list(list(gene = gm$gene_name[1], present = TRUE), list(gene = 'NOT_A_GENE', present = FALSE)),
+        contradicting_evidence = 'none beyond the absent marker',
+        alternative_label = list(label = 'Stress response', reason_rejected = 'no stress genes among the hubs'),
+        confidence_level = 'moderate',
+        display_hubs = gm$gene_name[1:3]
+    )
+    content <- list(
+        module_id = file_module_id,
+        proposed_label = label,
+        dominant_biology = 'A myeloid program',
+        interpretation = 'The hub genes mark a myeloid program.',
+        supporting_claims = list(list(claim = 'hub genes are myeloid genes', fragment_ids = as.list(fragment_ids), direction = direction)),
+        literature = list(),
+        flags = list(),
+        confidence = list(score = score, rationale = 'hub genes only'),
+        review = review_edit(review)
+    )
+    jsonlite::write_json(content, file.path(ws_dir, 'labels', paste0(module_id, '.json')), auto_unbox = TRUE, pretty = TRUE, digits = NA)
+    notes_path <- file.path(ws_dir, 'labels', 'notes', paste0(module_id, '.md'))
+    if (notes) writeLines('checked hubs and markers', notes_path) else unlink(notes_path)
+}
+
+test_that('export_agent_workspace() default mode stays explore-only', {
+    run <- make_label_workspace_run()
+    out_dir <- tempfile()
+    manifest_path <- suppressMessages(export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir))
+    manifest_txt <- paste(readLines(manifest_path), collapse = '\n')
+
+    expect_false(dir.exists(file.path(out_dir, 'labels')))
+    expect_false(file.exists(file.path(out_dir, 'validate_labels.R')))
+    expect_false(grepl('## Labeling Task', manifest_txt, fixed = TRUE))
+    expect_true(grepl('No interpretations shipped with this run', manifest_txt, fixed = TRUE))
+    expect_null(read_agent_manifest(manifest_path)$mode)
+})
+
+test_that('export_agent_workspace(mode = "label") ships the labelling task, rules, evidence and validator', {
+    run <- make_label_workspace_run()
+    out_dir <- tempfile()
+    manifest_path <- suppressMessages(export_agent_workspace(
+        run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir, mode = 'label'
+    ))
+    manifest_txt <- paste(readLines(manifest_path), collapse = '\n')
+    parsed <- read_agent_manifest(manifest_path)
+
+    expect_equal(parsed$mode, 'label')
+    expect_equal(parsed$labels_dir, 'labels')
+    expect_equal(parsed$prompt_template_version, PROMPT_TEMPLATE_VERSION)
+    expect_true(dir.exists(file.path(out_dir, 'labels')))
+    expect_true(file.exists(file.path(out_dir, 'validate_labels.R')))
+    for (key in c('dataset_description', 'label_schema', 'label_evidence_dir')) {
+        expect_true(file.exists(file.path(out_dir, parsed$artifacts[[key]])))
+    }
+
+    # each module's evidence is its packet rendered exactly as the synthesis model sees it,
+    # followed by the artifact screen
+    evidence <- paste(readLines(file.path(out_dir, 'artifacts', 'label_evidence', paste0(run$mods[1], '.md'))), collapse = '\n')
+    expect_true(startsWith(evidence, render_packet_compact(run$packets[[run$mods[1]]])))
+
+    expect_true(grepl('## Labeling Task', manifest_txt, fixed = TRUE))
+    expect_true(grepl('**Label every module.**', manifest_txt, fixed = TRUE))
+    expect_false(grepl('No interpretations shipped with this run', manifest_txt, fixed = TRUE))
+    # the synthesis prompt's rules are shipped verbatim, one quoted line each
+    expect_true(grepl('> - Use only the evidence given below.', manifest_txt, fixed = TRUE))
+    expect_true(grepl('Statistical wording must match the numbers', manifest_txt, fixed = TRUE))
+    # the no-code rules are reconciled with the ModuleSet queries label mode allows
+    expect_true(grepl('Two of these rules are written for a model that cannot run code', manifest_txt, fixed = TRUE))
+})
+
+test_that('label mode with interps asks the agent to refine the drafts', {
+    run <- make_label_workspace_run(1)
+    interps <- lapply(run$packets, function(p) synthesize_module(p, run$desc, mock_backend()))
+    out_dir <- tempfile()
+    manifest_path <- suppressMessages(export_agent_workspace(
+        run$ms, run$dctx, run$packets, run$desc, interps = interps, out_dir = out_dir, mode = 'label'
+    ))
+    manifest_txt <- paste(readLines(manifest_path), collapse = '\n')
+    expect_true(grepl('**Refine the draft labels.**', manifest_txt, fixed = TRUE))
+    expect_false(grepl('**Label every module.**', manifest_txt, fixed = TRUE))
+    expect_true(file.exists(file.path(out_dir, 'artifacts', 'interpretations', paste0(run$mods[1], '.json'))))
+})
+
+test_that('check_agent_labels() reports ok, missing, invalid, unfaithful and unexpected label files', {
+    run <- make_label_workspace_run(2)
+    out_dir <- tempfile()
+    suppressMessages(export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir, mode = 'label'))
+    status_of <- function(report, mod) report$status[report$module_id == mod]
+
+    write_agent_label(out_dir, run$mods[1], label = 'Interferon program')
+    write_agent_label(out_dir, run$mods[2], label = 'Stress program', fragment_ids = 'not_a_fragment')
+    write_agent_label(out_dir, 'not_a_module')
+    report <- check_agent_labels(out_dir)
+    expect_equal(status_of(report, run$mods[1]), 'ok')
+    expect_equal(status_of(report, run$mods[2]), 'unfaithful')
+    expect_match(report$detail[report$module_id == run$mods[2]], 'missing_fragment')
+    expect_equal(status_of(report, 'not_a_module'), 'unexpected')
+
+    write_agent_label(out_dir, run$mods[2], label = 'Stress program', score = 2)
+    expect_equal(status_of(check_agent_labels(out_dir), run$mods[2]), 'invalid')
+
+    write_agent_label(out_dir, run$mods[2], label = 'Stress program', review_edit = function(r) NULL)
+    report <- check_agent_labels(out_dir)
+    expect_equal(status_of(report, run$mods[2]), 'invalid')
+    expect_match(report$detail[report$module_id == run$mods[2]], 'review')
+
+    file.remove(file.path(out_dir, 'labels', paste0(run$mods[1], '.json')))
+    expect_equal(status_of(check_agent_labels(out_dir), run$mods[1]), 'missing')
+})
+
+test_that('check_agent_labels() checks the review block against the ModuleSet', {
+    run <- make_label_workspace_run(2)
+    out_dir <- tempfile()
+    suppressMessages(export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir, mode = 'label'))
+    write_agent_label(out_dir, run$mods[2], label = 'Stress program')
+    gm <- gene_membership(run$ms, run$mods[1])
+
+    detail_for <- function(review_edit, ...){
+        write_agent_label(out_dir, run$mods[1], label = 'Interferon program', review_edit = review_edit, ...)
+        report <- check_agent_labels(out_dir)
+        row <- report[report$module_id == run$mods[1], ]
+        expect_equal(row$status, 'needs_revision')
+        row$detail
+    }
+
+    expect_match(detail_for(function(r){ r$supporting_hubs[[1]]$kme <- 0.1; r }), 'has kME')
+    expect_match(detail_for(function(r){ r$supporting_hubs[[1]] <- list(gene = gm$gene_name[27], kme = gm$kme[27]); r }), 'outside the top 25')
+    expect_match(detail_for(function(r){ r$supporting_hubs[[1]] <- list(gene = 'FOS', kme = 0.5); r }), 'not in this module')
+    expect_match(detail_for(function(r){ r$expected_markers[[1]]$present <- FALSE; r }), 'is in this module, not absent')
+    expect_match(detail_for(function(r){ r$expected_markers[[2]]$present <- TRUE; r }), 'absent from this module, not present')
+    expect_match(detail_for(function(r){ r$display_hubs[[3]] <- gm$gene_name[12]; r }), 'not in the top 10')
+    expect_match(detail_for(function(r){ r$display_hubs[[3]] <- 'GAPDH'; r }), 'housekeeping normalizers: GAPDH')
+    expect_match(detail_for(function(r){ r$display_hubs[[3]] <- r$display_hubs[[1]]; r }), 'repeat a gene family')
+    expect_match(detail_for(function(r){ r$confidence_level <- 'high'; r }), 'outside the high band')
+    expect_match(detail_for(function(r){ r$artifact_gate$status <- 'technical'; r }), 'must go together')
+    expect_match(detail_for(identity, notes = FALSE), 'no working notes')
+
+    # the same label on two modules sends both back
+    write_agent_label(out_dir, run$mods[1], label = 'stress  PROGRAM')
+    report <- check_agent_labels(out_dir)
+    expect_true(all(report$status == 'needs_revision'))
+    expect_match(report$detail[report$module_id == run$mods[1]], paste('also used by', run$mods[2]))
+})
+
+test_that('.gene_family() groups paralogs by their symbol stem', {
+    expect_equal(.gene_family(c('HLA-A', 'HLA-B', 'RPL13', 'RPL13A', 'COX7B', 'IFIT1', 'CD74')),
+                 c('HLA', 'HLA', 'RPL', 'RPL', 'COX', 'IFIT', 'CD'))
+})
+
+test_that('label-mode evidence ends with the artifact screen', {
+    run <- make_label_workspace_run(2)
+    out_dir <- tempfile()
+    suppressMessages(export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir, mode = 'label'))
+    evidence <- function(mod) paste(readLines(file.path(out_dir, 'artifacts', 'label_evidence', paste0(mod, '.md'))), collapse = '\n')
+
+    stress <- evidence('module_b')
+    expect_match(stress, '[artifact_screen]', fixed = TRUE)
+    expect_match(stress, '4 of the top 25 hubs (FOS, JUN, EGR1, ATF3)', fixed = TRUE)
+    expect_match(stress, 'module size in this ModuleSet: 30 genes', fixed = TRUE)
+
+    # sample_col defaults to the ModuleSet's declared sample column
+    restricted <- evidence('module_a')
+    expect_match(restricted, '0 of the top 25 hubs', fixed = TRUE)
+    expect_match(restricted, 'from one sample (s1) of 4', fixed = TRUE)
+
+    # the label schema requires the review block; the LLM-facing schema omits it
+    label_schema <- jsonlite::read_json(file.path(out_dir, 'artifacts', 'interpretation_model_output.schema.json'))
+    expect_true('review' %in% unlist(label_schema$required))
+    llm_schema <- jsonlite::fromJSON(model_output_schema_json(), simplifyVector = FALSE)
+    expect_null(llm_schema$properties$review)
+    expect_false('review' %in% unlist(llm_schema$required))
+})
+
+test_that('a label file whose module_id does not match its filename is invalid', {
+    run <- make_label_workspace_run(2)
+    out_dir <- tempfile()
+    suppressMessages(export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir, mode = 'label'))
+    write_agent_label(out_dir, run$mods[1], file_module_id = run$mods[2])
+    report <- check_agent_labels(out_dir)
+    expect_equal(report$status[report$module_id == run$mods[1]], 'invalid')
+    expect_match(report$detail[report$module_id == run$mods[1]], 'has module_id')
+})
+
+test_that('collect_agent_labels() runs agent labels through the synthesis pipeline', {
+    run <- make_label_workspace_run(2)
+    out_dir <- tempfile()
+    suppressMessages(export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir, mode = 'label'))
+    write_agent_label(out_dir, run$mods[1], label = 'Complement program')
+
+    expect_warning(interps <- collect_agent_labels(out_dir, agent = 'claude-code'), 'no agent label file')
+    expect_null(interps[[run$mods[2]]])
+    interp <- interps[[run$mods[1]]]
+    expect_true(validate_interpretation(interp))
+    expect_equal(interp$proposed_label, 'Complement program')
+    expect_equal(interp$provenance$model, 'agent:claude-code')
+    expect_equal(interp$provenance$prompt_template_version, PROMPT_TEMPLATE_VERSION)
+    expect_equal(interp$provenance$input_packet_hash, run$packets[[run$mods[1]]]$packet_hash)
+
+    synth_dir <- tempfile()
+    write_agent_label(out_dir, run$mods[2])
+    collected <- collect_agent_labels(out_dir, output_dir = synth_dir, agent = 'claude-code')
+    expect_length(Filter(Negate(is.null), collected), 2)
+    expect_true(file.exists(file.path(synth_dir, 'review_queue.tsv')))
+    expect_true(file.exists(file.path(synth_dir, paste0(run$mods[1], '.json'))))
+})
+
+test_that('check_agent_labels() refuses an explore-mode workspace', {
+    run <- make_label_workspace_run(1)
+    out_dir <- tempfile()
+    suppressMessages(export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir))
+    expect_error(check_agent_labels(out_dir), 'mode = "label"')
+})
+
+test_that('validate_labels.R runs inside a label workspace and writes its report', {
+    skip_on_cran()
+    run <- make_label_workspace_run(2)
+    out_dir <- tempfile()
+    suppressMessages(export_agent_workspace(run$ms, run$dctx, run$packets, run$desc, out_dir = out_dir, mode = 'label'))
+    write_agent_label(out_dir, run$mods[1])
+
+    old_wd <- setwd(out_dir)
+    on.exit(setwd(old_wd), add = TRUE)
+    out <- utils::capture.output(source('validate_labels.R', local = new.env()))
+    report <- utils::read.delim(file.path('scratch', 'label_validation.tsv'))
+    expect_equal(nrow(report), 2)
+    expect_setequal(report$status, c('ok', 'missing'))
+    expect_true(any(grepl('1 of 2 modules ok', out, fixed = TRUE)))
+})

@@ -16,5 +16,6 @@ Invisibly \code{TRUE} if faithful; otherwise throws.
 }
 \description{
 Throws if \code{\link[=check_faithfulness]{check_faithfulness()}} finds any fabricated or
-direction-mismatched citation.
+direction-mismatched citation, or significance wording that no significant
+fragment supports.
 }

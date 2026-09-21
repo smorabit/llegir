@@ -114,3 +114,50 @@ test_that('write_interpretation()/read_interpretation() round-trip through disk'
     expect_equal(restored$module_id, interp$module_id)
     expect_true(validate_interpretation(restored))
 })
+
+test_that('an interpretation without a review serializes exactly as under schema 0.2', {
+    interp <- interpretation(
+        module_id = 'MM1', proposed_label = 'x', dominant_biology = 'x', interpretation = 'x',
+        supporting_claims = list(list(claim = 'c', fragment_ids = 'top_genes', direction = 'na')),
+        confidence = list(score = 0.5, model_score = 0.5, rationale = 'r'),
+        provenance = make_interpretation_provenance('mock', '1.3', 0, 'hash')
+    )
+    expect_equal(interp$schema_version, '0.2')
+    expect_false('review' %in% names(interp))
+    expect_false(grepl('review', interpretation_to_json(interp), fixed = TRUE))
+})
+
+test_that('an interpretation with a review is schema 0.3 and round-trips through JSON', {
+    review <- list(
+        evidence_tier = 'hub_genes',
+        artifact_gate = list(status = 'pass', reasons = 'clean'),
+        supporting_hubs = list(list(gene = 'A', kme = 0.9), list(gene = 'B', kme = 0.8), list(gene = 'C', kme = 0.7)),
+        expected_markers = list(list(gene = 'D', present = FALSE)),
+        contradicting_evidence = 'D absent',
+        alternative_label = list(label = 'y', reason_rejected = 'z'),
+        confidence_level = 'moderate',
+        display_hubs = c('A', 'B', 'C')
+    )
+    interp <- interpretation(
+        module_id = 'MM1', proposed_label = 'x', dominant_biology = 'x', interpretation = 'x',
+        supporting_claims = list(list(claim = 'c', fragment_ids = 'top_genes', direction = 'na')),
+        confidence = list(score = 0.6, model_score = 0.6, rationale = 'r'),
+        provenance = make_interpretation_provenance('agent:test', '1.3', NA_real_, 'hash'),
+        review = review
+    )
+    expect_equal(interp$schema_version, '0.3')
+    expect_true(validate_interpretation(interp))
+
+    back <- interpretation_from_json(interpretation_to_json(interp))
+    expect_equal(back$review$display_hubs, c('A', 'B', 'C'))
+    expect_equal(back$review$supporting_hubs[[2]]$kme, 0.8)
+    expect_false(back$review$expected_markers[[1]]$present)
+    expect_true(validate_interpretation(back))
+
+    bad <- interp
+    bad$review$confidence_level <- 'certain'
+    expect_error(validate_interpretation(bad), 'confidence_level')
+    bad <- interp
+    bad$review$display_hubs <- c('A', 'B')
+    expect_error(validate_interpretation(bad), 'exactly 3')
+})

@@ -14,7 +14,8 @@ interpretation(
   provenance,
   literature = list(),
   flags = list(),
-  schema_version = "0.2"
+  review = NULL,
+  schema_version = if (is.null(review)) "0.2" else "0.3"
 )
 }
 \arguments{
@@ -44,7 +45,12 @@ current synthesis layer.}
 \code{'needs_human_review'}, \code{'possible_artifact'}, \code{'tool_conflict'},
 \code{'label_low_specificity'}.}
 
-\item{schema_version}{Schema version tag. Default \code{'0.2'}.}
+\item{review}{Optional structured self-review (schema 0.3), attached by
+an agent labelling run (see \code{\link[=export_agent_workspace]{export_agent_workspace()}} with
+\code{mode = 'label'}); \code{NULL} (default) for LLM synthesis.}
+
+\item{schema_version}{Schema version tag. Defaults to \code{'0.2'}, or \code{'0.3'}
+when \code{review} is supplied (the only 0.3 addition).}
 }
 \value{
 An \code{interpretation} object.
