@@ -18,7 +18,8 @@ import_fragment(
 \item{module_id}{The module this fragment describes.}
 
 \item{type}{One of the supported fragment types: \code{'geneset_enrichment'},
-\code{'categorical_association'}.}
+\code{'categorical_association'}, \code{'state_expression'}, \code{'cross_condition_delta'},
+\code{'signature_correlation'}, \code{'continuous_correlation'}.}
 
 \item{result}{A tidy data.frame with the user's result table.}
 
@@ -30,7 +31,13 @@ import_fragment(
 \item{params}{Named list of column-name overrides (e.g. \code{term_col},
 \code{significance_col}, \code{effect_col}) and other normalizer options (e.g.
 \code{n_top}), since a user-supplied table won't share this package's exact
-column names.}
+column names. For \code{'geneset_enrichment'}: \code{alpha} (default 0.05) is the
+significance threshold stated in \code{compact_summary} (and \code{direction} is
+\code{'na'} when no term passes it); \code{overlap_col} and \code{jaccard_col} name the
+overlap-size and Jaccard columns, auto-detected from common names
+(\code{size_intersection}, \code{ngenes}, \code{n_overlap}, \code{overlap_size}, \code{Overlap},
+\code{overlap}; \code{jaccard}, \code{Jaccard}) when not given. \code{'k/n'} or \code{'k|n'}
+overlap strings are reduced to the count \code{k}.}
 
 \item{source_file}{Optional path to the file \code{result} was originally read
 from (e.g. a \code{FindMarkers()} CSV export). Recorded in

@@ -9,65 +9,26 @@
 #' for reproducibility.
 #'
 #' @export
-PROMPT_TEMPLATE_VERSION <- '0.4'
-
-# net directional sign of the pooled evidence mass, for the matrix's
-# CONSTRAINTS block -- mirrors R/confidence.R's .directional_coherence()
-# numerator (before abs()), so the reported sign always matches the C_dir
-# magnitude computed alongside it
-.net_direction_label <- function(matrix){
-    sign_map <- c(up = 1, down = -1, mixed = 0, na = 0)
-    sigma <- sign_map[matrix$direction]
-    mass <- matrix$weight * matrix$e_score
-    net <- sum(sigma * mass)
-    if (net > 0) 'up' else if (net < 0) 'down' else 'none'
-}
-
-# fixed-width EVIDENCE CONFIDENCE MATRIX block (milestone_fused_confidence.md
-# S6): the model explains this pre-computed matrix rather than inventing its
-# own confidence, and fuse_confidence() re-derives the final score from the
-# same `fusion` object regardless of what the model writes here
-.render_confidence_matrix <- function(fusion){
-    m <- fusion$matrix
-    header <- sprintf('%-18s %-18s %6s %9s %11s %7s %s', 'fragment_id', 'type', 'weight', 'magnitude', 'reliability', 'e_score', 'direction')
-    rows <- vapply(seq_len(nrow(m)), function(i){
-        sprintf(
-            '%-18s %-18s %6.2f %9.2f %11.2f %7.2f %s',
-            m$fragment_id[i], m$type[i], m$weight[i], m$magnitude[i], m$reliability[i], m$e_score[i], m$direction[i]
-        )
-    }, character(1))
-
-    paste(
-        'EVIDENCE CONFIDENCE MATRIX  (computed deterministically upstream -- treat as ground truth, do not recompute or contradict)',
-        '',
-        header,
-        paste(rows, collapse = '\n'),
-        '',
-        sprintf('pooled_evidence  E_pool  = %.2f   (weighted power mean, beta = %.2f)', fusion$e_pool, fusion$params$beta),
-        sprintf('directional      C_dir   = %.2f  ->  P_agree = %.2f', fusion$c_dir, fusion$p_agree),
-        sprintf('empirical        E_evidence      = %.2f', fusion$e_evidence),
-        sprintf('model_trust      lambda          = %.2f', fusion$lambda),
-        '',
-        'CONSTRAINTS:',
-        sprintf('- confidence.score must be consistent with E_evidence; it may not exceed E_evidence + 0.10 (E_evidence = %.2f).', fusion$e_evidence),
-        sprintf('- Any directional claim must agree with the sign of the directional mass above (coherence %.2f, net "%s").', fusion$c_dir, .net_direction_label(m)),
-        sprintf('- If E_evidence < %.2f, set flags to include insufficient_evidence and keep supporting_claims minimal.', 0.35),
-        '- Explain what the numbers mean for this module; do not restate or recompute them.',
-        sep = '\n'
-    )
-}
+PROMPT_TEMPLATE_VERSION <- '1.3'
 
 # a fragment's compact block: one header line (id/type/direction/effect/sig),
 # the compact_summary, and up to `max_findings` top_findings as compact JSON;
 # already-curated fragments (tools only keep the top few) rarely hit the cap,
-# it's a backstop for token efficiency, not the primary truncation
+# it's a backstop for token efficiency, not the primary truncation -- true for
+# every core tool except top_genes_tool(), whose ranked_genes fragment
+# deliberately carries the tool's full requested n_hubs (25 by default, often
+# more), not "the top few"; capping it at the same max_findings as a 5-item
+# signature list would silently hide lower-ranked-but-biologically-important
+# hub genes from the model (confirmed doing exactly that for a real module:
+# checkpoint/exhaustion markers ranked 9-16 by kME never reached the prompt),
+# so ranked_genes fragments are exempt from the cap
 .render_fragment_compact <- function(frag, max_findings = 8){
     sig <- if (is.null(frag$significance) || is.na(frag$significance)) 'NA' else format(frag$significance, digits = 4)
     header <- sprintf(
         '[%s] type=%s direction=%s effect_strength=%s significance=%s',
         frag$fragment_id, frag$type, frag$direction, format(frag$effect_strength, digits = 4), sig
     )
-    findings <- utils::head(frag$top_findings, max_findings)
+    findings <- if (identical(frag$type, 'ranked_genes')) frag$top_findings else utils::head(frag$top_findings, max_findings)
     findings_json <- jsonlite::toJSON(findings, auto_unbox = TRUE, na = 'null')
     paste(header, frag$compact_summary, paste0('top_findings: ', findings_json), sep = '\n')
 }
@@ -91,6 +52,16 @@ PROMPT_TEMPLATE_VERSION <- '0.4'
 #' @export
 render_packet_compact <- function(packet, max_findings = 8){
     blocks <- vapply(packet$fragments, .render_fragment_compact, character(1), max_findings = max_findings)
+
+    # deterministic housekeeping-composition note, appended to the ranked_genes
+    # block so a part-ribosomal/mitochondrial hub list is visible to the model
+    # rather than silently diluting the biological call (R/confidence.R)
+    note <- housekeeping_composition_note(packet)
+    if (!is.null(note)) {
+        hub_idx <- which(vapply(packet$fragments, function(f) identical(f$type, 'ranked_genes'), logical(1)))
+        if (length(hub_idx) > 0) blocks[hub_idx[1]] <- paste0(blocks[hub_idx[1]], '\n', note)
+    }
+
     paste0(
         'Module ', packet$module_id, ' evidence packet (', length(packet$fragments), ' fragments):\n\n',
         paste(blocks, collapse = '\n\n')
@@ -99,10 +70,16 @@ render_packet_compact <- function(packet, max_findings = 8){
 
 # a dataset_fragment's compact block: mirrors .render_fragment_compact() but
 # there's no direction/effect_strength/significance (dataset_fragment drops
-# the fusion fields), and caveats are appended when present
+# the fusion fields), and caveats are appended when present. A fragment can
+# declare its own render_max_findings (e.g. a cluster reference card, one
+# entry per cluster, a census rather than a top-N ranking) to override the
+# caller's cap -- the dataset_fragment analog of .render_fragment_compact()'s
+# ranked_genes exemption, but per-fragment rather than per-type, since every
+# dataset_fragment type here (composition_summary) can be either shape
 .render_dataset_fragment_compact <- function(frag, max_findings = 8){
     header <- sprintf('[%s] type=%s', frag$fragment_id, frag$type)
-    findings <- utils::head(frag$top_findings, max_findings)
+    cap <- if (is.null(frag$render_max_findings)) max_findings else frag$render_max_findings
+    findings <- utils::head(frag$top_findings, cap)
     findings_json <- jsonlite::toJSON(findings, auto_unbox = TRUE, na = 'null')
     lines <- c(header, frag$compact_summary, paste0('top_findings: ', findings_json))
     if (length(frag$caveats) > 0) {
@@ -122,7 +99,10 @@ render_packet_compact <- function(packet, max_findings = 8){
 #'
 #' @param dataset_context A dataset context, as built by [build_dataset_context()].
 #' @param max_findings Maximum number of `top_findings` entries rendered per
-#'   fragment. Default `8`.
+#'   fragment. Default `8`. A fragment carrying its own
+#'   `render_max_findings` (see [dataset_fragment()]) overrides this cap for
+#'   itself only, e.g. a census-style fragment with one entry per group that
+#'   must never be head-truncated.
 #' @return A single character string.
 #' @examples
 #' frag <- dataset_fragment(
@@ -149,9 +129,11 @@ render_dataset_context_compact <- function(dataset_context, max_findings = 8){
 #' A fixed set of rules governing how a backend must fill the model-facing
 #' interpretation schema: evidence-only claims, citation requirements,
 #' direction consistency, controlled vocabularies, the empty-literature
-#' constraint, and how `confidence.score` must relate to the deterministic
-#' EVIDENCE CONFIDENCE MATRIX ([calculate_fusion_score()]) injected into the
-#' user prompt by [build_user_prompt()].
+#' constraint, and a self-calibrated `confidence.score`. The deterministic
+#' fused evidence score is shelved (`docs/prompts/handoff_prompt_serpentine_tcell.md`
+#' Part 4.5): the EVIDENCE CONFIDENCE MATRIX is no longer injected and the
+#' model reports its own certainty, while [enforce_faithfulness()] and
+#' [fuse_confidence()]'s `possible_artifact` check still set review flags.
 #'
 #' @return A single character string.
 #' @examples
@@ -163,19 +145,18 @@ build_system_prompt <- function(){
         'from a fixed evidence packet produced by a deterministic analysis pipeline.',
         '',
         'Rules:',
+        '- FIRST STEP, before drafting anything else: find the ranked_genes fragment (e.g. top_genes) and read its top_findings gene list. Using your own biological knowledge of those specific gene symbols, identify the single most specific biological state or program they mark as a set (e.g. a named signaling pathway, a metabolic program, a cell-cycle or proliferation program, a differentiation or response program) -- this gene-identity call is the module\'s core biological identity and must anchor proposed_label and dominant_biology. Scan the whole top_findings gene list, not just the top-ranked gene: the identity of a coherent set of hub genes is rarely captured by any single entry. Only after that, use the other fragments (state_expression, differential_module_activity, signature_correlation, geneset_enrichment, etc.) to add supporting context, localization, and condition dynamics around that identity -- never let a different fragment\'s numeric ranking override or replace the gene-identity call, and do not default to whichever fragment happens to report the single largest effect_strength number: a top-ranked item within one fragment\'s top_findings can reflect a small-sample statistical artifact rather than the module\'s dominant biology, so weigh a fragment\'s top_findings list as a whole rather than only its top-ranked entry. A DATASET CONTEXT block, when present, may state the compartment being profiled and whether a proposed_label should name a program rather than a population -- follow that framing when it is given.',
         '- Use only the evidence given below. Do not invent genes, terms, or results, and do not run or imagine any analysis.',
         '- Every entry in supporting_claims must cite the fragment_id(s) it is based on, and its direction must match the direction reported by those fragments.',
-        '- A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report.',
-        '- metadata_associations entries must cite a real fragment_id the same way.',
+        '- A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report. Concrete example of what NOT to do: {"claim": "genes X/Y/Z indicate a hypoxia program, consistent with geneset_enrichment", "fragment_ids": ["top_genes", "geneset_enrichment"], "direction": "up"} is INVALID because top_genes reports direction na, not up. Instead write two entries: {"claim": "the module\'s hub genes (X, Y, Z) mark a hypoxia program", "fragment_ids": ["top_genes"], "direction": "na"} and {"claim": "consistent with this, geneset_enrichment shows hypoxia-related terms enriched", "fragment_ids": ["geneset_enrichment"], "direction": "up"}.',
+        '- Statistical wording must match the numbers. Only call a result "significant", "significantly enriched", "enriched", or "over-represented" when the fragment you cite reports a significance value below 0.05 (for a geneset_enrichment fragment, its compact_summary says how many terms reach FDR < 0.05). When a fragment reports significance of 0.05 or above, or its compact_summary says no term reaches the threshold, describe it as not significant (for example "a non-significant 2-gene overlap with DNA_damage"), treat it as descriptive context only, and never use it as support for proposed_label or dominant_biology. A significant term backed by only a handful of overlapping genes (see n_overlap) is still weak evidence; say so rather than calling it a program.',
+        '- Write the interpretation field as 1 to 3 sentences of plain prose that support the dominant_biology call, grounded only in the fragments you cite in supporting_claims. Fold in where the module is expressed (from a state_expression fragment, if one is present) and how its activity shifts across the tested condition (from a cross_condition_delta fragment, if one is present) when that context is relevant; do not add localization or dynamics claims the packet does not contain. Keep it consistent with supporting_claims -- do not introduce a program, gene, or term that no cited fragment supports.',
         paste0('- Each fragment has a type from a controlled vocabulary: ', paste(.fragment_types, collapse = ', '), '.'),
         paste0('- flags must be drawn only from: ', paste(.interpretation_flags, collapse = ', '), '.'),
         '- If the evidence is weak, sparse, or inconsistent, do not invent a confident story: set flags to include insufficient_evidence, keep supporting_claims minimal (or empty), and give a low confidence score.',
-        '- The user prompt includes an EVIDENCE CONFIDENCE MATRIX computed deterministically upstream: treat it as ground truth, do not recompute or contradict it.',
-        '- confidence.score must be consistent with the matrix\'s E_evidence: it may not exceed E_evidence + 0.10, and must fall below the matrix\'s stated insufficient_evidence threshold when E_evidence does.',
-        '- Every quantitative certainty statement in your response must reference E_evidence rather than restating your own separate estimate.',
-        '- You may not assert a direction (e.g. in dominant_biology or condition_dynamics) that contradicts the sign of the directional coherence reported in the matrix.',
+        '- Set confidence.score (0 to 1) to your own calibrated certainty that proposed_label is the right call given only the evidence in this packet: high when several fragments converge on one identity, low when the packet is thin, the hub genes are non-specific, or the fragments disagree.',
         '- literature must be left empty; literature grounding is not available in this pipeline.',
-        '- A DATASET CONTEXT block, when present, is global framing (composition, variance structure, and similar dataset-wide context) for confounder awareness -- it is not a per-module fragment, so never cite it in supporting_claims or metadata_associations.',
+        '- A DATASET CONTEXT block, when present, is global framing (composition, variance structure, and similar dataset-wide context) for confounder awareness -- it is not a per-module fragment, so never cite it in supporting_claims.',
         sep = '\n'
     )
 }
@@ -183,29 +164,24 @@ build_system_prompt <- function(){
 #' Build the synthesis user prompt for one module
 #'
 #' Concatenates the rendered [dataset_description()], the optional
-#' [render_dataset_context_compact()] block, the compact evidence packet
-#' ([render_packet_compact()]), and the deterministic EVIDENCE CONFIDENCE
-#' MATRIX ([calculate_fusion_score()]) that grounds the model's
-#' `confidence.score` in the same numbers [fuse_confidence()] later
-#' re-derives the final fused score from.
+#' [render_dataset_context_compact()] block, and the compact evidence packet
+#' ([render_packet_compact()]). The deterministic EVIDENCE CONFIDENCE MATRIX
+#' is no longer injected (Part 4.5: the fused score is shelved); the model
+#' sets `confidence.score` from its own calibrated certainty.
 #'
 #' @param packet An evidence packet, as built by [build_evidence_packet()].
 #' @param desc A `dataset_description`; see [dataset_description()].
-#' @param fusion An optional pre-computed [calculate_fusion_score()] result;
-#'   `NULL` (default) computes it from `packet$fragments` and `user_weights`.
-#'   Pass the same object used later by [fuse_confidence()] so the prompt and
-#'   the final score are guaranteed to agree.
+#' @param fusion Ignored; retained for call-site compatibility. The fused
+#'   evidence matrix is no longer part of the prompt.
 #' @param data_level Observation-unit descriptor of the `ModuleSet` the
 #'   packet was built from; see [render_dataset_description()]. Default `'cell'`.
 #' @param aggregated Whether that `ModuleSet`'s expression/scores are already
 #'   aggregated across cells; see [render_dataset_description()]. Default `FALSE`.
-#' @param user_weights Named list of per-`tool_id` weight multipliers passed
-#'   to [calculate_fusion_score()] when `fusion` is `NULL`. Default `list()`.
+#' @param user_weights Ignored; retained for call-site compatibility.
 #' @param dataset_context An optional dataset context, as built by
 #'   [build_dataset_context()] / [run_dataset_context()]. Rendered via
 #'   [render_dataset_context_compact()] between the dataset description and
-#'   the evidence packet. `NULL` (default) omits the block entirely, matching
-#'   prior prompt output exactly.
+#'   the evidence packet. `NULL` (default) omits the block entirely.
 #' @return A single character string.
 #' @examples
 #' ms <- llegir_example_moduleset()
@@ -215,13 +191,11 @@ build_system_prompt <- function(){
 #' @export
 build_user_prompt <- function(packet, desc, fusion = NULL, data_level = 'cell', aggregated = FALSE,
                                user_weights = list(), dataset_context = NULL){
-    fusion <- fusion %||% calculate_fusion_score(packet$fragments, user_weights = user_weights)
     dataset_block <- if (is.null(dataset_context)) NULL else render_dataset_context_compact(dataset_context)
     blocks <- Filter(Negate(is.null), list(
         render_dataset_description(desc, data_level = data_level, aggregated = aggregated),
         dataset_block,
-        render_packet_compact(packet),
-        .render_confidence_matrix(fusion)
+        render_packet_compact(packet)
     ))
     paste(blocks, collapse = '\n\n')
 }

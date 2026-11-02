@@ -2,11 +2,11 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "interpretation.schema.json",
   "title": "interpretation",
-  "schema_version": "0.1",
-  "description": "Produced by the synthesis layer (Milestone 2). Finalized from the M1 draft: confidence now separates the model's raw score from the fused final score, and provenance is required (attached by the synthesis orchestrator, never filled by the model).",
+  "schema_version": "0.3",
+  "description": "Produced by the synthesis layer. As of schema 0.2 the model fills a single free-text `interpretation` field (1-3 sentences supporting the dominant-biology call, folding in cell-state localization and condition dynamics where relevant) in place of the former `one_line_summary` / `cell_state` / `condition_dynamics` / `metadata_associations` fields. `confidence` still separates the model's raw score from the (currently shelved) fused final score; `provenance` is required and attached by the synthesis orchestrator, never filled by the model.",
   "type": "object",
   "required": [
-    "module_id", "proposed_label", "one_line_summary", "dominant_biology",
+    "module_id", "proposed_label", "dominant_biology", "interpretation",
     "supporting_claims", "confidence", "provenance"
   ],
   "properties": {
@@ -15,8 +15,11 @@
       "type": "string",
       "description": "short program name, e.g. 'Interferon response'"
     },
-    "one_line_summary": { "type": "string" },
-    "dominant_biology": { "type": "string", "description": "the main program" },
+    "dominant_biology": { "type": "string", "description": "the main program, as a short label" },
+    "interpretation": {
+      "type": "string",
+      "description": "1-3 sentences of prose supporting the dominant-biology call, grounded in the cited fragments; folds in where the module is expressed and how its activity shifts across the tested condition where relevant"
+    },
     "supporting_claims": {
       "type": "array",
       "description": "every fragment_id cited here must exist in the module's packet and its direction must match (faithfulness invariant); may be empty only when flags includes insufficient_evidence",
@@ -32,23 +35,6 @@
           },
           "direction": { "enum": ["up", "down", "mixed", "na"] },
           "strength": { "type": ["number", "null"] }
-        }
-      }
-    },
-    "cell_state": {
-      "type": ["string", "null"],
-      "description": "where expressed, from cluster_dme"
-    },
-    "condition_dynamics": { "type": ["string", "null"] },
-    "metadata_associations": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["variable", "summary", "fragment_id"],
-        "properties": {
-          "variable": { "type": "string" },
-          "summary": { "type": "string" },
-          "fragment_id": { "type": "string" }
         }
       }
     },
@@ -70,7 +56,7 @@
       "properties": {
         "score": {
           "type": "number", "minimum": 0, "maximum": 1,
-          "description": "final fused confidence (docs/milestone_2.md task 4); equal to model_score until fusion runs"
+          "description": "final confidence; equals model_score while the deterministic fusion is shelved (Part 4.5)"
         },
         "model_score": {
           "type": "number", "minimum": 0, "maximum": 1,
@@ -86,6 +72,101 @@
           "insufficient_evidence", "needs_human_review", "possible_artifact",
           "tool_conflict", "label_low_specificity"
         ]
+      }
+    },
+    "review": {
+      "type": "object",
+      "description": "optional (schema 0.3): the structured self-review an agent labelling run (export_agent_workspace(mode = 'label')) attaches; LLM synthesis never fills it",
+      "required": [
+        "evidence_tier", "artifact_gate", "supporting_hubs", "expected_markers",
+        "contradicting_evidence", "alternative_label", "confidence_level", "display_hubs"
+      ],
+      "properties": {
+        "evidence_tier": {
+          "enum": ["hub_genes", "geneset_enrichment", "technical_artifact", "insufficient"],
+          "description": "the tier that carried the call: hub_genes (primary), geneset_enrichment (secondary, only when hub genes are uninformative), technical_artifact (the artifact gate decided the label), or insufficient"
+        },
+        "artifact_gate": {
+          "type": "object",
+          "required": ["status", "reasons"],
+          "properties": {
+            "status": {
+              "enum": ["pass", "technical", "uncertain"],
+              "description": "technical: the module is a technical or sample-restricted signature (e.g. dissociation stress, patient-restricted) and gets a technical label"
+            },
+            "reasons": { "type": "string" }
+          }
+        },
+        "supporting_hubs": {
+          "type": "array",
+          "minItems": 3,
+          "description": "hub genes that support the label, each with its kME in this module; must be among the module's top 25 hubs by kME",
+          "items": {
+            "type": "object",
+            "required": ["gene", "kme"],
+            "properties": {
+              "gene": { "type": "string" },
+              "kme": { "type": "number" }
+            }
+          }
+        },
+        "expected_markers": {
+          "type": "array",
+          "minItems": 3,
+          "description": "the canonical markers the proposed label implies (obligate partners included), each with where it sits: in_module (assigned to this module), in_network (assigned to another module of this network), unassigned (in the network's input feature set but in no module, e.g. hdWGCNA grey), not_tested (not in the input feature set, so says nothing about the biology)",
+          "items": {
+            "type": "object",
+            "required": ["gene", "status"],
+            "properties": {
+              "gene": { "type": "string" },
+              "status": { "enum": ["in_module", "in_network", "unassigned", "not_tested"] }
+            }
+          }
+        },
+        "contradicting_evidence": {
+          "type": "string",
+          "description": "evidence against the label, including absent expected markers"
+        },
+        "alternative_label": {
+          "type": "object",
+          "required": ["label", "reason_rejected"],
+          "properties": {
+            "label": { "type": "string" },
+            "reason_rejected": { "type": "string" }
+          }
+        },
+        "confidence_level": {
+          "enum": ["high", "moderate", "low", "very_low"],
+          "description": "anchored rubric level; confidence.score must fall inside its band"
+        },
+        "display_hubs": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "three genes for figure annotation: from the top 10 hubs by kME, congruent with the label, no housekeeping normalizers (unless justified in display_hub_overrides), no two from the same gene family",
+          "items": { "type": "string" }
+        },
+        "display_hub_overrides": {
+          "type": "array",
+          "description": "optional: a housekeeping normalizer kept as a display hub because it is genuinely the module's biology, with the reason",
+          "items": {
+            "type": "object",
+            "required": ["gene", "reason"],
+            "properties": {
+              "gene": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "related_module": {
+          "type": "object",
+          "description": "optional: another module of this network capturing the same program, recorded instead of inventing a distinction; lets two modules share a label",
+          "required": ["module_id", "relationship"],
+          "properties": {
+            "module_id": { "type": "string" },
+            "relationship": { "enum": ["overlapping program", "weaker partial version", "technical counterpart"] }
+          }
+        }
       }
     },
     "provenance": {

@@ -8,6 +8,7 @@ write_interpretation_report(
   interps,
   packets,
   desc,
+  dataset_context = NULL,
   output_file = "output/report.html",
   quiet = TRUE
 )
@@ -20,6 +21,13 @@ write_interpretation_report(
 return value of \code{\link[=run_orchestrator]{run_orchestrator()}}).}
 
 \item{desc}{The \code{dataset_description} used for this synthesis run.}
+
+\item{dataset_context}{Optional dataset context (as built by
+\code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}). When supplied, its
+\code{dataset_fragments} render in a "Dataset-level evidence" section above the
+per-module sections -- each fragment's \code{compact_summary}, \code{top_findings}
+table, and any attached \code{plots}. \code{NULL} (default) omits the section, and
+the report is byte-identical to one produced without the argument.}
 
 \item{output_file}{Destination HTML path. Default \code{'output/report.html'}.}
 

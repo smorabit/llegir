@@ -42,11 +42,15 @@ Normalizes every fragment onto a unified \verb{[0, 1]} scale
 reliability factor), pools them with a weighted power mean
 (\code{\link[=.pool_evidence]{.pool_evidence()}}) using tool-tier + \code{user_weights} importance
 (\code{\link[=.tool_weight]{.tool_weight()}}), and applies a mass-weighted directional-conflict
-penalty (\code{\link[=.directional_coherence]{.directional_coherence()}}). Computed straight from the packet
-\emph{before} synthesis, so the result is reproducible from the packet hash
-alone; it's injected into the synthesis prompt as ground truth
-(\code{.render_confidence_matrix()}) and re-used by \code{\link[=fuse_confidence]{fuse_confidence()}} as the
-evidence term, so the printed fusion string can never drift from the math.
+penalty (\code{\link[=.directional_coherence]{.directional_coherence()}}). Computed straight from the packet,
+so the result is reproducible from the packet hash alone.
+}
+\details{
+Shelved as of Part 4.5
+(\code{docs/prompts/handoff_prompt_serpentine_tcell.md}): no longer injected
+into the synthesis prompt and no longer consumed by \code{\link[=fuse_confidence]{fuse_confidence()}}.
+Kept intact, with \code{\link[=compute_evidence_signals]{compute_evidence_signals()}}, for a future redesign of
+the evidence score.
 }
 \examples{
 ms <- llegir_example_moduleset()

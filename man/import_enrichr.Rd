@@ -13,7 +13,9 @@ import_enrichr(module_id, result, column_map = list(), source_file = NULL, ...)
 
 \item{column_map}{Named list of column overrides: \code{term_col} (default
 \code{'Term'}), \code{effect_col} (default \code{'Odds.Ratio'}), \code{significance_col}
-(default \code{'Adjusted.P.value'}).}
+(default \code{'Adjusted.P.value'}), plus optional \code{overlap_col} / \code{jaccard_col}
+/ \code{alpha} (see \code{\link[=import_fragment]{import_fragment()}}); EnrichR's \code{Overlap} (\code{'k/n'}) column
+is picked up automatically.}
 
 \item{source_file}{Optional path \code{result} was read from; see
 \code{\link[=import_fragment]{import_fragment()}}.}

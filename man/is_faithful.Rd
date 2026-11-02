@@ -4,12 +4,14 @@
 \alias{is_faithful}
 \title{Is an interpretation faithful to its evidence packet?}
 \usage{
-is_faithful(interp, packet)
+is_faithful(interp, packet, alpha = 0.05)
 }
 \arguments{
 \item{interp}{An \code{interpretation} object.}
 
 \item{packet}{The evidence packet \code{interp} was synthesized from.}
+
+\item{alpha}{Significance threshold passed to \code{\link[=check_faithfulness]{check_faithfulness()}}.}
 }
 \value{
 A single logical.

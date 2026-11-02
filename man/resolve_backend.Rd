@@ -7,9 +7,13 @@
 resolve_backend(provider = "github", model = NULL, temperature = 0)
 }
 \arguments{
-\item{provider}{One of \code{'github'} (default), \code{'gemini'}, \code{'mock'}.}
+\item{provider}{One of \code{'github'} (default), \code{'gemini'}, \code{'mock'}, \code{'local'}.
+\code{'local'} targets an OpenAI-compatible vLLM server at \code{LLEGIR_LLM_URL}
+(see \code{\link[=llm_server_status]{llm_server_status()}} and \code{\link[=local_backend]{local_backend()}}).}
 
-\item{model}{Optional model id override; defaults to a per-provider default.}
+\item{model}{Optional model id override; defaults to a per-provider default.
+For \code{'local'}, \code{NULL} triggers model auto-discovery via \code{\link[=llm_server_status]{llm_server_status()}};
+a hard error is raised if zero or more than one models are served.}
 
 \item{temperature}{Sampling temperature (ignored by the mock backend).}
 }
@@ -20,11 +24,14 @@ A backend function; see \code{\link[=mock_backend]{mock_backend()}} for the cont
 Provider + model as a single config knob. \code{'mock'} is the offline/CI
 backend (\code{\link[=mock_backend]{mock_backend()}}); \code{'github'} and \code{'gemini'} are both built on
 \code{\link[=ellmer_backend]{ellmer_backend()}} with the matching \verb{ellmer::chat_*()} constructor and a
-default model id, so callers never branch on provider.
+default model id; \code{'local'} points at a vLLM OpenAI-compatible server
+configured via the \code{LLEGIR_LLM_URL} and \code{LLEGIR_LLM_MODEL} environment
+variables (see \code{docs/local_llm_backend.md}). Callers never branch on provider.
 }
 \examples{
 backend <- resolve_backend(provider = 'mock')
 \dontrun{
 backend <- resolve_backend(provider = 'gemini')
+backend <- resolve_backend(provider = 'local')
 }
 }

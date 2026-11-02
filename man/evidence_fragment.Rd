@@ -15,7 +15,8 @@ evidence_fragment(
   effect_strength,
   significance = NA_real_,
   direction = "na",
-  provenance = list()
+  provenance = list(),
+  plots = NULL
 )
 }
 \arguments{
@@ -45,6 +46,9 @@ evidence_fragment(
 \item{direction}{One of \code{'up'}, \code{'down'}, \code{'mixed'}, \code{'na'}.}
 
 \item{provenance}{A provenance list, typically built with \code{\link[=make_provenance]{make_provenance()}}.}
+
+\item{plots}{Optional named list of plot specs to attach; see
+\code{\link[=attach_plots]{attach_plots()}}. Default \code{NULL}.}
 }
 \value{
 An \code{evidence_fragment} object.

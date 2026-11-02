@@ -121,6 +121,11 @@ list_tools <- function(scope = NULL){
         requires = c('grouping', 'module_scores'), tier = 'high'
     )
     register_tool(
+        'cluster_expression_profile', cluster_expression_profile_tool, type = 'state_expression',
+        description = "Per-state profile of a module's global score deciles, so medium expressers stay visible",
+        requires = c('grouping', 'module_scores'), tier = 'high'
+    )
+    register_tool(
         'geneset_enrichment', geneset_enrichment_tool, type = 'geneset_enrichment',
         description = "Gene-set overlap enrichment among a module's hub genes",
         requires = 'expression', tier = 'low'

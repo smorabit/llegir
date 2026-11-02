@@ -55,6 +55,20 @@
           "description": "'computed' for tool-produced fragments (default), 'user_supplied' for import_fragment()"
         }
       }
+    },
+    "plots": {
+      "type": "object",
+      "description": "optional named list of plot specs, keyed by a stable plot id; never added to required. This is the post-strip on-disk shape -- plot_obj is stripped before every JSON/hash boundary (attach_plots(), R/plots.R) and never reaches this file",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "legend": { "type": ["string", "null"] },
+          "placement": { "enum": ["above", "below"] },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "image_path": { "type": ["string", "null"] }
+        }
+      }
     }
   }
 }

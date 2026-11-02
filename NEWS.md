@@ -1,5 +1,138 @@
 # llegir 0.0.0.9000
 
+* `write_fragment_figures()` / `write_dataset_figures()` now honor a plot
+  spec's own `width`/`height`/`dpi` (already part of the documented on-disk
+  plots-slot shape in `docs/schemas.md` / `inst/schemas/evidence_fragment.schema.json`,
+  but silently ignored at render time until now) instead of always using
+  `save_plot_to_png()`'s `7`/`4`/`150` defaults -- surfaced by a Part 6
+  dotplot with 19 rows that needed more room than the default canvas.
+  `.validate_plots()` now rejects a non-positive or non-scalar `width`/
+  `height`/`dpi`, matching the existing `legend`/`placement` checks.
+
+* `write_interpretation_report()` gains an optional `dataset_context` argument:
+  when supplied, its `dataset_fragments` render (compact_summary, top_findings
+  table, caveats, and any attached `plots`) in a "Dataset-level evidence"
+  section above the per-module sections. `NULL` (default) omits the section
+  and the report is byte-identical to before. New `write_dataset_figures()`
+  is the dataset-level sibling of `write_fragment_figures()`: materializes a
+  dataset context's live plot objects to PNGs under `<figures_dir>/dataset/`
+  and records `image_path` back on each spec.
+
+* Interpretation schema `0.1` -> `0.2` (core contract). The model now fills a
+  single free-text `interpretation` field (1-3 sentences supporting the
+  `dominant_biology` call, folding in cell-state localization and condition
+  dynamics where relevant) in place of `one_line_summary`, `cell_state`,
+  `condition_dynamics`, and `metadata_associations`, which are removed.
+  `interpretation()` / `validate_interpretation()` / `interpretation_from_json()`
+  and the model-facing schema (`model_output_schema_json()`) follow the new
+  field set. `check_faithfulness()` now inspects only `supporting_claims` (the
+  `metadata_associations` loop is gone; `supporting_claims` checking is
+  unchanged). `build_system_prompt()` drops the `cell_state` /
+  `condition_dynamics` / `metadata_associations` fill rules and instructs the
+  model to write the grounded `interpretation` prose;
+  `PROMPT_TEMPLATE_VERSION` -> `1.0` (invalidates the synthesis cache).
+  `render_paragraph()` and the HTML report render a "Synthesized biological
+  interpretation" block (dominant-biology label + prose);
+  `RENDER_TEMPLATE_VERSION` -> `0.2`.
+
+* Fix: a fragment read back from disk kept `top_findings` as a data.frame
+  (jsonlite's `simplifyDataFrame` collapses the uniform JSON array on read),
+  where every tool and the HTML report's `findings_table()` expect a list
+  with one named-list entry per finding. `fragment_from_json()`,
+  `read_evidence_packet()`, `dataset_fragment_from_json()` and
+  `read_dataset_context()` now restore the list-of-lists shape; a ragged or
+  empty `top_findings` is unaffected. The report's `findings_table()` also
+  passes a data.frame straight through as a safety net. Without this, a
+  report rendered from a re-read packet transposed every evidence table
+  (genes became column headers).
+
+* The deterministic fused evidence score is shelved
+  (`docs/prompts/handoff_prompt_serpentine_tcell.md` Part 4.5). Two known
+  flaws made the blended number misleading: a non-significant dynamics
+  fragment dragged down a genuinely stable module, and `top_genes`' top-kME
+  magnitude stood in for interpretation confidence when it only measures hub
+  tightness. Changes: `PROMPT_TEMPLATE_VERSION` bumped to `0.9`;
+  `build_user_prompt()` no longer injects the EVIDENCE CONFIDENCE MATRIX (its
+  `fusion`/`user_weights` arguments are now ignored) and the internal
+  `.render_confidence_matrix()` is removed; `build_system_prompt()` drops the
+  rules constraining `confidence.score` to `E_evidence` and asks the model
+  for its own calibrated certainty instead. `fuse_confidence()` no longer
+  blends or overwrites `confidence$score` -- it keeps the model's own value
+  and only unions the deterministic `possible_artifact` flag;
+  `enforce_faithfulness()` still sets `needs_human_review`. `calculate_fusion_score()`
+  and `compute_evidence_signals()` are retained (unused) for a future
+  redesign. The HTML summary report drops the Evidence Confidence Matrix
+  section and shows the model's own confidence.
+
+* `cluster_expression_profile_tool()` now carries mean raw module activity
+  (eigengene) per state: the `result` column is `mean_activity` (was
+  `mean_score`), and it is also surfaced in `top_findings` and the
+  `compact_summary` alongside `mean_decile`/`pct_high`, so an absolute
+  activity difference between states is legible next to the rank-based
+  decile.
+
+* New exported `housekeeping_composition_note()`: the fraction of a module's
+  top hub genes that are cytoplasmic ribosomal (`RPS*`/`RPL*`) or
+  mitochondrially encoded (`MT-*`). `render_packet_compact()` appends it to
+  the `ranked_genes` block so a part-housekeeping hub list is visible to
+  synthesis as a co-occurring program rather than quietly diluting the call.
+  Deterministic and packet-only; unlike the IEG artifact pattern it never
+  sets a flag.
+
+* The HTML summary report renders `cross_condition_delta` fragments as the
+  full per-state limma table (effect log2FC, raw and BH-adjusted p, moderated
+  t) pulled from the fragment `result`, with a one-line method caption,
+  instead of the 3-column `top_findings` preview.
+
+* New core evidence tool `cluster_expression_profile_tool()` (registered as
+  `'cluster_expression_profile'`), the non-differential companion to
+  `cluster_dme_tool()`. Instead of a one-vs-all winner, it bins every cell's
+  module score into deciles of the module's own global score distribution
+  (all cells in the `ModuleSet`, not re-binned per state) and reports, per
+  cell state, the mean/median decile its cells occupy and the share of its
+  cells in the top bin -- so a state that expresses a module at a medium
+  intensity stays visible instead of being collapsed away by `cluster_dme`'s
+  winner-take-all contrast. Emits a `'state_expression'` fragment with
+  `direction = 'na'` (a graded profile, not a signed effect) and
+  `effect_strength` set to the top state's mean global decile scaled by the
+  realized bin count, so it stays comparable across modules even when heavy
+  ties in the score distribution collapse the requested `n_deciles` to fewer
+  realized bins. Requires the `grouping` and `module_scores` `ModuleSet`
+  capabilities, same as `cluster_dme`; skips gracefully when either is
+  unmet.
+
+* `import_fragment()` gained normalizers for `'signature_correlation'` and
+  `'continuous_correlation'` (`docs/milestones/milestone_serpentine_tcell.md`
+  Part 3), closing a gap where the two schema types existed in the controlled
+  vocab and had a native tool (`signature_correlation_tool()`) but no import
+  path. `signature_correlation` normalizes a many-rows-per-module table (one
+  row per named signature, e.g. a cGEP/program library), with `top_findings`
+  using the same `signature`/`r` field names `signature_correlation_tool()`
+  itself produces; `continuous_correlation` normalizes a module's correlation
+  with a single continuous variable (`variable_col` optional, since the
+  common shape -- one row per module -- is already scoped to one variable).
+  Both follow the existing importer contract: configurable column names via
+  `params`, `effect_strength = max(abs(r))`, direction from the top |r| row's
+  sign, `provenance$source = 'user_supplied'`.
+* Plot ingestion (`docs/milestones/milestone_plot_ingestion.md` Parts 1-2):
+  both `evidence_fragment()` and `dataset_fragment()` gained an optional
+  `plots` slot -- a named list of pre-rendered figure specs (a live
+  `plot_obj` and/or a persisted `image_path`, plus `legend`/`placement`
+  hints). `llegir` ships no plotting functions and stays strictly an asset
+  container; a fragment with no plots validates, serializes, and hashes
+  exactly as before. New exported `attach_plots(frag, plots)` decorates an
+  existing fragment and re-validates at attach time. A raw `plot_obj` never
+  reaches `jsonlite::toJSON()` or `digest::digest()`: the new internal
+  `.strip_plot_objs()` guardrail runs before every existing `unclass()` in
+  `.fragment_hashable()`/`fragment_to_json()`/`packet_to_json()` and their
+  `dataset_fragment` siblings, so `packet_hash` stays reproducible across
+  sessions while legends (text, not pixels) still serialize and count toward
+  the hash. New exported `write_fragment_figures(packet, figures_dir)`
+  renders each fragment's live plots to
+  `<figures_dir>/<module_id>/<fragment_id>__<plot_id>.png` and records the
+  path back onto the spec as `image_path`, the graphical sibling of
+  `write_fragment_tables()`. `ggplot2` added to `Suggests` (not `Imports`);
+  the core pipeline runs without it.
 * `export_agent_workspace()` v0.2 hardening (`docs/milestones/milestone_agent_workspace.md`
   Part 4): the serialized `ModuleSet` is now split into a lite/full pair --
   `artifacts/moduleset_lite.qs2` (default load; a new internal

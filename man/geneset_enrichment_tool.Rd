@@ -9,7 +9,12 @@ geneset_enrichment_tool(ctx)
 \arguments{
 \item{ctx}{A tool context list: \code{list(ms, module_id, params)}, as built by
 \code{\link[=run_module]{run_module()}}. \code{ctx$params$n_hubs} (default 25) is the number of hub
-genes tested. \code{ctx$params$db_files} (required for a non-empty result) is
+genes tested. \code{ctx$params$alpha} (default 0.05) is the FDR threshold
+below which a term counts as significant: the fragment's
+\code{compact_summary} states whether any term passes it, and \code{direction} is
+\code{'up'} only when one does (\code{'na'} otherwise). Each \code{top_findings} entry
+carries the term's FDR, odds ratio, overlap size (\code{n_overlap}) and
+Jaccard index. \code{ctx$params$db_files} (required for a non-empty result) is
 a named character vector of local GMT file paths, e.g.
 \code{c(GO_BP = 'path/to/GO_Biological_Process.txt')}.}
 }

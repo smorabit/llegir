@@ -60,6 +60,25 @@
           "description": "'computed' for tool-produced fragments (default), 'user_supplied' for import_dataset_fragment()/import_milo_da()"
         }
       }
+    },
+    "plots": {
+      "type": "object",
+      "description": "optional named list of plot specs, keyed by a stable plot id; never added to required. This is the post-strip on-disk shape -- plot_obj is stripped before every JSON/hash boundary (attach_plots(), R/plots.R) and never reaches this file",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "legend": { "type": ["string", "null"] },
+          "placement": { "enum": ["above", "below"] },
+          "width": { "type": "number" },
+          "height": { "type": "number" },
+          "image_path": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "render_max_findings": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "description": "optional per-fragment override of the top_findings render cap applied by .render_dataset_fragment_compact()/render_dataset_context_compact(); never added to required, and omitted entirely (not written as null) when unset, so a fragment that never opts in serializes and hashes exactly as one built before this field existed. Set by a tool whose findings are a census (one entry per group) rather than a top-N ranking, e.g. the SERPENTINE tumor cluster reference card (one row per Tumor-N cluster)."
     }
   }
 }

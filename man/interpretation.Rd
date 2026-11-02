@@ -7,17 +7,15 @@
 interpretation(
   module_id,
   proposed_label,
-  one_line_summary,
   dominant_biology,
+  interpretation,
   supporting_claims,
   confidence,
   provenance,
-  cell_state = NA_character_,
-  condition_dynamics = NA_character_,
-  metadata_associations = list(),
   literature = list(),
   flags = list(),
-  schema_version = "0.1"
+  review = NULL,
+  schema_version = if (is.null(review)) "0.2" else "0.3"
 )
 }
 \arguments{
@@ -25,9 +23,12 @@ interpretation(
 
 \item{proposed_label}{Short program name, e.g. \code{'Interferon response'}.}
 
-\item{one_line_summary}{A one-line summary of the module.}
+\item{dominant_biology}{The main program, as a short label.}
 
-\item{dominant_biology}{Description of the main program.}
+\item{interpretation}{1-3 sentences of prose supporting the
+\code{dominant_biology} call, grounded in the cited fragments; folds in where
+the module is expressed and how its activity shifts across the tested
+condition where relevant.}
 
 \item{supporting_claims}{A list of claims, each
 \code{list(claim, fragment_ids, direction, strength)}.}
@@ -37,12 +38,6 @@ interpretation(
 \item{provenance}{A provenance list, typically built with
 \code{\link[=make_interpretation_provenance]{make_interpretation_provenance()}}.}
 
-\item{cell_state}{Where the module is expressed (from \code{cluster_dme}), if known.}
-
-\item{condition_dynamics}{Condition-dependent dynamics, if applicable.}
-
-\item{metadata_associations}{A list of \code{list(variable, summary, fragment_id)}.}
-
 \item{literature}{A list of \code{list(statement, pmids)}. Always empty in the
 current synthesis layer.}
 
@@ -50,7 +45,12 @@ current synthesis layer.}
 \code{'needs_human_review'}, \code{'possible_artifact'}, \code{'tool_conflict'},
 \code{'label_low_specificity'}.}
 
-\item{schema_version}{Schema version tag. Default \code{'0.1'}.}
+\item{review}{Optional structured self-review (schema 0.3), attached by
+an agent labelling run (see \code{\link[=export_agent_workspace]{export_agent_workspace()}} with
+\code{mode = 'label'}); \code{NULL} (default) for LLM synthesis.}
+
+\item{schema_version}{Schema version tag. Defaults to \code{'0.2'}, or \code{'0.3'}
+when \code{review} is supplied (the only 0.3 addition).}
 }
 \value{
 An \code{interpretation} object.
@@ -58,7 +58,8 @@ An \code{interpretation} object.
 \description{
 One module's filled schema, produced by the synthesis layer
 (\code{\link[=synthesize_interpretation]{synthesize_interpretation()}}) from a fixed evidence packet.
-\code{confidence$score} starts out equal to \code{confidence$model_score} and is
-overwritten in place by confidence fusion (\code{\link[=fuse_confidence]{fuse_confidence()}});
-\code{provenance} is attached by the orchestrator, never by the model itself.
+\code{confidence$score} equals \code{confidence$model_score} (the deterministic
+fused blend is shelved as of Part 4.5; \code{\link[=fuse_confidence]{fuse_confidence()}} now only adds
+review flags and leaves the score alone); \code{provenance} is attached by the
+orchestrator, never by the model itself.
 }

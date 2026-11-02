@@ -5,12 +5,17 @@
 \title{Model-facing interpretation schema, derived from the canonical schema}
 \usage{
 model_output_schema_json(
-  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir")
+  schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir"),
+  include_review = FALSE
 )
 }
 \arguments{
 \item{schema_path}{Path to the canonical \code{interpretation.schema.json};
 defaults to the schema shipped with the package.}
+
+\item{include_review}{Keep the \code{review} block and make it required, as the
+label schema of \code{export_agent_workspace(mode = 'label')} does. Default
+\code{FALSE}.}
 }
 \value{
 A JSON string (a \code{jsonlite::toJSON()} scalar) of the model-facing schema.
@@ -22,6 +27,8 @@ The interpretation JSON schema minus fields the model shouldn't fill:
 asking the model to fill it twice invites drift. Derived from the one
 canonical schema file (rather than hand-duplicated) so the two never
 diverge, and normalized to a schema dialect supported across providers.
+The optional \code{review} block (schema 0.3) is dropped by default: it is the
+agent-labelling self-review, which LLM synthesis never fills.
 }
 \examples{
 model_output_schema_json()

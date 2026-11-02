@@ -13,9 +13,11 @@ A single character string.
 A fixed set of rules governing how a backend must fill the model-facing
 interpretation schema: evidence-only claims, citation requirements,
 direction consistency, controlled vocabularies, the empty-literature
-constraint, and how \code{confidence.score} must relate to the deterministic
-EVIDENCE CONFIDENCE MATRIX (\code{\link[=calculate_fusion_score]{calculate_fusion_score()}}) injected into the
-user prompt by \code{\link[=build_user_prompt]{build_user_prompt()}}.
+constraint, and a self-calibrated \code{confidence.score}. The deterministic
+fused evidence score is shelved (\code{docs/prompts/handoff_prompt_serpentine_tcell.md}
+Part 4.5): the EVIDENCE CONFIDENCE MATRIX is no longer injected and the
+model reports its own certainty, while \code{\link[=enforce_faithfulness]{enforce_faithfulness()}} and
+\code{\link[=fuse_confidence]{fuse_confidence()}}'s \code{possible_artifact} check still set review flags.
 }
 \examples{
 cat(build_system_prompt())

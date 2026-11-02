@@ -11,7 +11,11 @@ export_agent_workspace(
   desc,
   interps = NULL,
   out_dir = "agent_workspace",
-  write_json = TRUE
+  write_json = TRUE,
+  mode = c("explore", "label"),
+  sample_col = .ms_sample_col(ms),
+  depth_cols = NULL,
+  feature_genes = NULL
 )
 }
 \arguments{
@@ -35,6 +39,37 @@ mock-synthesize one.}
 
 \item{write_json}{Also emit portable JSON copies of the context, packets,
 and (if present) interpretations. Default \code{TRUE}.}
+
+\item{mode}{\code{'explore'} (default) exports the read-only query workspace
+described above, unchanged. \code{'label'} additionally commissions the agent
+to write module labels: the manifest gains a Labeling Task section
+carrying the synthesis prompt's rules (\code{\link[=build_system_prompt]{build_system_prompt()}}) and the
+model-facing schema, each module's packet is rendered to
+\verb{artifacts/label_evidence/<module_id>.md} exactly as the synthesis model
+sees it, a \verb{labels/} directory is created for the agent's output (one
+\verb{<module_id>.json} per module), and \code{validate_labels.R} is shipped so the
+agent can check its labels with \code{\link[=check_agent_labels]{check_agent_labels()}}. The manifest
+also sets a refinement protocol (artifact gate, evidence hierarchy,
+falsification against expected markers, anchored confidence, unique
+labels), each label must carry the interpretation's \code{review} block, and
+each evidence file ends with a deterministic artifact screen. Supplying
+\code{interps} in label mode ships them as drafts for the agent to refine.
+Collect the result with \code{\link[=collect_agent_labels]{collect_agent_labels()}}.}
+
+\item{sample_col}{Label mode only: metadata column naming the biological
+sample (e.g. patient) for the artifact screen's single-sample share of a
+module's top-decile activity. Defaults to the \code{ModuleSet}'s declared
+sample-id column, if any; \code{NULL} skips that line.}
+
+\item{depth_cols}{Label mode only: metadata columns holding per-cell
+sequencing depth (e.g. \code{c('nCount_RNA', 'nFeature_RNA')}), for the
+artifact screen's module-score/depth correlation. \code{NULL} (default) skips
+that line.}
+
+\item{feature_genes}{Label mode only: every gene that was eligible for
+module assignment (e.g. \code{hdWGCNA::GetWGCNAGenes()}, grey included), so a
+marker in no module can be classed \code{unassigned} rather than \code{not_tested}.
+\code{NULL} (default) accepts either for such a gene.}
 }
 \value{
 The absolute path to the written manifest, invisibly.
@@ -51,11 +86,11 @@ manual step. Pure exporter: writes files and returns a path, never calls
 }
 \details{
 The \code{ModuleSet} is serialized twice: \code{artifacts/moduleset_lite.qs2} (a
-[\code{.make_moduleset_lite()}] reduction with the backing expression/counts
+\code{\link[=.make_moduleset_lite]{.make_moduleset_lite()}} reduction with the backing expression/counts
 matrices dropped -- what \code{query_example.R} loads by default) and
 \code{artifacts/moduleset_full.qs2} (\code{ms} unchanged, for the rare
 \code{expression()}/\code{counts()} query). Every cheat-sheet row, tool-registry
 row, and recipe rung is still generated against \code{ms}'s full capabilities
--- nothing is dropped from the docs -- but is tagged \code{(full object only)}
+-- nothing is dropped from the docs -- but is tagged \verb{(full object only)}
 when it needs something the lite object doesn't carry.
 }

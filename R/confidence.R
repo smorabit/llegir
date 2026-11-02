@@ -222,11 +222,14 @@ compute_evidence_signals <- function(packet, sig_threshold = 0.05, effect_floor 
 #' reliability factor), pools them with a weighted power mean
 #' ([.pool_evidence()]) using tool-tier + `user_weights` importance
 #' ([.tool_weight()]), and applies a mass-weighted directional-conflict
-#' penalty ([.directional_coherence()]). Computed straight from the packet
-#' *before* synthesis, so the result is reproducible from the packet hash
-#' alone; it's injected into the synthesis prompt as ground truth
-#' (`.render_confidence_matrix()`) and re-used by [fuse_confidence()] as the
-#' evidence term, so the printed fusion string can never drift from the math.
+#' penalty ([.directional_coherence()]). Computed straight from the packet,
+#' so the result is reproducible from the packet hash alone.
+#'
+#' Shelved as of Part 4.5
+#' (`docs/prompts/handoff_prompt_serpentine_tcell.md`): no longer injected
+#' into the synthesis prompt and no longer consumed by [fuse_confidence()].
+#' Kept intact, with [compute_evidence_signals()], for a future redesign of
+#' the evidence score.
 #'
 #' @param fragments A list of `evidence_fragment` objects (a packet's `fragments`).
 #' @param user_weights Named list of per-`tool_id` weight multipliers on top of
@@ -294,36 +297,84 @@ calculate_fusion_score <- function(fragments, user_weights = list(), beta = 0.5,
     mean(toupper(top_genes) %in% .ieg_artifact_genes) >= frac_threshold
 }
 
-#' Fuse model and deterministic confidence into a final score and flags
+# fraction of a gene vector that is cytoplasmic ribosomal protein (RPS*/RPL*,
+# also catches the RPS6K* kinases -- accepted for regex simplicity) or
+# mitochondrially encoded (MT-*). A hub list can be part housekeeping without
+# being an artifact, so unlike .ieg_artifact_genes this is reported, not flagged
+.housekeeping_gene_fractions <- function(genes){
+    genes <- toupper(genes)
+    list(
+        ribosomal = mean(grepl('^RP[SL]', genes)),
+        mitochondrial = mean(grepl('^MT-', genes))
+    )
+}
+
+#' Housekeeping-composition note for a packet's hub-gene list
 #'
-#' The model's self-reported confidence (`interp$confidence$model_score`) is
-#' never trusted alone. It's blended with [calculate_fusion_score()]'s
-#' deterministic `e_evidence` via a weighted geometric blend
-#' (`model_score^lambda * e_evidence^(1 - lambda)`), and the blend is what can
-#' trigger review flags -- so a fluent, confident label over weak evidence
-#' gets caught even if the model never flags itself. `fusion` should be the
-#' same [calculate_fusion_score()] result already injected into the
-#' synthesis prompt (see `R/prompt.R`), so the printed fusion string can
-#' never drift from what the model was shown; passing `NULL` recomputes it
-#' from `packet` and `user_weights`. Mutates and returns `interp`:
-#' `confidence$score` is overwritten (`model_score` is preserved for audit),
-#' and `flags` are unioned with whatever the model or
-#' [enforce_faithfulness()] already set.
+#' The fraction of a module's top hub genes that are cytoplasmic ribosomal
+#' (`RPS*`/`RPL*`) or mitochondrially encoded (`MT-*`). Surfaced to synthesis
+#' via [render_packet_compact()] as a short note appended to the
+#' `ranked_genes` fragment, so a module whose hub list is part housekeeping
+#' reads as "<program> AND ribosomal-high" instead of having the housekeeping
+#' genes quietly dilute the biological call. Deterministic, packet-only, and
+#' -- unlike `.artifact_flagged()`'s IEG pattern -- never sets a flag on its own.
+#'
+#' @param packet An evidence packet, as built by [build_evidence_packet()].
+#' @param top_n Number of top hub genes to inspect. Default `20`.
+#' @param min_fraction Fraction a family must reach to be worth noting.
+#'   Default `0.15`.
+#' @return A single-string note, or `NULL` when neither family clears
+#'   `min_fraction` or the packet carries no `ranked_genes` fragment.
+#' @examples
+#' ms <- llegir_example_moduleset()
+#' packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
+#' housekeeping_composition_note(packet)
+#' @export
+housekeeping_composition_note <- function(packet, top_n = 20, min_fraction = 0.15){
+    hub_frag <- Find(function(f) f$type == 'ranked_genes', packet$fragments)
+    if (is.null(hub_frag) || !('gene_name' %in% names(hub_frag$result))) return(NULL)
+    top_genes <- utils::head(hub_frag$result$gene_name, top_n)
+    fr <- .housekeeping_gene_fractions(top_genes)
+
+    parts <- character(0)
+    if (fr$ribosomal >= min_fraction) {
+        parts <- c(parts, sprintf('%d%% ribosomal protein genes (RPS/RPL)', round(100 * fr$ribosomal)))
+    }
+    if (fr$mitochondrial >= min_fraction) {
+        parts <- c(parts, sprintf('%d%% mitochondrial genes (MT-)', round(100 * fr$mitochondrial)))
+    }
+    if (length(parts) == 0) return(NULL)
+
+    sprintf(
+        'housekeeping note: %s among the top %d hub genes -- read this as a co-occurring housekeeping program alongside the module\'s biology, not automatically an artifact',
+        paste(parts, collapse = ' and '), top_n
+    )
+}
+
+#' Apply deterministic review flags to an interpretation
+#'
+#' The fused evidence score is shelved
+#' (`docs/prompts/handoff_prompt_serpentine_tcell.md` Part 4.5): its two known
+#' flaws -- a non-significant dynamics fragment dragging down a genuinely
+#' stable module, and `top_genes`' top-kME magnitude standing in for
+#' interpretation confidence when it only measures hub tightness -- made the
+#' blended number misleading, so `confidence$score` is left as the model's own
+#' calibrated value. This function now only unions the deterministic
+#' `possible_artifact` flag (hub list dominated by IEG/dissociation-stress
+#' markers, `.artifact_flagged()`) into `interp$flags`; [enforce_faithfulness()]
+#' sets `needs_human_review` independently, and the model may still set
+#' `insufficient_evidence` itself. [calculate_fusion_score()] and
+#' [compute_evidence_signals()] are retained, unused here, for a future
+#' redesign of the score.
 #'
 #' @param interp An `interpretation` object, as returned by
 #'   [synthesize_interpretation()] (after [enforce_faithfulness()]).
 #' @param packet The evidence packet `interp` was synthesized from.
-#' @param low_threshold `e_evidence` floor below which the fused score is
-#'   capped and `'insufficient_evidence'` is flagged.
-#' @param disagreement_threshold Minimum `|model_score - e_evidence|` gap
-#'   that flags `'needs_human_review'`.
-#' @param user_weights Named list of per-`tool_id` weight multipliers passed
-#'   to [calculate_fusion_score()] when `fusion` is `NULL`. Default `list()`.
-#' @param fusion An optional pre-computed [calculate_fusion_score()] result
-#'   (the same one shown to the model in the prompt); `NULL` (default)
-#'   recomputes it from `packet` and `user_weights`.
-#' @return `interp`, with `confidence$score`, `confidence$rationale`, and
-#'   `flags` updated.
+#' @param low_threshold Ignored; retained for call-site compatibility.
+#' @param disagreement_threshold Ignored; retained for call-site compatibility.
+#' @param user_weights Ignored; retained for call-site compatibility.
+#' @param fusion Ignored; retained for call-site compatibility.
+#' @return `interp`, with `flags` possibly extended by `'possible_artifact'`.
 #' @examples
 #' ms <- llegir_example_moduleset()
 #' packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list())))
@@ -333,38 +384,10 @@ calculate_fusion_score <- function(fragments, user_weights = list(), beta = 0.5,
 #' @export
 fuse_confidence <- function(interp, packet, low_threshold = 0.35, disagreement_threshold = 0.35,
                              user_weights = list(), fusion = NULL){
-    fusion <- fusion %||% calculate_fusion_score(packet$fragments, user_weights = user_weights)
-    signals <- compute_evidence_signals(packet)
-    model_score <- interp$confidence$model_score
-    fused_score <- model_score^fusion$lambda * fusion$e_evidence^(1 - fusion$lambda)
-
     flags <- unlist(interp$flags)
-
-    # weak evidence caps the final score regardless of how confident the
-    # model sounded -- this is the guardrail against a fluent story over a
-    # random gene set (docs/implementation_guide.md #4 negative control),
-    # now intrinsic to the geometric blend above but retained as an explicit
-    # cap + flag for the same threshold semantics as before
-    if (fusion$e_evidence < low_threshold) {
-        flags <- union(flags, 'insufficient_evidence')
-        fused_score <- min(fused_score, low_threshold)
-    }
-    if (abs(model_score - fusion$e_evidence) > disagreement_threshold) {
-        flags <- union(flags, 'needs_human_review')
-    }
-    if (identical(signals$cross_tool_agreement, 'conflicting')) {
-        flags <- union(flags, 'tool_conflict')
-    }
     if (.artifact_flagged(packet)) {
         flags <- union(flags, 'possible_artifact')
     }
-
-    interp$confidence$score <- fused_score
-    interp$confidence$rationale <- sprintf(
-        '%s [fusion: model=%.2f, evidence=%.2f (E_pool=%.2f, P_agree=%.2f, C_dir=%.2f), lambda=%.2f, fused=%.2f]',
-        interp$confidence$rationale, model_score, fusion$e_evidence, fusion$e_pool,
-        fusion$p_agree, fusion$c_dir, fusion$lambda, fused_score
-    )
     interp$flags <- as.list(flags)
     interp
 }

@@ -48,15 +48,26 @@
 #' asking the model to fill it twice invites drift. Derived from the one
 #' canonical schema file (rather than hand-duplicated) so the two never
 #' diverge, and normalized to a schema dialect supported across providers.
+#' The optional `review` block (schema 0.3) is dropped by default: it is the
+#' agent-labelling self-review, which LLM synthesis never fills.
 #'
 #' @param schema_path Path to the canonical `interpretation.schema.json`;
 #'   defaults to the schema shipped with the package.
+#' @param include_review Keep the `review` block and make it required, as the
+#'   label schema of `export_agent_workspace(mode = 'label')` does. Default
+#'   `FALSE`.
 #' @return A JSON string (a `jsonlite::toJSON()` scalar) of the model-facing schema.
 #' @examples
 #' model_output_schema_json()
 #' @export
-model_output_schema_json <- function(schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir')){
+model_output_schema_json <- function(schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
+                                     include_review = FALSE){
     schema <- jsonlite::fromJSON(schema_path, simplifyVector = FALSE)
+    if (isTRUE(include_review)) {
+        schema$required <- c(schema$required, 'review')
+    } else {
+        schema$properties$review <- NULL
+    }
     schema$`$schema` <- NULL
     schema$`$id` <- NULL
     schema$schema_version <- NULL
@@ -73,11 +84,11 @@ model_output_schema_json <- function(schema_path = system.file('schemas', 'inter
 #'
 #' A canned, fixed-response backend: the first-class offline backend used by
 #' tests and CI, and never touches the network. It cites fragment_ids
-#' (`'top_genes'`, `'geneset_enrichment'`) and directions (`'na'`, `'up'`)
-#' that hold on every packet produced by the core tools (`top_genes` is
-#' always direction `'na'`, `geneset_enrichment` is always direction
-#' `'up'`), so it passes [check_faithfulness()] against any real evidence
-#' packet without per-module logic.
+#' `'top_genes'` (always direction `'na'`) and `'geneset_enrichment'`, whose
+#' direction (`'up'` only when a term reaches significance, else `'na'`) is
+#' read back from the rendered packet in the user prompt, and its claim text
+#' avoids significance wording, so it passes [check_faithfulness()] against
+#' any real evidence packet without per-module logic.
 #'
 #' @return A backend function with the signature
 #'   `function(system_prompt, user_prompt, schema_json, packet_hash) -> list(content, meta)`,
@@ -88,19 +99,19 @@ model_output_schema_json <- function(schema_path = system.file('schemas', 'inter
 #' @export
 mock_backend <- function(){
     function(system_prompt, user_prompt, schema_json, packet_hash = NA_character_){
+        # render_packet_compact() writes '[fragment_id] type=... direction=...' headers
+        enrich_header <- regmatches(user_prompt, regexpr('\\[geneset_enrichment\\] type=\\S+ direction=\\w+', user_prompt))
+        enrich_direction <- if (length(enrich_header) == 1) sub('^.*direction=', '', enrich_header) else 'up'
         list(
             content = list(
                 module_id = 'MOCK',
                 proposed_label = 'Myeloid activation program (mock)',
-                one_line_summary = 'Mock synthesis output for offline testing; not derived from the evidence packet.',
                 dominant_biology = 'Not evaluated by the mock backend.',
+                interpretation = 'Mock synthesis output for offline testing; not derived from the evidence packet.',
                 supporting_claims = list(
                     list(claim = 'Top genes were computed by the deterministic core.', fragment_ids = list('top_genes'), direction = 'na'),
-                    list(claim = 'The module has enriched gene-set terms.', fragment_ids = list('geneset_enrichment'), direction = 'up')
+                    list(claim = 'Gene-set overlap was tested for the hub genes.', fragment_ids = list('geneset_enrichment'), direction = enrich_direction)
                 ),
-                cell_state = NA_character_,
-                condition_dynamics = NA_character_,
-                metadata_associations = list(),
                 flags = list(),
                 confidence = list(score = 0.5, rationale = 'Mock backend: fixed neutral confidence, not evidence-derived.')
             ),
@@ -189,33 +200,94 @@ ellmer_backend <- function(chat_fn = ellmer::chat_google_gemini, model = 'gemini
     }
 }
 
+#' Query a local vLLM server's model list
+#'
+#' GETs `<base_url>/models` and returns the base URL and the served model ids.
+#' Used by [resolve_backend()] for model auto-discovery and by [local_backend()]
+#' for connectivity pre-flight. Throws a clear, actionable error if the server
+#' is unreachable so the failure site is visible at the top of the call stack
+#' rather than buried in an httr2 connection error.
+#'
+#' @param base_url Base URL of the OpenAI-compatible server (no trailing
+#'   slash); defaults to `LLEGIR_LLM_URL` or `http://127.0.0.1:8000/v1`.
+#' @return A list with two elements: `base_url` (character) and `models`
+#'   (character vector of served model ids as reported by the `/models` endpoint).
+#' @examples
+#' \dontrun{
+#' status <- llm_server_status()
+#' cat('Served models:', paste(status$models, collapse = ', '), '\n')
+#' }
+#' @export
+llm_server_status <- function(base_url = Sys.getenv('LLEGIR_LLM_URL', 'http://127.0.0.1:8000/v1')){
+    resp <- tryCatch(
+        httr2::req_perform(httr2::req_url_path_append(httr2::request(base_url), 'models')),
+        error = function(e) stop(
+            'local LLM server not reachable at ', base_url,
+            ' -- is `vllm serve` running and your tunnel/URL correct? (',
+            conditionMessage(e), ')', call. = FALSE
+        )
+    )
+    list(base_url = base_url, models = vapply(httr2::resp_body_json(resp)$data, function(m) m$id, character(1)))
+}
+
 # provider + model as a single config knob: 'github' (gpt-4o-mini, the
 # generous ~150/day tier) is the default dev provider, 'gemini' is kept for
-# occasional quality cross-checks, 'mock' is the offline/CI backend. All
-# three satisfy the same backend contract above, so callers (scripts, tests)
-# never branch on provider.
-.default_models <- list(github = 'gpt-4o-mini', gemini = 'gemini-3.5-flash')
+# occasional quality cross-checks, 'mock' is the offline/CI backend, 'local'
+# points at a vLLM server via LLEGIR_LLM_URL (model auto-discovered via
+# llm_server_status() when model = NULL). All four satisfy the same backend
+# contract above, so callers never branch on provider.
+.default_models <- list(
+    github = 'gpt-4o-mini',
+    gemini = 'gemini-3.5-flash'
+)
 
 #' Resolve a synthesis backend from a provider name
 #'
 #' Provider + model as a single config knob. `'mock'` is the offline/CI
 #' backend ([mock_backend()]); `'github'` and `'gemini'` are both built on
 #' [ellmer_backend()] with the matching `ellmer::chat_*()` constructor and a
-#' default model id, so callers never branch on provider.
+#' default model id; `'local'` points at a vLLM OpenAI-compatible server
+#' configured via the `LLEGIR_LLM_URL` and `LLEGIR_LLM_MODEL` environment
+#' variables (see `docs/local_llm_backend.md`). Callers never branch on provider.
 #'
-#' @param provider One of `'github'` (default), `'gemini'`, `'mock'`.
+#' @param provider One of `'github'` (default), `'gemini'`, `'mock'`, `'local'`.
+#'   `'local'` targets an OpenAI-compatible vLLM server at `LLEGIR_LLM_URL`
+#'   (see [llm_server_status()] and [local_backend()]).
 #' @param model Optional model id override; defaults to a per-provider default.
+#'   For `'local'`, `NULL` triggers model auto-discovery via [llm_server_status()];
+#'   a hard error is raised if zero or more than one models are served.
 #' @param temperature Sampling temperature (ignored by the mock backend).
 #' @return A backend function; see [mock_backend()] for the contract.
 #' @examples
 #' backend <- resolve_backend(provider = 'mock')
 #' \dontrun{
 #' backend <- resolve_backend(provider = 'gemini')
+#' backend <- resolve_backend(provider = 'local')
 #' }
 #' @export
 resolve_backend <- function(provider = 'github', model = NULL, temperature = 0){
-    provider <- match.arg(provider, c('github', 'gemini', 'mock'))
+    provider <- match.arg(provider, c('github', 'gemini', 'mock', 'local'))
     if (provider == 'mock') return(mock_backend())
+
+    if (provider == 'local') {
+        base_url <- Sys.getenv('LLEGIR_LLM_URL', 'http://127.0.0.1:8000/v1')
+        if (!nzchar(Sys.getenv('VLLM_API_KEY'))) Sys.setenv(VLLM_API_KEY = 'EMPTY')
+        if (is.null(model)) {
+            status <- llm_server_status(base_url)
+            if (length(status$models) == 0)
+                stop('no models served at ', base_url, call. = FALSE)
+            if (length(status$models) > 1)
+                stop('multiple models served at ', base_url, ': ', paste(status$models, collapse = ', '),
+                     ' -- set `model` explicitly', call. = FALSE)
+            model <- status$models[1]
+        }
+        chat_fn <- function(credentials = NULL, ...) ellmer::chat_vllm(base_url = base_url, ...)
+        return(ellmer_backend(
+            chat_fn = chat_fn, model = model,
+            temperature = temperature, schema_transform = identity
+        ))
+    }
+
     chat_fn <- switch(provider, github = ellmer::chat_github, gemini = ellmer::chat_google_gemini)
     schema_transform <- if (provider == 'github') .to_openai_strict_schema else identity
     ellmer_backend(chat_fn = chat_fn, model = model %||% .default_models[[provider]],
@@ -257,6 +329,47 @@ cached_backend <- function(backend, provider, model, prompt_template_version,
     }
 }
 
+#' Convenience constructor for the local vLLM backend
+#'
+#' Combines connectivity pre-flight ([llm_server_status()]), model
+#' auto-discovery, [resolve_backend()] for `'local'`, and [cached_backend()]
+#' into a single call. Returns a ready-to-use cached backend suitable for
+#' [synthesize_interpretation()] and [run_synthesis_orchestrator()].
+#'
+#' @param model Model id served by the vLLM server. When `NULL` (default),
+#'   the server's model list is queried via [llm_server_status()]; a hard
+#'   error is raised if zero or more than one models are served so the
+#'   correct id can be specified explicitly.
+#' @param cache If `TRUE` (default), wraps the live backend with
+#'   [cached_backend()] keyed on provider, model, and prompt template version.
+#' @param force_refresh Passed to [cached_backend()]; if `TRUE`, bypasses any
+#'   cached response and always calls the live server.
+#' @param prompt_template_version Cache-key component passed to
+#'   [cached_backend()]; defaults to the package-level [PROMPT_TEMPLATE_VERSION].
+#' @return A backend function; see [mock_backend()] for the contract.
+#' @examples
+#' \dontrun{
+#' backend <- local_backend()
+#' }
+#' @export
+local_backend <- function(model = NULL, cache = TRUE, force_refresh = FALSE,
+                           prompt_template_version = PROMPT_TEMPLATE_VERSION){
+    base_url <- Sys.getenv('LLEGIR_LLM_URL', 'http://127.0.0.1:8000/v1')
+    status <- llm_server_status(base_url)
+    if (is.null(model)) {
+        if (length(status$models) == 0)
+            stop('no models served at ', base_url, call. = FALSE)
+        if (length(status$models) > 1)
+            stop('multiple models served at ', base_url, ': ', paste(status$models, collapse = ', '),
+                 ' -- set `model` explicitly', call. = FALSE)
+        model <- status$models[1]
+    }
+    backend <- resolve_backend('local', model = model)
+    if (!cache) return(backend)
+    cached_backend(backend, provider = 'local', model = model,
+        prompt_template_version = prompt_template_version, force_refresh = force_refresh)
+}
+
 #' Synthesize one evidence packet into an interpretation via a backend
 #'
 #' The model's role is bounded: it fills the model-facing schema
@@ -277,14 +390,10 @@ cached_backend <- function(backend, provider, model, prompt_template_version,
 #'   interpretation's provenance.
 #' @param schema_path Path to the interpretation JSON schema; defaults to the
 #'   schema shipped with the package.
-#' @param user_weights Named list of per-`tool_id` weight multipliers passed
-#'   to [calculate_fusion_score()] for the EVIDENCE CONFIDENCE MATRIX injected
-#'   into the user prompt (see [build_user_prompt()]). Default `list()`.
-#' @param fusion An optional pre-computed [calculate_fusion_score()] result to
-#'   inject into the user prompt; `NULL` (default) computes it from
-#'   `packet$fragments` and `user_weights`. [synthesize_module()] computes it
-#'   once and passes the same object here and to [fuse_confidence()], so the
-#'   prompt and the final fused score are guaranteed to agree.
+#' @param user_weights Ignored; retained for call-site compatibility since the
+#'   fused evidence score is shelved (Part 4.5). Default `list()`.
+#' @param fusion Ignored; retained for call-site compatibility. The EVIDENCE
+#'   CONFIDENCE MATRIX is no longer part of the prompt.
 #' @param dataset_context An optional dataset context, as built by
 #'   [build_dataset_context()] / [run_dataset_context()], threaded into
 #'   [build_user_prompt()]. `NULL` (default) omits the DATASET CONTEXT block.
@@ -301,10 +410,9 @@ synthesize_interpretation <- function(packet, desc, backend, temperature = 0, se
                                        schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
                                        user_weights = list(), fusion = NULL, dataset_context = NULL){
     validate_dataset_description(desc)
-    fusion <- fusion %||% calculate_fusion_score(packet$fragments, user_weights = user_weights)
 
     system_prompt <- build_system_prompt()
-    user_prompt <- build_user_prompt(packet, desc, fusion = fusion, dataset_context = dataset_context)
+    user_prompt <- build_user_prompt(packet, desc, dataset_context = dataset_context)
     schema_json <- model_output_schema_json(schema_path)
 
     result <- backend(system_prompt, user_prompt, schema_json, packet_hash = packet$packet_hash)
@@ -335,16 +443,16 @@ synthesize_interpretation <- function(packet, desc, backend, temperature = 0, se
     interp <- interpretation(
         module_id = packet$module_id,
         proposed_label = raw$proposed_label,
-        one_line_summary = raw$one_line_summary,
         dominant_biology = raw$dominant_biology,
+        interpretation = raw$interpretation,
         supporting_claims = lapply(raw$supporting_claims, to_claim),
         confidence = confidence,
         provenance = provenance,
-        cell_state = raw$cell_state %||% NA_character_,
-        condition_dynamics = raw$condition_dynamics %||% NA_character_,
-        metadata_associations = raw$metadata_associations %||% list(),
         literature = list(),
-        flags = unlist(raw$flags) %||% list()
+        flags = unlist(raw$flags) %||% list(),
+        # only an agent label (export_agent_workspace(mode = 'label')) carries
+        # one; the LLM-facing schema omits it, so this is NULL for LLM output
+        review = .normalize_review(raw$review)
     )
     validate_interpretation(interp)
     interp

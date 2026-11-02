@@ -5,8 +5,8 @@ make_valid_interpretation <- function(){
     interpretation(
         module_id = 'MM1',
         proposed_label = 'Border TAM / complement program',
-        one_line_summary = 'Complement and phagocytic program enriched in border-associated macrophages.',
         dominant_biology = 'Complement activation and synaptic pruning.',
+        interpretation = 'The hub genes and enriched terms mark a complement and phagocytic program in border-associated macrophages.',
         supporting_claims = list(
             list(claim = 'Top genes include complement components.', fragment_ids = 'top_genes', direction = 'na'),
             list(claim = 'Enriched for synapse pruning and complement terms.', fragment_ids = 'geneset_enrichment', direction = 'up')
@@ -20,7 +20,7 @@ make_valid_interpretation <- function(){
 
 test_that('validate_interpretation() rejects an invalid claim direction', {
     interp <- interpretation(
-        module_id = 'MM1', proposed_label = 'x', one_line_summary = 'x', dominant_biology = 'x',
+        module_id = 'MM1', proposed_label = 'x', dominant_biology = 'x', interpretation = 'x',
         supporting_claims = list(list(claim = 'x', fragment_ids = 'top_genes', direction = 'sideways')),
         confidence = list(score = 0.5, model_score = 0.5, rationale = 'x'),
         provenance = make_interpretation_provenance('mock', '0.1', 0, 'abc')
@@ -36,6 +36,15 @@ test_that('validate_interpretation() catches missing required fields', {
     interp <- make_valid_interpretation()
     interp$dominant_biology <- NULL
     expect_error(validate_interpretation(interp), 'missing required fields')
+})
+
+test_that('validate_interpretation() requires the interpretation prose field', {
+    interp <- make_valid_interpretation()
+    interp$interpretation <- NULL
+    expect_error(validate_interpretation(interp), 'missing required fields')
+
+    interp$interpretation <- c('two', 'strings')
+    expect_error(validate_interpretation(interp), 'interpretation must be a single string')
 })
 
 test_that('validate_interpretation() rejects invalid flags', {
@@ -76,6 +85,7 @@ test_that('interpretation JSON round-trip preserves fields, including single-ele
     restored <- interpretation_from_json(interpretation_to_json(interp))
     expect_equal(restored$module_id, interp$module_id)
     expect_equal(restored$proposed_label, interp$proposed_label)
+    expect_equal(restored$interpretation, interp$interpretation)
     expect_equal(restored$supporting_claims[[1]]$fragment_ids, 'top_genes')
     expect_equal(restored$confidence$score, interp$confidence$score)
     expect_true(validate_interpretation(restored))
@@ -103,4 +113,57 @@ test_that('write_interpretation()/read_interpretation() round-trip through disk'
     restored <- read_interpretation(tmp)
     expect_equal(restored$module_id, interp$module_id)
     expect_true(validate_interpretation(restored))
+})
+
+test_that('an interpretation without a review serializes exactly as under schema 0.2', {
+    interp <- interpretation(
+        module_id = 'MM1', proposed_label = 'x', dominant_biology = 'x', interpretation = 'x',
+        supporting_claims = list(list(claim = 'c', fragment_ids = 'top_genes', direction = 'na')),
+        confidence = list(score = 0.5, model_score = 0.5, rationale = 'r'),
+        provenance = make_interpretation_provenance('mock', '1.3', 0, 'hash')
+    )
+    expect_equal(interp$schema_version, '0.2')
+    expect_false('review' %in% names(interp))
+    expect_false(grepl('review', interpretation_to_json(interp), fixed = TRUE))
+})
+
+test_that('an interpretation with a review is schema 0.3 and round-trips through JSON', {
+    review <- list(
+        evidence_tier = 'hub_genes',
+        artifact_gate = list(status = 'pass', reasons = 'clean'),
+        supporting_hubs = list(list(gene = 'A', kme = 0.9), list(gene = 'B', kme = 0.8), list(gene = 'C', kme = 0.7)),
+        expected_markers = list(list(gene = 'D', status = 'unassigned')),
+        contradicting_evidence = 'D absent',
+        alternative_label = list(label = 'y', reason_rejected = 'z'),
+        confidence_level = 'moderate',
+        display_hubs = c('A', 'B', 'C')
+    )
+    interp <- interpretation(
+        module_id = 'MM1', proposed_label = 'x', dominant_biology = 'x', interpretation = 'x',
+        supporting_claims = list(list(claim = 'c', fragment_ids = 'top_genes', direction = 'na')),
+        confidence = list(score = 0.6, model_score = 0.6, rationale = 'r'),
+        provenance = make_interpretation_provenance('agent:test', '1.3', NA_real_, 'hash'),
+        review = review
+    )
+    expect_equal(interp$schema_version, '0.3')
+    expect_true(validate_interpretation(interp))
+
+    back <- interpretation_from_json(interpretation_to_json(interp))
+    expect_equal(back$review$display_hubs, c('A', 'B', 'C'))
+    expect_equal(back$review$supporting_hubs[[2]]$kme, 0.8)
+    expect_equal(back$review$expected_markers[[1]]$status, 'unassigned')
+    expect_true(validate_interpretation(back))
+
+    bad <- interp
+    bad$review$confidence_level <- 'certain'
+    expect_error(validate_interpretation(bad), 'confidence_level')
+    bad <- interp
+    bad$review$display_hubs <- c('A', 'B')
+    expect_error(validate_interpretation(bad), 'exactly 3')
+    bad <- interp
+    bad$review$expected_markers[[1]]$status <- 'absent'
+    expect_error(validate_interpretation(bad), 'status')
+    bad <- interp
+    bad$review$related_module <- list(module_id = 'MM2', relationship = 'same')
+    expect_error(validate_interpretation(bad), 'related_module')
 })

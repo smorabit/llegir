@@ -67,7 +67,56 @@ test_that('resolve_backend() dispatches provider without touching the network (d
     expect_true(is.function(resolve_backend('mock')))
     expect_true(is.function(resolve_backend('github', model = 'gpt-4o-mini')))
     expect_true(is.function(resolve_backend('gemini', model = 'gemini-3.5-flash')))
+    expect_true(is.function(resolve_backend('local', model = 'qwen')))
     expect_error(resolve_backend('bogus'))
+})
+
+test_that('resolve_backend("local") auto-discovers sole served model when model = NULL', {
+    local_mocked_bindings(
+        llm_server_status = function(...) list(base_url = 'http://127.0.0.1:8000/v1', models = 'qwen'),
+        .package = 'llegir'
+    )
+    expect_true(is.function(resolve_backend('local', model = NULL)))
+})
+
+test_that('resolve_backend("local") errors when 0 models are served', {
+    local_mocked_bindings(
+        llm_server_status = function(...) list(base_url = 'http://127.0.0.1:8000/v1', models = character(0)),
+        .package = 'llegir'
+    )
+    expect_error(resolve_backend('local', model = NULL), 'no models served')
+})
+
+test_that('resolve_backend("local") errors when multiple models are served', {
+    local_mocked_bindings(
+        llm_server_status = function(...) list(base_url = 'http://127.0.0.1:8000/v1', models = c('qwen', 'llama')),
+        .package = 'llegir'
+    )
+    expect_error(resolve_backend('local', model = NULL), 'multiple models served')
+})
+
+test_that('llm_server_status() gives an actionable error when the server is unreachable', {
+    err <- tryCatch(llm_server_status('http://127.0.0.1:1/v1'), error = function(e) e)
+    expect_true(inherits(err, 'error'))
+    expect_match(conditionMessage(err), 'not reachable')
+    expect_match(conditionMessage(err), 'vllm serve')
+})
+
+test_that('local_backend() auto-discovers sole served model and returns a cached backend', {
+    local_mocked_bindings(
+        llm_server_status = function(...) list(base_url = 'http://127.0.0.1:8000/v1', models = 'qwen'),
+        .package = 'llegir'
+    )
+    b <- local_backend(cache = FALSE)
+    expect_true(is.function(b))
+})
+
+test_that('local_backend() errors when multiple models are served and model = NULL', {
+    local_mocked_bindings(
+        llm_server_status = function(...) list(base_url = 'http://127.0.0.1:8000/v1', models = c('qwen', 'llama')),
+        .package = 'llegir'
+    )
+    expect_error(local_backend(), 'multiple models served')
 })
 
 test_that('cached_backend() skips the inner backend on a cache hit and honors force_refresh (docs/dev_economy.md task 3)', {

@@ -35,15 +35,11 @@ interpretation's provenance.}
 \item{schema_path}{Path to the interpretation JSON schema; defaults to the
 schema shipped with the package.}
 
-\item{user_weights}{Named list of per-\code{tool_id} weight multipliers passed
-to \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} for the EVIDENCE CONFIDENCE MATRIX injected
-into the user prompt (see \code{\link[=build_user_prompt]{build_user_prompt()}}). Default \code{list()}.}
+\item{user_weights}{Ignored; retained for call-site compatibility since the
+fused evidence score is shelved (Part 4.5). Default \code{list()}.}
 
-\item{fusion}{An optional pre-computed \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} result to
-inject into the user prompt; \code{NULL} (default) computes it from
-\code{packet$fragments} and \code{user_weights}. \code{\link[=synthesize_module]{synthesize_module()}} computes it
-once and passes the same object here and to \code{\link[=fuse_confidence]{fuse_confidence()}}, so the
-prompt and the final fused score are guaranteed to agree.}
+\item{fusion}{Ignored; retained for call-site compatibility. The EVIDENCE
+CONFIDENCE MATRIX is no longer part of the prompt.}
 
 \item{dataset_context}{An optional dataset context, as built by
 \code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}, threaded into

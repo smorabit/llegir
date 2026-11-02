@@ -19,10 +19,8 @@ build_user_prompt(
 
 \item{desc}{A \code{dataset_description}; see \code{\link[=dataset_description]{dataset_description()}}.}
 
-\item{fusion}{An optional pre-computed \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} result;
-\code{NULL} (default) computes it from \code{packet$fragments} and \code{user_weights}.
-Pass the same object used later by \code{\link[=fuse_confidence]{fuse_confidence()}} so the prompt and
-the final score are guaranteed to agree.}
+\item{fusion}{Ignored; retained for call-site compatibility. The fused
+evidence matrix is no longer part of the prompt.}
 
 \item{data_level}{Observation-unit descriptor of the \code{ModuleSet} the
 packet was built from; see \code{\link[=render_dataset_description]{render_dataset_description()}}. Default \code{'cell'}.}
@@ -30,25 +28,22 @@ packet was built from; see \code{\link[=render_dataset_description]{render_datas
 \item{aggregated}{Whether that \code{ModuleSet}'s expression/scores are already
 aggregated across cells; see \code{\link[=render_dataset_description]{render_dataset_description()}}. Default \code{FALSE}.}
 
-\item{user_weights}{Named list of per-\code{tool_id} weight multipliers passed
-to \code{\link[=calculate_fusion_score]{calculate_fusion_score()}} when \code{fusion} is \code{NULL}. Default \code{list()}.}
+\item{user_weights}{Ignored; retained for call-site compatibility.}
 
 \item{dataset_context}{An optional dataset context, as built by
 \code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}. Rendered via
 \code{\link[=render_dataset_context_compact]{render_dataset_context_compact()}} between the dataset description and
-the evidence packet. \code{NULL} (default) omits the block entirely, matching
-prior prompt output exactly.}
+the evidence packet. \code{NULL} (default) omits the block entirely.}
 }
 \value{
 A single character string.
 }
 \description{
 Concatenates the rendered \code{\link[=dataset_description]{dataset_description()}}, the optional
-\code{\link[=render_dataset_context_compact]{render_dataset_context_compact()}} block, the compact evidence packet
-(\code{\link[=render_packet_compact]{render_packet_compact()}}), and the deterministic EVIDENCE CONFIDENCE
-MATRIX (\code{\link[=calculate_fusion_score]{calculate_fusion_score()}}) that grounds the model's
-\code{confidence.score} in the same numbers \code{\link[=fuse_confidence]{fuse_confidence()}} later
-re-derives the final fused score from.
+\code{\link[=render_dataset_context_compact]{render_dataset_context_compact()}} block, and the compact evidence packet
+(\code{\link[=render_packet_compact]{render_packet_compact()}}). The deterministic EVIDENCE CONFIDENCE MATRIX
+is no longer injected (Part 4.5: the fused score is shelved); the model
+sets \code{confidence.score} from its own calibrated certainty.
 }
 \examples{
 ms <- llegir_example_moduleset()

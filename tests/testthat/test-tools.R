@@ -36,6 +36,29 @@ test_that('geneset_enrichment_tool() returns a valid geneset_enrichment fragment
     expect_true(frag$effect_strength >= 0)
 })
 
+test_that('geneset_enrichment_tool() reports overlap stats and states significance against alpha', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
+    ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 25, db_files = test_db_files))
+    frag <- geneset_enrichment_tool(ctx)
+    expect_true(all(c('term', 'fdr', 'odds_ratio', 'n_overlap', 'jaccard') %in% names(frag$top_findings[[1]])))
+    expect_equal(frag$top_findings[[1]]$n_overlap, frag$result$ngenes[1])
+    expect_match(frag$compact_summary, 'genes overlap, OR', fixed = TRUE)
+    expect_length(frag$top_findings, 3)
+    expect_match(frag$compact_summary, '^gene-set overlap of 25 hub genes: ')
+    if (frag$significance < 0.05) {
+        expect_equal(frag$direction, 'up')
+        expect_match(frag$compact_summary, 'tested terms reach FDR < 0.05', fixed = TRUE)
+    } else {
+        expect_equal(frag$direction, 'na')
+        expect_match(frag$compact_summary, 'no term reaches FDR < 0.05', fixed = TRUE)
+    }
+
+    # nothing can pass alpha = 0, so the same module becomes non-directional
+    strict <- geneset_enrichment_tool(list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 25, db_files = test_db_files, alpha = 0)))
+    expect_equal(strict$direction, 'na')
+    expect_match(strict$compact_summary, 'NOT significant enrichment', fixed = TRUE)
+})
+
 test_that('geneset_enrichment_tool() is deterministic across repeated runs', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
     ctx <- list(ms = ms_test, module_id = mod_test, params = list(n_hubs = 25, db_files = test_db_files))

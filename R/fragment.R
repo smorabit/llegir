@@ -34,12 +34,14 @@
 #' @param significance p / FDR where applicable, else `NA_real_`.
 #' @param direction One of `'up'`, `'down'`, `'mixed'`, `'na'`.
 #' @param provenance A provenance list, typically built with [make_provenance()].
+#' @param plots Optional named list of plot specs to attach; see
+#'   [attach_plots()]. Default `NULL`.
 #' @return An `evidence_fragment` object.
 #' @export
 evidence_fragment <- function(fragment_id, tool_id, module_id, type, result,
                                compact_summary, top_findings, effect_strength,
                                significance = NA_real_, direction = 'na',
-                               provenance = list()){
+                               provenance = list(), plots = NULL){
     type <- match.arg(type, .fragment_types)
     direction <- match.arg(direction, .direction_types)
     frag <- list(
@@ -53,7 +55,8 @@ evidence_fragment <- function(fragment_id, tool_id, module_id, type, result,
         effect_strength = effect_strength,
         significance = significance,
         direction = direction,
-        provenance = provenance
+        provenance = provenance,
+        plots = plots
     )
     structure(frag, class = 'evidence_fragment')
 }
@@ -96,12 +99,34 @@ validate_evidence_fragment <- function(frag){
     if (length(prov_missing) > 0) {
         stop('provenance missing fields: ', paste(prov_missing, collapse = ', '))
     }
+    .validate_plots(frag$plots, 'evidence_fragment')
     invisible(TRUE)
 }
 
+# jsonlite's simplifyDataFrame collapses a top_findings JSON array of uniform
+# objects into a data.frame on read, but the contract (and every tool, plus
+# the report's findings_table) expects a list with one named-list entry per
+# finding. Undo that simplification so a re-read fragment matches what its
+# tool emitted; a ragged or already-list top_findings, and an empty one, pass
+# through untouched. Shared by fragment_from_json/read_evidence_packet and
+# their dataset_fragment siblings.
+.rowlist_from_simplified <- function(top_findings){
+    if (!is.data.frame(top_findings)) return(top_findings)
+    lapply(seq_len(nrow(top_findings)), function(i){
+        row <- as.list(top_findings[i, , drop = FALSE])
+        # a list-column (e.g. a per-row gene vector) comes back wrapped one
+        # level deep; unwrap so the scalar case matches the tool's output
+        lapply(row, function(v) if (is.list(v) && length(v) == 1) v[[1]] else v)
+    })
+}
+
 # strip volatile fields (timestamps) before hashing so identical evidence
-# hashes identically across reruns
+# hashes identically across reruns; plot_obj is stripped first since a live
+# grob holds environments/external pointers and would make the hash
+# non-reproducible across sessions -- legends are text and stay in, so they
+# still count toward the hash
 .fragment_hashable <- function(frag){
+    frag <- .strip_plot_objs(frag)
     frag$provenance$timestamp <- NULL
     unclass(frag)
 }
@@ -114,8 +139,9 @@ validate_evidence_fragment <- function(frag){
 #' @export
 fragment_to_json <- function(frag, pretty = TRUE){
     # `unclass()` drops the S3 tag so jsonlite serializes the fragment as a plain
-    # object; `dataframe = 'rows'` keeps `result` as a row-oriented JSON array
-    jsonlite::toJSON(unclass(frag), dataframe = 'rows', auto_unbox = TRUE, na = 'null', pretty = pretty)
+    # object; `dataframe = 'rows'` keeps `result` as a row-oriented JSON array;
+    # `.strip_plot_objs()` drops any live plot_obj so a raw grob never reaches jsonlite
+    jsonlite::toJSON(unclass(.strip_plot_objs(frag)), dataframe = 'rows', auto_unbox = TRUE, na = 'null', pretty = pretty)
 }
 
 #' Parse an evidence fragment from JSON
@@ -135,11 +161,12 @@ fragment_from_json <- function(json_str){
         type = parsed$type,
         result = as.data.frame(parsed$result),
         compact_summary = parsed$compact_summary,
-        top_findings = parsed$top_findings,
+        top_findings = .rowlist_from_simplified(parsed$top_findings),
         effect_strength = parsed$effect_strength,
         significance = ifelse(is.null(parsed$significance), NA_real_, parsed$significance),
         direction = ifelse(is.null(parsed$direction), 'na', parsed$direction),
-        provenance = parsed$provenance
+        provenance = parsed$provenance,
+        plots = parsed$plots
     ))
 }
 
@@ -188,7 +215,7 @@ packet_to_json <- function(packet, pretty = TRUE){
     jsonlite::toJSON(
         list(
             module_id = packet$module_id,
-            fragments = lapply(packet$fragments, unclass),
+            fragments = lapply(packet$fragments, function(f) unclass(.strip_plot_objs(f))),
             packet_hash = packet$packet_hash,
             schema_version = packet$schema_version,
             provenance = packet$provenance
@@ -223,10 +250,14 @@ read_evidence_packet <- function(path){
     # the `provenance` field is a JSON *object*, so jsonlite instead
     # simplifies it into its own nested data.frame keyed by column, and a
     # one-row slice of that is already this fragment's record (as.list(),
-    # not `[[1]]`)
+    # not `[[1]]`); `plots` is keyed by plot id rather than a uniform array,
+    # so the same row-simplification mangles it once a spec has more than one
+    # field -- a second, unsimplified parse pulls it out untouched
     parsed <- jsonlite::fromJSON(path, simplifyDataFrame = TRUE, simplifyVector = TRUE)
+    raw <- jsonlite::fromJSON(path, simplifyDataFrame = FALSE, simplifyVector = FALSE)
     fragments <- lapply(seq_len(nrow(parsed$fragments)), function(i) {
         f <- parsed$fragments[i, ]
+        raw_plots <- raw$fragments[[i]]$plots
         do.call(evidence_fragment, list(
             fragment_id = f$fragment_id[[1]],
             tool_id = f$tool_id[[1]],
@@ -234,11 +265,12 @@ read_evidence_packet <- function(path){
             type = f$type[[1]],
             result = as.data.frame(f$result[[1]]),
             compact_summary = f$compact_summary[[1]],
-            top_findings = f$top_findings[[1]],
+            top_findings = .rowlist_from_simplified(f$top_findings[[1]]),
             effect_strength = f$effect_strength[[1]],
             significance = ifelse(is.null(f$significance[[1]]) || length(f$significance[[1]]) == 0, NA_real_, f$significance[[1]]),
             direction = ifelse(is.null(f$direction[[1]]), 'na', f$direction[[1]]),
-            provenance = as.list(f$provenance)
+            provenance = as.list(f$provenance),
+            plots = if (length(raw_plots) == 0) NULL else raw_plots
         ))
     })
     list(
@@ -273,6 +305,43 @@ write_fragment_tables <- function(packet, tables_dir){
         utils::write.table(frag$result, path, sep = '\t', row.names = FALSE, quote = FALSE)
     }
     invisible(tables_dir)
+}
+
+#' Materialize every fragment's live plots to PNG files
+#'
+#' The graphical sibling of [write_fragment_tables()]: renders each fragment's
+#' live `plot_obj` to `<figures_dir>/<module_id>/<fragment_id>__<plot_id>.png`
+#' and records that path back onto the spec as `image_path`, so a report
+#' rendered from a re-read packet (where `plot_obj` has already been stripped;
+#' see [attach_plots()]) can still embed the figure. A spec's own
+#' `width`/`height`/`dpi` (see [attach_plots()]) are honored when set;
+#' otherwise [save_plot_to_png()]'s `7`/`4`/`150` defaults apply. Fragments
+#' with no plots are skipped.
+#'
+#' @param packet An evidence packet, as returned by [build_evidence_packet()].
+#' @param figures_dir Output directory.
+#' @return `packet`, with `image_path` filled in on every rendered plot spec.
+#' @export
+write_fragment_figures <- function(packet, figures_dir){
+    module_dir <- file.path(figures_dir, packet$module_id)
+    packet$fragments <- lapply(packet$fragments, function(frag){
+        if (is.null(frag$plots) || length(frag$plots) == 0) return(frag)
+        dir.create(module_dir, recursive = TRUE, showWarnings = FALSE)
+        file_stub <- gsub(':', '_', frag$fragment_id)
+        plot_ids <- names(frag$plots)
+        frag$plots <- lapply(plot_ids, function(plot_id){
+            spec <- frag$plots[[plot_id]]
+            if (!is.null(spec$plot_obj)) {
+                path <- file.path(module_dir, paste0(file_stub, '__', plot_id, '.png'))
+                .save_plot_spec_png(spec, path)
+                spec$image_path <- path
+            }
+            spec
+        })
+        names(frag$plots) <- plot_ids
+        frag
+    })
+    packet
 }
 
 #' Build a fragment's provenance record

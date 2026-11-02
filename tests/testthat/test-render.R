@@ -26,14 +26,13 @@ make_render_packet <- function(module_id){
 
 make_render_interpretation <- function(module_id, packet_hash, model_score = 0.9){
     interpretation(
-        module_id = module_id, proposed_label = 'Complement/phagocytic program', one_line_summary = 'x',
+        module_id = module_id, proposed_label = 'Complement/phagocytic program',
         dominant_biology = 'Complement activation and phagocytosis.',
+        interpretation = 'The hub genes and enriched terms mark a complement and phagocytosis program, expressed in microglia and elevated in glioblastoma.',
         supporting_claims = list(
             list(claim = 'Top genes include complement components.', fragment_ids = 'top_genes', direction = 'na'),
             list(claim = 'Enriched for complement/phagocytosis terms.', fragment_ids = 'geneset_enrichment', direction = 'up')
         ),
-        cell_state = 'microglia', condition_dynamics = 'elevated in glioblastoma',
-        metadata_associations = list(list(variable = 'diagnosis', summary = 'higher in GBM', fragment_id = 'geneset_enrichment')),
         confidence = list(score = model_score, model_score = model_score, rationale = 'model self-report'),
         provenance = make_interpretation_provenance('mock', '0.1', 0, packet_hash)
     )
@@ -44,29 +43,23 @@ test_that('render_paragraph() is byte-identical across repeated calls on the sam
     expect_identical(render_paragraph(interp), render_paragraph(interp))
 })
 
-test_that('render_paragraph() includes label, summary, claims, and confidence', {
+test_that('render_paragraph() includes label, interpretation prose, claims, and confidence', {
     interp <- make_render_interpretation('MM1', 'abc')
     txt <- render_paragraph(interp)
     expect_true(grepl('Complement/phagocytic program', txt, fixed = TRUE))
     expect_true(grepl('MM1', txt, fixed = TRUE))
-    expect_true(grepl('Primarily expressed in: microglia', txt, fixed = TRUE))
-    expect_true(grepl('Condition dynamics: elevated in glioblastoma', txt, fixed = TRUE))
+    expect_true(grepl('Synthesized biological interpretation:', txt, fixed = TRUE))
+    expect_true(grepl('Dominant biology: Complement activation and phagocytosis.', txt, fixed = TRUE))
+    expect_true(grepl(interp$interpretation, txt, fixed = TRUE))
     expect_true(grepl('Top genes include complement components', txt, fixed = TRUE))
-    expect_true(grepl('Metadata associations:', txt, fixed = TRUE))
     expect_true(grepl(sprintf('Confidence: %.2f', interp$confidence$score), txt))
 })
 
-test_that('render_paragraph() omits optional sections when fields are NA/empty', {
+test_that('render_paragraph() omits the supporting-evidence section when there are no claims', {
     interp <- make_render_interpretation('MM1', 'abc')
-    interp$cell_state <- NA_character_
-    interp$condition_dynamics <- NA_character_
-    interp$metadata_associations <- list()
     interp$supporting_claims <- list()
     interp$flags <- list('insufficient_evidence')
     txt <- render_paragraph(interp)
-    expect_false(grepl('Primarily expressed in', txt, fixed = TRUE))
-    expect_false(grepl('Condition dynamics', txt, fixed = TRUE))
-    expect_false(grepl('Metadata associations', txt, fixed = TRUE))
     expect_false(grepl('Supporting evidence', txt, fixed = TRUE))
     expect_true(grepl('Flags: insufficient_evidence', txt, fixed = TRUE))
 })
@@ -132,15 +125,16 @@ test_that('write_synthesis_manifest() writes valid JSON', {
     expect_equal(parsed$n_modules, 1)
 })
 
-test_that('synthesize_module() runs synthesis, faithfulness, and confidence fusion together', {
+test_that('synthesize_module() runs synthesis, faithfulness, and flag application together', {
     packet <- make_render_packet('MM1')
     interp <- synthesize_module(packet, csf_dataset_description(), backend = mock_backend(), schema_path = test_schema_path)
     expect_true(validate_interpretation(interp))
     expect_equal(interp$module_id, 'MM1')
-    # confidence$score must have been overwritten by fuse_confidence(), so it
-    # differs from the mock backend's flat 0.5 self-report post-fusion
+    # the fused score is shelved (Part 4.5): confidence$score stays the mock
+    # backend's own 0.5 self-report, and no fusion string is appended
     expect_equal(interp$confidence$model_score, 0.5)
-    expect_true(grepl('fusion:', interp$confidence$rationale, fixed = TRUE))
+    expect_equal(interp$confidence$score, 0.5)
+    expect_false(grepl('fusion:', interp$confidence$rationale, fixed = TRUE))
 })
 
 test_that('run_synthesis_orchestrator() writes per-module JSON/MD plus a review queue and manifest', {

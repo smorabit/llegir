@@ -78,7 +78,10 @@ if (go_data_available) {
         set.seed(seed)
         module_a_genes <- go_gene_sets$module_a
         module_b_genes <- go_gene_sets$module_b
-        noise_genes <- paste0('GOPBNOISE', 1:10)
+        # the decoy signature's genes carry flat background counts, so
+        # sig_decoy is scorable at pseudo-bulk level and acts as a true negative
+        decoy_genes <- setdiff(.go_pathways[[go_decoys[1]]], c(module_a_genes, module_b_genes))
+        noise_genes <- c(decoy_genes, paste0('GOPBNOISE', 1:10))
         all_genes <- c(module_a_genes, module_b_genes, noise_genes)
 
         condition <- rep(c('case', 'control'), each = n_samples / 2)
