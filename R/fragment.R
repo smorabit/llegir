@@ -61,6 +61,67 @@ evidence_fragment <- function(fragment_id, tool_id, module_id, type, result,
     structure(frag, class = 'evidence_fragment')
 }
 
+#' Build a module tool's evidence fragment
+#'
+#' The constructor custom (and core) module tools return: fills in the parts
+#' every tool repeats (`fragment_id` and `tool_id` from `id`, `module_id`,
+#' the `ModuleSet`'s package versions and `ctx$module_method` in
+#' provenance), so a tool only states what it found.
+#'
+#' @param ctx The tool context passed to the tool by [run_module()].
+#' @param id The tool's id, used as both `fragment_id` and `tool_id`;
+#'   normally the id it is registered under (see [register_tool()]).
+#' @param type,result,compact_summary,top_findings,effect_strength,significance,direction,plots
+#'   As in [evidence_fragment()].
+#' @param params The parameters to record in provenance (the values the tool
+#'   actually used, defaults included).
+#' @param tool_version The tool's version string. Default `'0.1'`.
+#' @return A validated `evidence_fragment`.
+#' @examples
+#' my_tool <- function(ctx){
+#'     gm <- gene_membership(ctx$ms, ctx$module_id)
+#'     module_fragment(
+#'         ctx, 'my_tool', type = 'ranked_genes', result = gm,
+#'         compact_summary = paste(nrow(gm), 'genes'), top_findings = list(),
+#'         effect_strength = max(gm$kme), params = list()
+#'     )
+#' }
+#' ms <- llegir_example_moduleset()
+#' my_tool(list(ms = ms, module_id = modules(ms)[1], params = list()))
+#' @export
+module_fragment <- function(ctx, id, type, result, compact_summary, top_findings, effect_strength,
+                            significance = NA_real_, direction = 'na', params = list(),
+                            tool_version = '0.1', plots = NULL){
+    evidence_fragment(
+        fragment_id = id,
+        tool_id = id,
+        module_id = ctx$module_id,
+        type = type,
+        result = result,
+        compact_summary = compact_summary,
+        top_findings = top_findings,
+        effect_strength = effect_strength,
+        significance = significance,
+        direction = direction,
+        plots = plots,
+        provenance = make_provenance(
+            tool_version = tool_version,
+            params = params,
+            pkg_versions = pkg_versions(ctx$ms),
+            module_method = ctx$module_method %||% NA_character_
+        )
+    )
+}
+
+# the first n rows of a result table as top_findings entries, keeping the
+# named fields; a field can be renamed with c(new_name = 'column')
+.top_findings <- function(df, fields, n = 5){
+    keys <- names(fields) %||% fields
+    keys[keys == ''] <- fields[keys == '']
+    names(fields) <- keys
+    lapply(seq_len(min(n, nrow(df))), function(i) lapply(as.list(fields), function(col) df[[col]][i]))
+}
+
 #' Validate an evidence fragment
 #'
 #' Asserts required fields and basic types against

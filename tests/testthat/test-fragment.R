@@ -151,3 +151,22 @@ test_that('read_evidence_packet() keeps top_findings a list of per-item lists', 
     expect_equal(tf[[1]]$gene, 'A')
     expect_equal(tf[[2]]$score, 0.5)
 })
+
+test_that('module_fragment() fills ids, module and provenance from ctx', {
+    ms <- llegir_example_moduleset()
+    ctx <- list(ms = ms, module_id = modules(ms)[1], params = list(), module_method = 'cNMF k=10')
+    gm <- gene_membership(ms, ctx$module_id)
+    frag <- module_fragment(
+        ctx, 'my_tool', type = 'ranked_genes', result = gm, compact_summary = 'x',
+        top_findings = .top_findings(gm, c(gene = 'gene_name', 'kme'), n = 2),
+        effect_strength = 0.5, params = list(n = 2)
+    )
+    expect_true(validate_evidence_fragment(frag))
+    expect_equal(frag$fragment_id, 'my_tool')
+    expect_equal(frag$tool_id, 'my_tool')
+    expect_equal(frag$module_id, ctx$module_id)
+    expect_equal(frag$provenance$module_method, 'cNMF k=10')
+    expect_equal(frag$provenance$params, list(n = 2))
+    expect_equal(frag$top_findings[[1]], list(gene = gm$gene_name[1], kme = gm$kme[1]))
+    expect_length(frag$top_findings, 2)
+})

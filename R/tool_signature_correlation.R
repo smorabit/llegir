@@ -68,12 +68,7 @@ signature_correlation_tool <- function(ctx){
     if (is.null(library_files)) stop('signature_correlation requires params$library_files')
     method <- ctx$params$method %||% 'UCell'
 
-    provenance <- make_provenance(
-        tool_version = '0.2',
-        params = list(library_files = unname(library_files), method = method),
-        pkg_versions = pkg_versions(ctx$ms),
-        module_method = ctx$module_method %||% NA_character_
-    )
+    prov_params <- list(library_files = unname(library_files), method = method)
 
     libs <- lapply(library_files, .read_signature_library)
     all_gene_sets <- do.call(c, unname(libs))
@@ -81,17 +76,16 @@ signature_correlation_tool <- function(ctx){
     names(lib_of) <- names(all_gene_sets)
 
     if (length(all_gene_sets) == 0) {
-        return(evidence_fragment(
-            fragment_id = 'signature_correlation',
-            tool_id = 'signature_correlation',
-            module_id = ctx$module_id,
+        return(module_fragment(
+            ctx, 'signature_correlation',
             type = 'signature_correlation',
             result = data.frame(),
             compact_summary = 'no signatures found in the supplied library files',
             top_findings = list(),
             effect_strength = 0,
             direction = 'na',
-            provenance = provenance
+            params = prov_params,
+            tool_version = '0.2'
         ))
     }
 
@@ -136,9 +130,7 @@ signature_correlation_tool <- function(ctx){
     rownames(result) <- NULL
     top <- result[1, ]
 
-    top_findings <- lapply(seq_len(min(5, nrow(result))), function(i){
-        list(signature = result$signature[i], library = result$library[i], r = result$r[i], level = result$level[i])
-    })
+    top_findings <- .top_findings(result, c('signature', 'library', 'r', 'level'))
 
     compact_summary <- paste0(
         'top |r| signatures: ',
@@ -147,10 +139,8 @@ signature_correlation_tool <- function(ctx){
         ), collapse = '; ')
     )
 
-    evidence_fragment(
-        fragment_id = 'signature_correlation',
-        tool_id = 'signature_correlation',
-        module_id = ctx$module_id,
+    module_fragment(
+        ctx, 'signature_correlation',
         type = 'signature_correlation',
         result = result,
         compact_summary = compact_summary,
@@ -158,6 +148,7 @@ signature_correlation_tool <- function(ctx){
         effect_strength = abs(top$r),
         significance = top$fdr,
         direction = if (top$r > 0) 'up' else 'down',
-        provenance = provenance
+        params = prov_params,
+        tool_version = '0.2'
     )
 }

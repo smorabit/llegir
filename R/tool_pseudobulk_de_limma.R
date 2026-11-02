@@ -108,18 +108,14 @@ pseudobulk_de_limma_tool <- function(ctx){
     top <- tt[1, ]
 
     levels_use <- levels(groups)
-    top_findings <- lapply(seq_len(min(5, nrow(tt))), function(i){
-        list(gene_name = tt$gene_name[i], logFC = tt$logFC[i], p_value = tt$P.Value[i], fdr = tt$adj.P.Val[i])
-    })
+    top_findings <- .top_findings(tt, c('gene_name', 'logFC', p_value = 'P.Value', fdr = 'adj.P.Val'))
     compact_summary <- paste0(
         condition_col, ' (limma-voom): ', levels_use[2], ' vs ', levels_use[1],
         ', top gene ', top$gene_name, ' (logFC=', round(top$logFC, 2), ', FDR=', signif(top$adj.P.Val, 2), ')'
     )
 
-    evidence_fragment(
-        fragment_id = 'pseudobulk_de_limma',
-        tool_id = 'pseudobulk_de_limma',
-        module_id = ctx$module_id,
+    module_fragment(
+        ctx, 'pseudobulk_de_limma',
         type = 'cross_condition_delta',
         result = tt,
         compact_summary = compact_summary,
@@ -127,14 +123,10 @@ pseudobulk_de_limma_tool <- function(ctx){
         effect_strength = max(abs(tt$logFC)),
         significance = min(tt$adj.P.Val),
         direction = if (top$logFC > 0) 'up' else 'down',
-        provenance = make_provenance(
-            tool_version = '0.1',
-            params = list(
-                condition_col = condition_col, covariates = covariates, min_count = min_count,
-                min_count_samples = min_count_samples, n_genes_tested = nrow(mod_counts), n_units = sum(keep_units)
-            ),
-            pkg_versions = pkg_versions(ctx$ms),
-            module_method = ctx$module_method %||% NA_character_
-        )
+        params = list(
+            condition_col = condition_col, covariates = covariates, min_count = min_count,
+            min_count_samples = min_count_samples, n_genes_tested = nrow(mod_counts), n_units = sum(keep_units)
+        ),
+        tool_version = '0.1'
     )
 }

@@ -83,14 +83,7 @@ cluster_expression_profile_tool <- function(ctx){
 
     top <- result[1, ]
 
-    top_findings <- lapply(seq_len(min(5, nrow(result))), function(i){
-        list(
-            cluster = result$group[i],
-            mean_decile = result$mean_decile[i],
-            mean_activity = result$mean_activity[i],
-            pct_high = result$pct_high[i]
-        )
-    })
+    top_findings <- .top_findings(result, c(cluster = 'group', 'mean_decile', 'mean_activity', 'pct_high'))
 
     compact_summary <- paste0(
         'global module-score deciles (', n_bins, ' realized bins of ', n_deciles, ' requested): ',
@@ -100,10 +93,8 @@ cluster_expression_profile_tool <- function(ctx){
         nrow(result), ' states profiled'
     )
 
-    evidence_fragment(
-        fragment_id = 'cluster_expression_profile',
-        tool_id = 'cluster_expression_profile',
-        module_id = ctx$module_id,
+    module_fragment(
+        ctx, 'cluster_expression_profile',
         type = 'state_expression',
         result = result,
         compact_summary = compact_summary,
@@ -113,11 +104,7 @@ cluster_expression_profile_tool <- function(ctx){
         # (and in [0,1]) even when ties collapse the requested n_deciles
         effect_strength = top$mean_decile / n_bins,
         direction = 'na',
-        provenance = make_provenance(
-            tool_version = '0.1',
-            params = list(group_col = group_col, n_deciles = n_deciles, method = 'global_decile'),
-            pkg_versions = pkg_versions(ctx$ms),
-            module_method = ctx$module_method %||% NA_character_
-        )
+        params = list(group_col = group_col, n_deciles = n_deciles, method = 'global_decile'),
+        tool_version = '0.1'
     )
 }

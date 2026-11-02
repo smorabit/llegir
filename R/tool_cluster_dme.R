@@ -38,14 +38,7 @@ cluster_dme_tool <- function(ctx){
     }
     top <- result[1, ]
 
-    top_findings <- lapply(seq_len(min(5, nrow(result))), function(i){
-        list(
-            cluster = result$group[i],
-            mean_score = result$mean_score[i],
-            rank_biserial = result$rank_biserial[i],
-            fdr = result$fdr[i]
-        )
-    })
+    top_findings <- .top_findings(result, c(cluster = 'group', 'mean_score', 'rank_biserial', 'fdr'))
 
     compact_summary <- paste0(
         'strongest state: ', top$group,
@@ -53,10 +46,8 @@ cluster_dme_tool <- function(ctx){
         '); omnibus Kruskal p=', signif(test$omnibus_p, 2)
     )
 
-    evidence_fragment(
-        fragment_id = 'cluster_dme',
-        tool_id = 'cluster_dme',
-        module_id = ctx$module_id,
+    module_fragment(
+        ctx, 'cluster_dme',
         type = 'state_expression',
         result = result,
         compact_summary = compact_summary,
@@ -64,13 +55,9 @@ cluster_dme_tool <- function(ctx){
         effect_strength = abs(top$rank_biserial),
         significance = test$omnibus_p,
         direction = top$direction,
-        provenance = make_provenance(
-            tool_version = '0.1',
-            # method = 'per_cell' now; a pseudobulk-aggregated variant can slot in
-            # here later since categorical_group_test() only needs scores + groups
-            params = list(group_col = group_col, method = 'per_cell'),
-            pkg_versions = pkg_versions(ctx$ms),
-            module_method = ctx$module_method %||% NA_character_
-        )
+        # method = 'per_cell' now; a pseudobulk-aggregated variant can slot in
+        # here later since categorical_group_test() only needs scores + groups
+        params = list(group_col = group_col, method = 'per_cell'),
+        tool_version = '0.1'
     )
 }

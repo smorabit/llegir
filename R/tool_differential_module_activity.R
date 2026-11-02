@@ -144,12 +144,7 @@ differential_module_activity_tool <- function(ctx){
     levels_use <- levels(groups)
     nlevels_contrast <- length(levels_use)
 
-    provenance <- make_provenance(
-        tool_version = '0.1',
-        params = list(condition_col = condition_col, covariates = covariates, method = method, n_units = sum(keep)),
-        pkg_versions = pkg_versions(ctx$ms),
-        module_method = ctx$module_method %||% NA_character_
-    )
+    prov_params <- list(condition_col = condition_col, covariates = covariates, method = method, n_units = sum(keep))
 
     if (nlevels_contrast == 2) {
         row <- per_group[per_group$group == levels_use[2], ][1, ]
@@ -157,10 +152,8 @@ differential_module_activity_tool <- function(ctx){
             module = ctx$module_id, group1 = levels_use[1], group2 = levels_use[2],
             effect = row$effect, p_value = row$p_value, fdr = row$fdr
         )
-        evidence_fragment(
-            fragment_id = 'differential_module_activity',
-            tool_id = 'differential_module_activity',
-            module_id = ctx$module_id,
+        module_fragment(
+            ctx, 'differential_module_activity',
             type = 'cross_condition_delta',
             result = result,
             compact_summary = paste0(
@@ -173,17 +166,14 @@ differential_module_activity_tool <- function(ctx){
             effect_strength = abs(row$effect),
             significance = row$fdr,
             direction = row$direction,
-            provenance = provenance
+            params = prov_params,
+            tool_version = '0.1'
         )
     } else {
         top <- per_group[1, ]
-        top_findings <- lapply(seq_len(min(5, nrow(per_group))), function(i){
-            list(group = per_group$group[i], effect = per_group$effect[i])
-        })
-        evidence_fragment(
-            fragment_id = 'differential_module_activity',
-            tool_id = 'differential_module_activity',
-            module_id = ctx$module_id,
+        top_findings <- .top_findings(per_group, c('group', 'effect'))
+        module_fragment(
+            ctx, 'differential_module_activity',
             type = 'categorical_association',
             result = per_group,
             compact_summary = paste0(
@@ -194,7 +184,8 @@ differential_module_activity_tool <- function(ctx){
             effect_strength = abs(top$effect),
             significance = omnibus_p,
             direction = top$direction,
-            provenance = provenance
+            params = prov_params,
+            tool_version = '0.1'
         )
     }
 }

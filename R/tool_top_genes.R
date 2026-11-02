@@ -20,9 +20,7 @@ top_genes_tool <- function(ctx){
     gm <- gene_membership(ctx$ms, ctx$module_id)
     top <- utils::head(gm, n_hubs)
 
-    top_findings <- lapply(seq_len(nrow(top)), function(i){
-        list(gene = top$gene_name[i], kme = top$kme[i])
-    })
+    top_findings <- .top_findings(top, c(gene = 'gene_name', 'kme'), n = nrow(top))
 
     compact_summary <- paste0(
         'top ', nrow(top), ' genes by kME: ',
@@ -30,21 +28,15 @@ top_genes_tool <- function(ctx){
         if (nrow(top) > 10) ', ...' else ''
     )
 
-    evidence_fragment(
-        fragment_id = 'top_genes',
-        tool_id = 'top_genes',
-        module_id = ctx$module_id,
+    module_fragment(
+        ctx, 'top_genes',
         type = 'ranked_genes',
         result = top,
         compact_summary = compact_summary,
         top_findings = top_findings,
         effect_strength = if (nrow(top) > 0) max(top$kme) else 0,
         direction = 'na',
-        provenance = make_provenance(
-            tool_version = '0.1',
-            params = list(n_hubs = n_hubs),
-            pkg_versions = pkg_versions(ctx$ms),
-            module_method = ctx$module_method %||% NA_character_
-        )
+        params = list(n_hubs = n_hubs),
+        tool_version = '0.1'
     )
 }

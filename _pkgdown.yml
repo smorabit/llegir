@@ -91,6 +91,7 @@ reference:
   desc: The evidence_fragment / evidence packet data contract.
   contents:
   - evidence_fragment
+  - module_fragment
   - validate_evidence_fragment
   - fragment_to_json
   - fragment_from_json

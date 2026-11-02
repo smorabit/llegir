@@ -115,12 +115,7 @@ geneset_enrichment_tool <- function(ctx){
     hub_genes <- utils::head(gm$gene_name, n_hubs)
     genome_size <- nrow(expression(ctx$ms))
 
-    provenance <- make_provenance(
-        tool_version = '0.2',
-        params = list(n_hubs = n_hubs, alpha = alpha, db_files = unname(db_files), network_required = FALSE),
-        pkg_versions = pkg_versions(ctx$ms),
-        module_method = ctx$module_method %||% NA_character_
-    )
+    prov_params <- list(n_hubs = n_hubs, alpha = alpha, db_files = unname(db_files), network_required = FALSE)
 
     overlap_df <- do.call(rbind, lapply(names(db_files), function(db_name){
         .geneoverlap_flatten(db_files[[db_name]], db_name, hub_genes, genome_size)
@@ -128,17 +123,16 @@ geneset_enrichment_tool <- function(ctx){
     overlap_df <- subset(overlap_df, ngenes > 0)
 
     if (nrow(overlap_df) == 0) {
-        return(evidence_fragment(
-            fragment_id = 'geneset_enrichment',
-            tool_id = 'geneset_enrichment',
-            module_id = ctx$module_id,
+        return(module_fragment(
+            ctx, 'geneset_enrichment',
             type = 'geneset_enrichment',
             result = data.frame(),
             compact_summary = 'no gene-set overlap found among hub genes',
             top_findings = list(),
             effect_strength = 0,
             direction = 'na',
-            provenance = provenance
+            params = prov_params,
+            tool_version = '0.2'
         ))
     }
 
@@ -165,10 +159,8 @@ geneset_enrichment_tool <- function(ctx){
     # floor to avoid -log10(0) = Inf, which jsonlite can't round-trip
     min_fdr <- max(min(top$fdr), 1e-300)
 
-    evidence_fragment(
-        fragment_id = 'geneset_enrichment',
-        tool_id = 'geneset_enrichment',
-        module_id = ctx$module_id,
+    module_fragment(
+        ctx, 'geneset_enrichment',
         type = 'geneset_enrichment',
         result = top,
         compact_summary = compact_summary,
@@ -176,6 +168,7 @@ geneset_enrichment_tool <- function(ctx){
         effect_strength = -log10(min_fdr),
         significance = min(top$fdr),
         direction = .enrichment_direction(top$fdr, alpha),
-        provenance = provenance
+        params = prov_params,
+        tool_version = '0.2'
     )
 }
