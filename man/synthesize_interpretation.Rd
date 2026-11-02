@@ -14,7 +14,9 @@ synthesize_interpretation(
   schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir"),
   user_weights = list(),
   fusion = NULL,
-  dataset_context = NULL
+  dataset_context = NULL,
+  data_level = "cell",
+  aggregated = FALSE
 )
 }
 \arguments{
@@ -44,6 +46,10 @@ CONFIDENCE MATRIX is no longer part of the prompt.}
 \item{dataset_context}{An optional dataset context, as built by
 \code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}, threaded into
 \code{\link[=build_user_prompt]{build_user_prompt()}}. \code{NULL} (default) omits the DATASET CONTEXT block.}
+
+\item{data_level, aggregated}{The \code{ModuleSet}'s observation unit (e.g.
+\code{ms$data_level}, \code{ms$aggregated}), stated in the prompt so a pseudo-bulk
+run is not described to the model as cell-level. Default \code{'cell'}/\code{FALSE}.}
 }
 \value{
 An \code{interpretation} object (not yet faithfulness-checked or

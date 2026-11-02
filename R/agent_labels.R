@@ -13,13 +13,6 @@
 ## absent, display hubs must follow the figure convention, the confidence
 ## score must sit in its rubric band, and no two modules may share a label.
 
-# the immediate-early / heat-shock genes of the dissociation-stress signature
-# the label-mode artifact gate screens for
-.dissociation_stress_genes <- c(
-    'FOS', 'FOSB', 'JUN', 'JUNB', 'EGR1', 'ATF3', 'IER2', 'IER3', 'NR4A1', 'ZFP36',
-    'DUSP1', 'HSPA1A', 'HSPA1B', 'DNAJB1', 'HSPH1', 'BAG3'
-)
-
 # classic qPCR/normalization reference genes: reviewers read them as depth
 # artifacts, so they may never be a module's figure display hubs
 .display_hub_excluded <- c('GAPDH', 'ACTB', 'ACTG1', 'PPIA', 'RPLP0', 'TBP', 'HPRT1', 'GUSB', 'YWHAZ', 'UBC')
@@ -260,6 +253,9 @@ agent_label_backend <- function(labels_dir, packets, agent = 'coding-agent'){
     rank_of <- function(gene) match(gene, ranked$gene_name)
     issues <- character(0)
 
+    # without real gene weights (e.g. a gene-list ModuleSet) kME is NA and the
+    # rank is just table order, so only membership and rank can be checked
+    has_weights <- has_capability(ws$ms, 'gene_weights')
     hub_ranks <- vapply(review$supporting_hubs, function(hub) rank_of(hub$gene), numeric(1))
     for (i in seq_along(review$supporting_hubs)) {
         hub <- review$supporting_hubs[[i]]
@@ -268,7 +264,7 @@ agent_label_backend <- function(labels_dir, packets, agent = 'coding-agent'){
             issues <- c(issues, sprintf('supporting hub %s is not in this module', hub$gene))
         } else if (r > .review_max_support_rank) {
             issues <- c(issues, sprintf('supporting hub %s is rank %d, outside the top %d', hub$gene, r, .review_max_support_rank))
-        } else if (abs(hub$kme - ranked$kme[r]) > 0.01) {
+        } else if (has_weights && abs(hub$kme - ranked$kme[r]) > 0.01) {
             issues <- c(issues, sprintf('supporting hub %s has kME %.3f, not %.3f', hub$gene, ranked$kme[r], hub$kme))
         }
     }
@@ -474,12 +470,18 @@ check_agent_labels <- function(workspace_dir, alpha = 0.05){
 #' `output_dir`, delegates to [run_synthesis_orchestrator()], which also
 #' writes per-module JSON/Markdown, `review_queue.tsv` and `manifest.json`,
 #' exactly as for an LLM run. Provenance records `model = 'agent:<agent>'`
-#' and the current [PROMPT_TEMPLATE_VERSION], whose rules the workspace
-#' manifest handed the agent.
+#' and the `prompt_template_version` recorded in the workspace manifest,
+#' whose rules the agent labelled under.
+#'
+#' Labels are first run through [check_agent_labels()]: with `strict = TRUE`
+#' (default) collection stops unless every module is `ok`; with
+#' `strict = FALSE` it warns and collects whatever passes validation.
 #'
 #' @param workspace_dir Path to the exported workspace.
 #' @param output_dir Optional directory to write the synthesis outputs to.
 #' @param agent Short name of the agent that wrote the labels.
+#' @param strict Stop (rather than warn) when [check_agent_labels()] reports
+#'   any module that is not `ok`. Default `TRUE`.
 #' @return A named list of `interpretation` objects (`NULL` for a module
 #'   whose label is missing or invalid, with a warning), invisibly when
 #'   `output_dir` is given.
@@ -488,20 +490,36 @@ check_agent_labels <- function(workspace_dir, alpha = 0.05){
 #' interps <- collect_agent_labels('agent_workspace', output_dir = 'interpretations', agent = 'claude-code')
 #' }
 #' @export
-collect_agent_labels <- function(workspace_dir, output_dir = NULL, agent = 'coding-agent'){
+collect_agent_labels <- function(workspace_dir, output_dir = NULL, agent = 'coding-agent', strict = TRUE){
+    report <- check_agent_labels(workspace_dir)
+    failing <- report[report$status != 'ok', , drop = FALSE]
+    if (nrow(failing) > 0) {
+        msg <- paste0(
+            nrow(failing), ' module(s) did not pass check_agent_labels(): ',
+            paste0(failing$module_id, ' [', failing$status, ']', collapse = ', ')
+        )
+        if (strict) stop(msg, '. Fix the labels, or use strict = FALSE to collect the rest.', call. = FALSE)
+        warning(msg, call. = FALSE)
+    }
+
     ws <- .read_label_workspace(workspace_dir)
     backend <- agent_label_backend(ws$labels_dir, ws$packets, agent = agent)
+    # the agent labelled under the rules frozen into the manifest, which may
+    # predate the installed package's prompt template
+    synth_args <- list(
+        desc = ws$desc, backend = backend, temperature = NA_real_,
+        prompt_template_version = ws$manifest$prompt_template_version %||% PROMPT_TEMPLATE_VERSION,
+        dataset_context = ws$dataset_context,
+        data_level = ws$ms$data_level %||% 'cell', aggregated = isTRUE(ws$ms$aggregated)
+    )
 
     if (!is.null(output_dir)) {
-        return(run_synthesis_orchestrator(
-            ws$packets, ws$desc, backend, output_dir = output_dir,
-            temperature = NA_real_, dataset_context = ws$dataset_context
-        ))
+        return(do.call(run_synthesis_orchestrator, c(list(packets = ws$packets, output_dir = output_dir), synth_args)))
     }
 
     interps <- lapply(names(ws$packets), function(mod){
         tryCatch(
-            synthesize_module(ws$packets[[mod]], ws$desc, backend, temperature = NA_real_, dataset_context = ws$dataset_context),
+            do.call(synthesize_module, c(list(packet = ws$packets[[mod]]), synth_args)),
             error = function(e){
                 warning('agent label rejected for module ', mod, ': ', conditionMessage(e), call. = FALSE)
                 NULL

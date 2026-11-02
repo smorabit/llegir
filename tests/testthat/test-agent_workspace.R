@@ -547,7 +547,7 @@ test_that('export_agent_workspace() tolerates a custom tool whose requires names
 # 30-gene program with a housekeeping normalizer (UBC) at rank 7 and its
 # activity almost entirely in one sample; module_b carries five
 # dissociation-stress genes at the top and a score that tracks total_counts
-make_label_moduleset <- function(){
+make_label_moduleset <- function(weights = TRUE){
     set.seed(1)
     genes_a <- c('IFIT1', 'ISG15', 'MX1', 'STAT1', 'IRF7', 'OAS2', 'UBC', paste0('ALPHA', LETTERS[1:23]))
     genes_b <- c('FOS', 'JUN', 'EGR1', 'ATF3', 'IER2', 'CLDN4', 'KRT8', paste0('BRAVO', LETTERS[1:23]))
@@ -565,6 +565,7 @@ make_label_moduleset <- function(){
     scores$module_a[metadata$sample == 's1'] <- scores$module_a[metadata$sample == 's1'] + 5
     metadata$total_counts <- round(1000 + 300 * scores$module_b + stats::rnorm(n_cells, sd = 50))
     expr <- Matrix::Matrix(0, nrow = 60, ncol = n_cells, sparse = TRUE, dimnames = list(gene_table$gene_name, NULL))
+    if (!weights) gene_table$weight <- NULL
     components_ModuleSet(gene_table = gene_table, expression = expr, metadata = metadata, scores = scores,
                          group_col = 'cell_type', sample_col = 'sample')
 }
@@ -572,8 +573,8 @@ make_label_moduleset <- function(){
 # the input feature set: every module gene plus one grey (unassigned) gene
 label_feature_genes <- function(ms) c(unlist(lapply(modules(ms), function(m) gene_membership(ms, m)$gene_name)), 'GREYGENE')
 
-make_label_workspace_run <- function(n_modules = 2){
-    ms <- make_label_moduleset()
+make_label_workspace_run <- function(n_modules = 2, weights = TRUE){
+    ms <- make_label_moduleset(weights = weights)
     mods <- utils::head(modules(ms), n_modules)
     packets <- run_orchestrator(ms, list(list(fn = top_genes_tool, params = list())),
                                 output_dir = tempfile(), modules_use = mods)
@@ -875,7 +876,8 @@ test_that('collect_agent_labels() runs agent labels through the synthesis pipeli
     out_dir <- export_label_workspace(run)
     write_agent_label(out_dir, run$mods[1], label = 'Complement program')
 
-    expect_warning(interps <- collect_agent_labels(out_dir, agent = 'claude-code'), 'no agent label file')
+    expect_error(collect_agent_labels(out_dir, agent = 'claude-code'), 'did not pass check_agent_labels')
+    interps <- suppressWarnings(collect_agent_labels(out_dir, agent = 'claude-code', strict = FALSE))
     expect_null(interps[[run$mods[2]]])
     interp <- interps[[run$mods[1]]]
     expect_true(validate_interpretation(interp))
@@ -892,6 +894,42 @@ test_that('collect_agent_labels() runs agent labels through the synthesis pipeli
     expect_length(Filter(Negate(is.null), collected), 2)
     expect_true(file.exists(file.path(synth_dir, 'review_queue.tsv')))
     expect_true(file.exists(file.path(synth_dir, paste0(run$mods[1], '.json'))))
+})
+
+test_that('collect_agent_labels() records the manifest prompt version and trusts the agent artifact gate', {
+    run <- make_label_workspace_run(2)
+    out_dir <- export_label_workspace(run)
+    for (mod in run$mods) write_agent_label(out_dir, mod, label = paste('Program', mod))
+
+    # a manifest exported under an older prompt template keeps that version
+    manifest_path <- file.path(out_dir, '.llegir_agent_manifest.md')
+    manifest_txt <- readLines(manifest_path)
+    manifest_txt <- sub('^prompt_template_version: .*$', "prompt_template_version: '0.0-test'", manifest_txt)
+    writeLines(manifest_txt, manifest_path)
+
+    interps <- collect_agent_labels(out_dir, agent = 'claude-code')
+    expect_equal(interps[[run$mods[1]]]$provenance$prompt_template_version, '0.0-test')
+
+    # module_b's top hubs are immediate-early genes, which the synthesis-side
+    # rule would flag; the agent's own gate is authoritative in label mode
+    expect_false('possible_artifact' %in% unlist(interps[['module_b']]$flags))
+})
+
+test_that('check_agent_labels() handles a ModuleSet without gene weights', {
+    run <- make_label_workspace_run(1, weights = FALSE)
+    expect_false(has_capability(run$ms, 'gene_weights'))
+    out_dir <- export_label_workspace(run)
+    zero_kme <- function(review){
+        review$supporting_hubs <- lapply(review$supporting_hubs, function(hub){
+            hub$kme <- 0
+            hub
+        })
+        review
+    }
+    write_agent_label(out_dir, run$mods[1], ms = run$ms, review_edit = zero_kme)
+
+    report <- check_agent_labels(out_dir)
+    expect_equal(report$status, 'ok')
 })
 
 test_that('check_agent_labels() refuses an explore-mode workspace', {

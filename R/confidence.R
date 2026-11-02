@@ -6,12 +6,14 @@
 ## implementation_guide.md #3/#4 calls out) gets caught even if the model
 ## never flags itself.
 
-# immediate-early / dissociation-artifact genes (implementation_guide.md #3);
-# a hub-gene list dominated by these is a stress/dissociation artifact, not a
-# real biological program
-.ieg_artifact_genes <- c(
-    'FOS', 'FOSB', 'JUN', 'JUNB', 'JUND', 'EGR1', 'EGR2', 'EGR3',
-    'NR4A1', 'NR4A2', 'NR4A3', 'IER2', 'IER3', 'DUSP1', 'HSPA1A', 'HSPA1B', 'ZFP36'
+# immediate-early / heat-shock dissociation-stress genes: one list shared by
+# the synthesis-side artifact flag (.artifact_flagged()) and the label-mode
+# artifact screen (.artifact_screen_values()), so both routes judge the same
+# genes as stress
+.dissociation_stress_genes <- c(
+    'FOS', 'FOSB', 'JUN', 'JUNB', 'JUND', 'EGR1', 'EGR2', 'EGR3', 'ATF3',
+    'NR4A1', 'NR4A2', 'NR4A3', 'IER2', 'IER3', 'DUSP1', 'ZFP36',
+    'HSPA1A', 'HSPA1B', 'DNAJB1', 'HSPH1', 'BAG3'
 )
 
 # fragment types whose effect_strength is a bounded, comparable magnitude
@@ -294,13 +296,13 @@ calculate_fusion_score <- function(fragments, user_weights = list(), beta = 0.5,
     hub_frag <- Find(function(f) f$type == 'ranked_genes', packet$fragments)
     if (is.null(hub_frag) || !('gene_name' %in% names(hub_frag$result))) return(FALSE)
     top_genes <- utils::head(hub_frag$result$gene_name, top_n)
-    mean(toupper(top_genes) %in% .ieg_artifact_genes) >= frac_threshold
+    mean(toupper(top_genes) %in% .dissociation_stress_genes) >= frac_threshold
 }
 
 # fraction of a gene vector that is cytoplasmic ribosomal protein (RPS*/RPL*,
 # also catches the RPS6K* kinases -- accepted for regex simplicity) or
 # mitochondrially encoded (MT-*). A hub list can be part housekeeping without
-# being an artifact, so unlike .ieg_artifact_genes this is reported, not flagged
+# being an artifact, so unlike .dissociation_stress_genes this is reported, not flagged
 .housekeeping_gene_fractions <- function(genes){
     genes <- toupper(genes)
     list(
@@ -385,7 +387,10 @@ housekeeping_composition_note <- function(packet, top_n = 20, min_fraction = 0.1
 fuse_confidence <- function(interp, packet, low_threshold = 0.35, disagreement_threshold = 0.35,
                              user_weights = list(), fusion = NULL){
     flags <- unlist(interp$flags)
-    if (.artifact_flagged(packet)) {
+    # a label-mode interpretation carries the agent's own artifact gate, which
+    # check_agent_labels() enforces against the artifact screen; a second,
+    # differently-thresholded rule here would contradict a gate that passed
+    if (is.null(interp$review) && .artifact_flagged(packet)) {
         flags <- union(flags, 'possible_artifact')
     }
     interp$flags <- as.list(flags)

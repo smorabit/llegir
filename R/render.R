@@ -59,11 +59,11 @@ render_paragraph <- function(interp){
 # short human-readable explanations for the review queue's `reason` column;
 # every entry in .interpretation_flags (R/interpretation.R) must have one
 .flag_reasons <- list(
-    insufficient_evidence = 'deterministic evidence signals are weak (low effect size / few significant terms)',
-    needs_human_review = 'model confidence and deterministic evidence disagree, or a citation issue was found',
+    insufficient_evidence = 'the interpretation itself reports the evidence as too weak for a confident call',
+    needs_human_review = 'a claim failed the faithfulness check (missing citation, contradicted direction, or unsupported significance wording), or the interpretation asked for a human look',
     tool_conflict = 'evidence tools disagree on whether the module shows a real signal',
-    possible_artifact = 'hub genes are dominated by stress/dissociation markers',
-    label_low_specificity = 'the proposed label was flagged as too generic'
+    possible_artifact = 'the module may be technical (dissociation stress, sequencing depth, or generic high expressers) rather than biological',
+    label_low_specificity = 'the label is generic, or the module is driven mostly by a single sample'
 )
 
 #' Describe an interpretation's flags in human-readable form

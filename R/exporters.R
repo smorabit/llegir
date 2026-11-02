@@ -591,6 +591,19 @@ read_agent_manifest <- function(path){
 # round-tripping to an R logical via yaml::yaml.load()
 .yaml_bool_handler <- list(logical = function(x) structure(ifelse(x, 'true', 'false'), class = 'verbatim'))
 
+# the interpretation contract table, generated from the packaged schema so
+# the manifest can never describe fields the schema doesn't have
+.build_interpretation_contract <- function(){
+    schema <- jsonlite::read_json(system.file('schemas', 'interpretation.schema.json', package = 'llegir'))
+    required <- unlist(schema$required)
+    rows <- vapply(names(schema$properties), function(field){
+        desc <- schema$properties[[field]]$description %||% ''
+        status <- if (field %in% required) 'required' else 'optional'
+        sprintf('| `%s` | %s | %s |', field, status, gsub('\\|', '/', desc))
+    }, character(1))
+    paste(c('| field | status | meaning |', '|---|---|---|', rows), collapse = '\n')
+}
+
 # the machine-readable YAML front matter read_agent_manifest() parses back;
 # artifact paths are recorded relative to workspace_root so the folder stays
 # portable if zipped/moved, resolvable against the absolute workspace_root
@@ -749,7 +762,8 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc, interps =
         api_cheatsheet = .build_api_cheatsheet(ms, lite_caps),
         tool_cheatsheet = .build_tool_cheatsheet(ms, lite_caps),
         recipes = .build_safe_recipes(ms, lite_caps),
-        provenance_block = .render_provenance_block(provenance)
+        provenance_block = .render_provenance_block(provenance),
+        interpretation_contract = .build_interpretation_contract()
     )
 
     #---------------------------------------------------------

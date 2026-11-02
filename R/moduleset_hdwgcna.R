@@ -47,14 +47,12 @@ hdWGCNA_ModuleSet <- function(seurat_obj, wgcna_name = NULL, data_level = 'cell'
 }
 
 #' @rdname hdWGCNA_ModuleSet
-#' @param include_grey Include hdWGCNA's 'grey' bucket for unassigned genes
-#'   (not a real co-expression module). Default `FALSE`.
 #' @export
-modules.hdWGCNA_ModuleSet <- function(ms, include_grey = FALSE, ...){
+modules.hdWGCNA_ModuleSet <- function(ms, ...){
+    # grey is hdWGCNA's bucket for unassigned genes, not a co-expression
+    # module, and gene_membership() never serves it
     mod_df <- hdWGCNA::GetModules(ms$seurat_obj, wgcna_name = ms$wgcna_name)
-    mod_ids <- unique(as.character(mod_df$module))
-    if (!include_grey) mod_ids <- setdiff(mod_ids, 'grey')
-    mod_ids
+    setdiff(unique(as.character(mod_df$module)), 'grey')
 }
 
 # each gene's weight is its OWN module's kME column (kME_<module>) -- the

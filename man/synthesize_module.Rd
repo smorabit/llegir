@@ -13,7 +13,9 @@ synthesize_module(
   prompt_template_version = PROMPT_TEMPLATE_VERSION,
   schema_path = system.file("schemas", "interpretation.schema.json", package = "llegir"),
   user_weights = list(),
-  dataset_context = NULL
+  dataset_context = NULL,
+  data_level = "cell",
+  aggregated = FALSE
 )
 }
 \arguments{
@@ -42,6 +44,10 @@ fused evidence score is shelved (Part 4.5). Default \code{list()}.}
 \code{\link[=build_dataset_context]{build_dataset_context()}} / \code{\link[=run_dataset_context]{run_dataset_context()}}, threaded into
 \code{\link[=build_user_prompt]{build_user_prompt()}} as global framing. Never enters
 \code{\link[=enforce_faithfulness]{enforce_faithfulness()}}. \code{NULL} (default) omits the DATASET CONTEXT block.}
+
+\item{data_level, aggregated}{The \code{ModuleSet}'s observation unit (e.g.
+\code{ms$data_level}, \code{ms$aggregated}), stated in the prompt so a pseudo-bulk
+run is not described to the model as cell-level. Default \code{'cell'}/\code{FALSE}.}
 }
 \value{
 A validated \code{interpretation} object.

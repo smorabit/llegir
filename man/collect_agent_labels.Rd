@@ -4,7 +4,12 @@
 \alias{collect_agent_labels}
 \title{Collect an agent's labels as validated interpretations}
 \usage{
-collect_agent_labels(workspace_dir, output_dir = NULL, agent = "coding-agent")
+collect_agent_labels(
+  workspace_dir,
+  output_dir = NULL,
+  agent = "coding-agent",
+  strict = TRUE
+)
 }
 \arguments{
 \item{workspace_dir}{Path to the exported workspace.}
@@ -12,6 +17,9 @@ collect_agent_labels(workspace_dir, output_dir = NULL, agent = "coding-agent")
 \item{output_dir}{Optional directory to write the synthesis outputs to.}
 
 \item{agent}{Short name of the agent that wrote the labels.}
+
+\item{strict}{Stop (rather than warn) when \code{\link[=check_agent_labels]{check_agent_labels()}} reports
+any module that is not \code{ok}. Default \code{TRUE}.}
 }
 \value{
 A named list of \code{interpretation} objects (\code{NULL} for a module
@@ -26,8 +34,13 @@ validation, \code{\link[=enforce_faithfulness]{enforce_faithfulness()}}, \code{\
 \code{output_dir}, delegates to \code{\link[=run_synthesis_orchestrator]{run_synthesis_orchestrator()}}, which also
 writes per-module JSON/Markdown, \code{review_queue.tsv} and \code{manifest.json},
 exactly as for an LLM run. Provenance records \code{model = 'agent:<agent>'}
-and the current \link{PROMPT_TEMPLATE_VERSION}, whose rules the workspace
-manifest handed the agent.
+and the \code{prompt_template_version} recorded in the workspace manifest,
+whose rules the agent labelled under.
+}
+\details{
+Labels are first run through \code{\link[=check_agent_labels]{check_agent_labels()}}: with \code{strict = TRUE}
+(default) collection stops unless every module is \code{ok}; with
+\code{strict = FALSE} it warns and collects whatever passes validation.
 }
 \examples{
 \dontrun{

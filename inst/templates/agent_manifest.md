@@ -201,8 +201,9 @@ every `labels/<module_id>.json` through llegir's synthesis post-processing
 (schema validation, citation and direction faithfulness, the
 significance-wording check) and checks the `review` block against the
 `ModuleSet` and the artifact screen: supporting hubs must be
-top-{{support_rank}} hubs with the kME you state and at least one from the
-top {{display_rank}}; at least {{min_markers}} expected markers, each with its
+top-{{support_rank}} hubs with the kME you state (when the `ModuleSet` has no
+real gene weights, kME is NA, hub rank is table order and the kME is not
+checked) and at least one from the top {{display_rank}}; at least {{min_markers}} expected markers, each with its
 true status; display hubs must follow step 7; the score must sit in its band;
 a technical gate must match the tier and flag; the gate and confidence must
 respect the screen's thresholds; the notes file must exist and cite every
@@ -378,19 +379,7 @@ token-efficient digest built for exactly that purpose.
 
 ### `interpretation` (synthesized narrative, if this run produced any)
 
-| field | meaning |
-|---|---|
-| `module_id` | which module this interpretation describes |
-| `proposed_label` | short human-readable label for the module |
-| `one_line_summary` | one-sentence summary |
-| `dominant_biology` | the dominant biological theme, in prose |
-| `supporting_claims` | claims tied back to specific evidence fragments |
-| `cell_state` / `condition_dynamics` | optional narrower framing, if evidenced |
-| `metadata_associations` / `literature` | optional supporting associations |
-| `confidence` | fused confidence score and its components |
-| `flags` | faithfulness / review flags raised during synthesis |
-| `provenance` | model, backend, prompt/schema versions, timestamp |
-| `schema_version` | version of this contract the object was built against |
+{{{interpretation_contract}}}
 
 ## 8. Execution Protocol
 

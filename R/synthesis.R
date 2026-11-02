@@ -397,6 +397,9 @@ local_backend <- function(model = NULL, cache = TRUE, force_refresh = FALSE,
 #' @param dataset_context An optional dataset context, as built by
 #'   [build_dataset_context()] / [run_dataset_context()], threaded into
 #'   [build_user_prompt()]. `NULL` (default) omits the DATASET CONTEXT block.
+#' @param data_level,aggregated The `ModuleSet`'s observation unit (e.g.
+#'   `ms$data_level`, `ms$aggregated`), stated in the prompt so a pseudo-bulk
+#'   run is not described to the model as cell-level. Default `'cell'`/`FALSE`.
 #' @return An `interpretation` object (not yet faithfulness-checked or
 #'   confidence-fused; see [synthesize_module()] for the full pipeline).
 #' @examples
@@ -408,11 +411,12 @@ local_backend <- function(model = NULL, cache = TRUE, force_refresh = FALSE,
 synthesize_interpretation <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                        prompt_template_version = PROMPT_TEMPLATE_VERSION,
                                        schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
-                                       user_weights = list(), fusion = NULL, dataset_context = NULL){
+                                       user_weights = list(), fusion = NULL, dataset_context = NULL,
+                                       data_level = 'cell', aggregated = FALSE){
     validate_dataset_description(desc)
 
     system_prompt <- build_system_prompt()
-    user_prompt <- build_user_prompt(packet, desc, dataset_context = dataset_context)
+    user_prompt <- build_user_prompt(packet, desc, data_level = data_level, aggregated = aggregated, dataset_context = dataset_context)
     schema_json <- model_output_schema_json(schema_path)
 
     result <- backend(system_prompt, user_prompt, schema_json, packet_hash = packet$packet_hash)

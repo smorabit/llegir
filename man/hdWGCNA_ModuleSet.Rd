@@ -19,7 +19,7 @@ hdWGCNA_ModuleSet(
   aggregated = FALSE
 )
 
-\method{modules}{hdWGCNA_ModuleSet}(ms, include_grey = FALSE, ...)
+\method{modules}{hdWGCNA_ModuleSet}(ms, ...)
 
 \method{gene_membership}{hdWGCNA_ModuleSet}(ms, module, ...)
 
@@ -51,9 +51,6 @@ aggregated across cells (e.g. pseudobulk) rather than per-cell. Default \code{FA
 \item{ms}{A \code{ModuleSet} object; the dispatch target for the generic
 methods below (\code{\link[=modules]{modules()}}, \code{\link[=gene_membership]{gene_membership()}}, \code{\link[=module_scores]{module_scores()}},
 \code{\link[=expression]{expression()}}, \code{\link[=counts]{counts()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}).}
-
-\item{include_grey}{Include hdWGCNA's 'grey' bucket for unassigned genes
-(not a real co-expression module). Default \code{FALSE}.}
 
 \item{...}{Passed to methods.}
 

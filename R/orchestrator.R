@@ -213,6 +213,9 @@ run_dataset_context <- function(ms, dataset_tool_config, input_hash = NA_charact
 #'   [build_dataset_context()] / [run_dataset_context()], threaded into
 #'   [build_user_prompt()] as global framing. Never enters
 #'   [enforce_faithfulness()]. `NULL` (default) omits the DATASET CONTEXT block.
+#' @param data_level,aggregated The `ModuleSet`'s observation unit (e.g.
+#'   `ms$data_level`, `ms$aggregated`), stated in the prompt so a pseudo-bulk
+#'   run is not described to the model as cell-level. Default `'cell'`/`FALSE`.
 #' @return A validated `interpretation` object.
 #' @examples
 #' ms <- llegir_example_moduleset()
@@ -223,11 +226,12 @@ run_dataset_context <- function(ms, dataset_tool_config, input_hash = NA_charact
 synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_real_,
                                prompt_template_version = PROMPT_TEMPLATE_VERSION,
                                schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
-                               user_weights = list(), dataset_context = NULL){
+                               user_weights = list(), dataset_context = NULL,
+                               data_level = 'cell', aggregated = FALSE){
     interp <- synthesize_interpretation(
         packet, desc, backend, temperature = temperature, seed = seed,
         prompt_template_version = prompt_template_version, schema_path = schema_path,
-        dataset_context = dataset_context
+        dataset_context = dataset_context, data_level = data_level, aggregated = aggregated
     )
     interp <- enforce_faithfulness(interp, packet)
     interp <- fuse_confidence(interp, packet)
@@ -261,6 +265,9 @@ synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_
 #'   [build_dataset_context()] / [run_dataset_context()]. Computed once and
 #'   passed to every module's [synthesize_module()] call, exactly like
 #'   `desc`. `NULL` (default) omits the DATASET CONTEXT block.
+#' @param data_level,aggregated The `ModuleSet`'s observation unit (e.g.
+#'   `ms$data_level`, `ms$aggregated`), stated in the prompt so a pseudo-bulk
+#'   run is not described to the model as cell-level. Default `'cell'`/`FALSE`.
 #' @return Invisibly, a named list of interpretation objects (one per module;
 #'   `NULL` for any module whose synthesis failed).
 #' @examples
@@ -272,7 +279,7 @@ synthesize_module <- function(packet, desc, backend, temperature = 0, seed = NA_
 run_synthesis_orchestrator <- function(packets, desc, backend, output_dir, temperature = 0, seed = NA_real_,
                                         prompt_template_version = PROMPT_TEMPLATE_VERSION,
                                         schema_path = system.file('schemas', 'interpretation.schema.json', package = 'llegir'),
-                                        dataset_context = NULL){
+                                        dataset_context = NULL, data_level = 'cell', aggregated = FALSE){
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     mods <- names(packets)
 
@@ -283,7 +290,7 @@ run_synthesis_orchestrator <- function(packets, desc, backend, output_dir, tempe
             synthesize_module(
                 packet, desc, backend, temperature = temperature, seed = seed,
                 prompt_template_version = prompt_template_version, schema_path = schema_path,
-                dataset_context = dataset_context
+                dataset_context = dataset_context, data_level = data_level, aggregated = aggregated
             ),
             error = function(e){
                 warning('synthesis failed for module ', mod, ': ', conditionMessage(e), call. = FALSE)
