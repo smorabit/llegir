@@ -32,9 +32,18 @@
     very_low = c(0, 0.25)
 )
 
-# label-mode hub ranks: supporting evidence from the top 25, display from the top 10
+# label-mode hub ranks: supporting evidence from the top 25 (and at least one
+# from the top 10), display from the top 10
 .review_max_support_rank <- 25
 .review_max_display_rank <- 10
+.review_min_markers <- 3
+
+# artifact-screen thresholds, stated in the manifest and enforced by
+# check_agent_labels(): at or above them the gate may not simply 'pass', and a
+# sample-concentrated module keeps its biological label with capped confidence
+.screen_stress_min_hubs <- 5
+.screen_depth_min_rho <- 0.5
+.screen_sample_share_cap <- 0.5
 
 # gene family for the "no two display hubs from one family" rule: the symbol
 # up to its first digit or hyphen (HLA-A/HLA-B -> HLA, RPL13/RPL13A -> RPL,
@@ -57,47 +66,96 @@
     scores <- module_scores(ms)[[module_id]]
     high <- scores >= stats::quantile(scores, 0.9, na.rm = TRUE)
     counts <- sort(table(md[[sample_col]][high]), decreasing = TRUE)
-    list(sample = names(counts)[1], share = as.numeric(counts[1]) / sum(counts), n_samples = length(unique(md[[sample_col]])))
+    list(sample_col = sample_col, sample = names(counts)[1], share = as.numeric(counts[1]) / sum(counts),
+         n_samples = length(unique(md[[sample_col]])))
+}
+
+# Spearman correlation of the module score with each sequencing-depth column
+# (e.g. total counts, detected genes) across cells; columns the metadata lacks
+# are skipped, so NULL when none are available
+.depth_correlations <- function(ms, module_id, depth_cols){
+    if (!length(depth_cols) || !has_capability(ms, 'module_scores')) return(NULL)
+    md <- metadata(ms)
+    depth_cols <- intersect(depth_cols, colnames(md))
+    if (!length(depth_cols)) return(NULL)
+    scores <- module_scores(ms)[[module_id]]
+    vapply(depth_cols, function(col) stats::cor(scores, md[[col]], method = 'spearman', use = 'complete.obs'), numeric(1))
+}
+
+# the artifact screen's numbers for one module, shared by the rendered block
+# and by check_agent_labels(), so what the agent reads is what gets enforced
+.artifact_screen_values <- function(ms, module_id, sample_col = NULL, depth_cols = NULL){
+    ranked <- .ranked_module_genes(ms, module_id)
+    top_hubs <- utils::head(ranked$gene_name, .review_max_support_rank)
+    list(
+        n_genes = nrow(ranked),
+        n_top = length(top_hubs),
+        stress_top = intersect(top_hubs, .dissociation_stress_genes),
+        stress_all = intersect(ranked$gene_name, .dissociation_stress_genes),
+        sample_share = .top_decile_sample_share(ms, module_id, sample_col),
+        depth_rho = .depth_correlations(ms, module_id, depth_cols)
+    )
+}
+
+# which screen thresholds a module meets: stress / depth mean the gate may not
+# simply pass; sample concentration caps the confidence instead
+.screen_flags <- function(values){
+    list(
+        stress = length(values$stress_top) >= .screen_stress_min_hubs,
+        depth = !is.null(values$depth_rho) && any(abs(values$depth_rho) >= .screen_depth_min_rho, na.rm = TRUE),
+        sample = !is.null(values$sample_share) && values$sample_share$share >= .screen_sample_share_cap
+    )
 }
 
 #' Artifact screen for one module (label mode)
 #'
 #' The deterministic inputs to the label-mode artifact gate, rendered as a
-#' text block appended to each module's `label_evidence` file: module size,
+#' text block appended to each module's `label_evidence` file: module size;
 #' how many of the dissociation-stress (immediate-early / heat-shock) genes
-#' sit among the top hubs and in the whole module, and, when `sample_col`
-#' names a metadata column (e.g. patient), how much of the module's top-decile
-#' activity comes from a single sample. Not an evidence fragment: it may
-#' inform the gate but is never cited in `supporting_claims`.
+#' sit among the top 25 hubs and in the whole module; when `depth_cols` are
+#' available, the module score's Spearman correlation with sequencing depth;
+#' and, when `sample_col` names a metadata column (e.g. patient), how much of
+#' the module's top-decile activity comes from a single sample. Each line
+#' states its threshold and whether the module meets it. Not an evidence
+#' fragment: it informs the gate but is never cited in `supporting_claims`.
 #'
 #' @param ms A `ModuleSet`.
 #' @param module_id The module to screen.
 #' @param sample_col Optional metadata column (e.g. `'Patient'`) for the
 #'   single-sample share. Default `NULL` skips that line.
+#' @param depth_cols Optional metadata columns holding per-cell sequencing
+#'   depth (e.g. `c('nCount_RNA', 'nFeature_RNA')`). Default `NULL` skips that
+#'   line.
 #' @return A single character string.
 #' @keywords internal
-.label_artifact_screen <- function(ms, module_id, sample_col = NULL){
-    ranked <- .ranked_module_genes(ms, module_id)
-    top_hubs <- utils::head(ranked$gene_name, .review_max_support_rank)
-    stress_top <- intersect(top_hubs, .dissociation_stress_genes)
-    stress_all <- intersect(ranked$gene_name, .dissociation_stress_genes)
+.label_artifact_screen <- function(ms, module_id, sample_col = NULL, depth_cols = NULL){
+    values <- .artifact_screen_values(ms, module_id, sample_col, depth_cols)
+    flags <- .screen_flags(values)
+    meets <- function(x) if (isTRUE(x)) 'MEETS threshold' else 'below threshold'
 
     lines <- c(
-        paste0('[artifact_screen] computed by llegir for the label-mode artifact gate; not an evidence fragment, never cite it in supporting_claims'),
-        paste0('module size in this ModuleSet: ', nrow(ranked), ' genes'),
+        '[artifact_screen] computed by llegir for the label-mode artifact gate; not an evidence fragment, never cite it in supporting_claims',
+        paste0('module_size: ', values$n_genes, ' genes'),
         paste0(
-            'dissociation-stress genes (immediate-early / heat-shock, ', length(.dissociation_stress_genes), ' screened): ',
-            length(stress_top), ' of the top ', length(top_hubs), ' hubs',
-            if (length(stress_top)) paste0(' (', paste(stress_top, collapse = ', '), ')') else '',
-            '; ', length(stress_all), ' in the whole module',
-            if (length(stress_all)) paste0(' (', paste(stress_all, collapse = ', '), ')') else ''
+            'dissociation_stress: ', length(values$stress_top), ' of the top ', values$n_top, ' hubs',
+            if (length(values$stress_top)) paste0(' (', paste(values$stress_top, collapse = ', '), ')') else '',
+            '; ', length(values$stress_all), ' in the whole module',
+            if (length(values$stress_all)) paste0(' (', paste(values$stress_all, collapse = ', '), ')') else '',
+            ' [threshold: ', .screen_stress_min_hubs, ' of the top ', .review_max_support_rank, ' hubs; ', meets(flags$stress), ']'
         )
     )
-    share <- .top_decile_sample_share(ms, module_id, sample_col)
-    if (!is.null(share)) {
+    if (!is.null(values$depth_rho)) {
+        lines <- c(lines, paste0(
+            'depth_correlation (Spearman rho, module score vs ',
+            paste(sprintf('%s %.2f', names(values$depth_rho), values$depth_rho), collapse = ', '),
+            ') [threshold: |rho| >= ', .screen_depth_min_rho, ' for any; ', meets(flags$depth), ']'
+        ))
+    }
+    if (!is.null(values$sample_share)) {
         lines <- c(lines, sprintf(
-            'top-decile cells by module score: %.1f%% from one %s (%s) of %d',
-            100 * share$share, sample_col, share$sample, share$n_samples
+            'sample_concentration: %.1f%% of top-decile cells by module score from one %s (%s) of %d [threshold: %.0f%%; %s]',
+            100 * values$sample_share$share, values$sample_share$sample_col %||% 'sample', values$sample_share$sample,
+            values$sample_share$n_samples, 100 * .screen_sample_share_cap, meets(flags$sample)
         ))
     }
     paste(lines, collapse = '\n')
@@ -166,8 +224,13 @@ agent_label_backend <- function(labels_dir, packets, agent = 'coding-agent'){
         stop('workspace was not exported with mode = "label": ', workspace_dir)
     }
     artifact_path <- function(key) file.path(workspace_dir, manifest$artifacts[[key]])
+    feature_genes <- if (!is.null(manifest$artifacts$feature_genes)) readLines(artifact_path('feature_genes')) else NULL
     list(
         manifest = manifest,
+        feature_genes = feature_genes,
+        sample_col = manifest$sample_col,
+        depth_cols = unlist(manifest$depth_cols),
+        workspace_dir = workspace_dir,
         ms = qs2::qs_read(artifact_path('moduleset_lite')),
         packets = qs2::qs_read(artifact_path('packets')),
         dataset_context = qs2::qs_read(artifact_path('dataset_context')),
@@ -176,16 +239,31 @@ agent_label_backend <- function(labels_dir, packets, agent = 'coding-agent'){
     )
 }
 
+# where a gene sits relative to one module: in it, in another module of the
+# network, in the input feature set but no module (e.g. hdWGCNA grey), or not
+# in the input at all. Without a feature set the last two can't be told
+# apart, so NA_character_ (either answer is accepted).
+.marker_status <- function(gene, module_id, ms, feature_genes){
+    if (gene %in% gene_membership(ms, module_id)$gene_name) return('in_module')
+    in_other <- any(vapply(setdiff(modules(ms), module_id), function(m) gene %in% gene_membership(ms, m)$gene_name, logical(1)))
+    if (in_other) return('in_network')
+    if (is.null(feature_genes)) return(NA_character_)
+    if (gene %in% feature_genes) 'unassigned' else 'not_tested'
+}
+
 # the label-mode review checks for one module, against the ModuleSet itself;
 # returns a character vector of problems (empty when the review holds up)
-.review_issues <- function(interp, ms, notes_path){
+.review_issues <- function(interp, ws){
     review <- interp$review
-    ranked <- .ranked_module_genes(ms, interp$module_id)
+    mod <- interp$module_id
+    ranked <- .ranked_module_genes(ws$ms, mod)
     rank_of <- function(gene) match(gene, ranked$gene_name)
     issues <- character(0)
 
-    for (hub in review$supporting_hubs) {
-        r <- rank_of(hub$gene)
+    hub_ranks <- vapply(review$supporting_hubs, function(hub) rank_of(hub$gene), numeric(1))
+    for (i in seq_along(review$supporting_hubs)) {
+        hub <- review$supporting_hubs[[i]]
+        r <- hub_ranks[i]
         if (is.na(r)) {
             issues <- c(issues, sprintf('supporting hub %s is not in this module', hub$gene))
         } else if (r > .review_max_support_rank) {
@@ -194,13 +272,20 @@ agent_label_backend <- function(labels_dir, packets, agent = 'coding-agent'){
             issues <- c(issues, sprintf('supporting hub %s has kME %.3f, not %.3f', hub$gene, ranked$kme[r], hub$kme))
         }
     }
+    if (!any(hub_ranks <= .review_max_display_rank, na.rm = TRUE)) {
+        issues <- c(issues, sprintf('no supporting hub comes from the top %d; the call must rest on the top of the hub list', .review_max_display_rank))
+    }
 
-    # the falsification step is only worth anything if the absences are real
+    # the falsification step is only worth anything if each marker's status is real
+    if (length(review$expected_markers) < .review_min_markers) {
+        issues <- c(issues, sprintf('only %d expected_markers; check at least %d', length(review$expected_markers), .review_min_markers))
+    }
     for (marker in review$expected_markers) {
-        in_module <- marker$gene %in% ranked$gene_name
-        if (!identical(in_module, isTRUE(marker$present))) {
-            issues <- c(issues, sprintf('expected marker %s is %s this module, not %s', marker$gene,
-                                        if (in_module) 'in' else 'absent from', if (isTRUE(marker$present)) 'present' else 'absent'))
+        actual <- .marker_status(marker$gene, mod, ws$ms, ws$feature_genes)
+        ok <- if (is.na(actual)) marker$status %in% c('unassigned', 'not_tested') else identical(marker$status, actual)
+        if (!ok) {
+            issues <- c(issues, sprintf('expected marker %s is %s, not %s', marker$gene,
+                                        if (is.na(actual)) 'in no module' else actual, marker$status))
         }
     }
 
@@ -211,8 +296,12 @@ agent_label_backend <- function(labels_dir, packets, agent = 'coding-agent'){
             issues <- c(issues, sprintf('display hub %s is not in the top %d hubs', gene, .review_max_display_rank))
         }
     }
-    excluded <- intersect(display, .display_hub_excluded)
-    if (length(excluded)) issues <- c(issues, paste('display hubs include housekeeping normalizers:', paste(excluded, collapse = ', ')))
+    # a normalizer can stay as a display hub only with a stated reason
+    overridden <- vapply(review$display_hub_overrides %||% list(), function(o) if (nzchar(trimws(o$reason))) o$gene else NA_character_, character(1))
+    excluded <- setdiff(intersect(display, .display_hub_excluded), overridden)
+    if (length(excluded)) {
+        issues <- c(issues, paste('display hubs include housekeeping normalizers without a display_hub_overrides reason:', paste(excluded, collapse = ', ')))
+    }
     families <- .gene_family(display)
     if (anyDuplicated(families)) {
         issues <- c(issues, paste('display hubs repeat a gene family:', paste(display[families %in% families[duplicated(families)]], collapse = ', ')))
@@ -225,17 +314,47 @@ agent_label_backend <- function(labels_dir, packets, agent = 'coding-agent'){
     }
 
     # a technical call must be made consistently in the gate, the tier and the flags
-    gate_technical <- identical(review$artifact_gate$status, 'technical')
-    tier_technical <- identical(review$evidence_tier, 'technical_artifact')
-    if (gate_technical != tier_technical) {
+    flags <- unlist(interp$flags)
+    gate <- review$artifact_gate$status
+    gate_technical <- identical(gate, 'technical')
+    if (gate_technical != identical(review$evidence_tier, 'technical_artifact')) {
         issues <- c(issues, 'artifact_gate status technical and evidence_tier technical_artifact must go together')
     }
-    if (gate_technical && !('possible_artifact' %in% unlist(interp$flags))) {
+    if (gate_technical && !('possible_artifact' %in% flags)) {
         issues <- c(issues, 'a technical label must carry the possible_artifact flag')
     }
 
-    if (!file.exists(notes_path) || !any(nzchar(trimws(readLines(notes_path, warn = FALSE))))) {
-        issues <- c(issues, paste('no working notes at', file.path('labels', 'notes', basename(notes_path))))
+    # the screen's stated thresholds, enforced exactly as the manifest states them
+    screen <- .screen_flags(.artifact_screen_values(ws$ms, mod, ws$sample_col, ws$depth_cols))
+    if ((screen$stress || screen$depth) && identical(gate, 'pass')) {
+        issues <- c(issues, sprintf('the artifact screen meets the %s threshold, so artifact_gate cannot be pass (use technical or uncertain)',
+                                    paste(c(if (screen$stress) 'dissociation_stress', if (screen$depth) 'depth_correlation'), collapse = ' and ')))
+    }
+    if (screen$sample) {
+        if (identical(review$confidence_level, 'high')) {
+            issues <- c(issues, 'sample_concentration meets its threshold, so confidence_level is capped at moderate')
+        }
+        if (!('label_low_specificity' %in% flags)) {
+            issues <- c(issues, 'sample_concentration meets its threshold, so add the label_low_specificity flag')
+        }
+    }
+
+    notes_path <- file.path(ws$labels_dir, 'notes', paste0(mod, '.md'))
+    notes <- if (file.exists(notes_path)) readLines(notes_path, warn = FALSE) else character(0)
+    if (!any(nzchar(trimws(notes)))) {
+        issues <- c(issues, paste('no working notes at', file.path('labels', 'notes', paste0(mod, '.md'))))
+    }
+
+    # every script run for this module is part of the record: kept output, cited in the notes
+    scripts <- list.files(file.path(ws$workspace_dir, 'queries', mod), pattern = '\\.R$')
+    for (script in scripts) {
+        rel <- file.path('queries', mod, script)
+        if (!file.exists(file.path(ws$workspace_dir, sub('\\.R$', '.out', rel)))) {
+            issues <- c(issues, paste('no captured output for', rel))
+        }
+        if (!any(grepl(rel, notes, fixed = TRUE))) {
+            issues <- c(issues, paste('notes do not cite', rel))
+        }
     }
     issues
 }
@@ -252,16 +371,25 @@ agent_label_backend <- function(labels_dir, packets, agent = 'coding-agent'){
 #' [check_faithfulness()] against the module's packet, and checks the
 #' required `review` block against the ModuleSet itself:
 #' * every supporting hub is among the module's top 25 hubs, with the kME
-#'   stated (within 0.01);
-#' * every expected marker's `present` call matches the module's membership;
+#'   stated (within 0.01), and at least one is from the top 10;
+#' * at least 3 expected markers, each with the right status (`in_module`,
+#'   `in_network`, `unassigned`, `not_tested`; the last two are told apart
+#'   only when the workspace ships the input feature set);
 #' * the 3 display hubs are among the top 10 hubs, exclude housekeeping
-#'   normalizers, and do not repeat a gene family;
+#'   normalizers unless `review$display_hub_overrides` gives a reason, and do
+#'   not repeat a gene family;
 #' * `confidence$score` lies in the band of `review$confidence_level`
 #'   (high 0.75-0.95, moderate 0.5-0.75, low 0.25-0.5, very_low 0-0.25);
 #' * a technical artifact gate, a `technical_artifact` evidence tier and the
 #'   `possible_artifact` flag go together;
-#' * working notes exist at `labels/notes/<module_id>.md`;
-#' * no two modules in the workspace share a `proposed_label`.
+#' * a module meeting the artifact screen's dissociation-stress or
+#'   depth-correlation threshold does not `pass` the gate, and one meeting
+#'   the sample-concentration threshold is at most `moderate` and flagged
+#'   `label_low_specificity`;
+#' * working notes exist at `labels/notes/<module_id>.md`, and every script
+#'   in `queries/<module_id>/` has its captured `.out` and is cited in them;
+#' * no two modules in the workspace share a `proposed_label`, unless one's
+#'   `review$related_module` names the other.
 #'
 #' This is what the workspace's `validate_labels.R` runs, so an agent can
 #' iterate until every module is `'ok'`.
@@ -291,7 +419,7 @@ check_agent_labels <- function(workspace_dir, alpha = 0.05){
             return(data.frame(module_id = mod, status = 'invalid', proposed_label = NA_character_, detail = interp))
         }
         violations <- vapply(check_faithfulness(interp, packet, alpha = alpha), .describe_violation, character(1))
-        issues <- .review_issues(interp, ws$ms, file.path(ws$labels_dir, 'notes', paste0(mod, '.md')))
+        issues <- .review_issues(interp, ws)
         data.frame(
             module_id = mod,
             status = if (length(violations)) 'unfaithful' else if (length(issues)) 'needs_revision' else 'ok',
@@ -300,13 +428,24 @@ check_agent_labels <- function(workspace_dir, alpha = 0.05){
         )
     })
 
-    # within-network uniqueness can only be judged across the whole workspace
+    # within-network uniqueness can only be judged across the whole workspace; a
+    # shared label is accepted when either module's review.related_module names
+    # the other (the same program, recorded honestly rather than distinguished)
     labelled <- do.call(rbind, rows)
+    related <- vapply(labelled$module_id, function(mod){
+        path <- file.path(ws$labels_dir, paste0(mod, '.json'))
+        if (!file.exists(path)) return(NA_character_)
+        lab <- tryCatch(jsonlite::read_json(path), error = function(e) NULL)
+        lab$review$related_module$module_id %||% NA_character_
+    }, character(1))
+    linked <- function(a, b) identical(unname(related[a]), b) || identical(unname(related[b]), a)
     norm <- .normalize_label(labelled$proposed_label)
     dup <- !is.na(norm) & (duplicated(norm) | duplicated(norm, fromLast = TRUE))
     for (i in which(dup)) {
         others <- setdiff(labelled$module_id[norm == norm[i] & dup], labelled$module_id[i])
-        note <- paste0('proposed_label also used by ', paste(others, collapse = ', '))
+        others <- others[!vapply(others, function(o) linked(labelled$module_id[i], o), logical(1))]
+        if (!length(others)) next
+        note <- paste0('proposed_label also used by ', paste(others, collapse = ', '), ' (record review.related_module if they are the same program)')
         labelled$detail[i] <- paste(c(if (nzchar(labelled$detail[i])) labelled$detail[i], note), collapse = '; ')
         if (labelled$status[i] == 'ok') labelled$status[i] <- 'needs_revision'
     }

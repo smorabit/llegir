@@ -13,7 +13,9 @@ export_agent_workspace(
   out_dir = "agent_workspace",
   write_json = TRUE,
   mode = c("explore", "label"),
-  sample_col = .ms_sample_col(ms)
+  sample_col = .ms_sample_col(ms),
+  depth_cols = NULL,
+  feature_genes = NULL
 )
 }
 \arguments{
@@ -58,6 +60,16 @@ Collect the result with \code{\link[=collect_agent_labels]{collect_agent_labels(
 sample (e.g. patient) for the artifact screen's single-sample share of a
 module's top-decile activity. Defaults to the \code{ModuleSet}'s declared
 sample-id column, if any; \code{NULL} skips that line.}
+
+\item{depth_cols}{Label mode only: metadata columns holding per-cell
+sequencing depth (e.g. \code{c('nCount_RNA', 'nFeature_RNA')}), for the
+artifact screen's module-score/depth correlation. \code{NULL} (default) skips
+that line.}
+
+\item{feature_genes}{Label mode only: every gene that was eligible for
+module assignment (e.g. \code{hdWGCNA::GetWGCNAGenes()}, grey included), so a
+marker in no module can be classed \code{unassigned} rather than \code{not_tested}.
+\code{NULL} (default) accepts either for such a gene.}
 }
 \value{
 The absolute path to the written manifest, invisibly.

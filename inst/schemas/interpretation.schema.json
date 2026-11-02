@@ -112,14 +112,14 @@
         },
         "expected_markers": {
           "type": "array",
-          "minItems": 1,
-          "description": "the canonical markers the proposed label implies (obligate partners included); present means the gene is a member of this module",
+          "minItems": 3,
+          "description": "the canonical markers the proposed label implies (obligate partners included), each with where it sits: in_module (assigned to this module), in_network (assigned to another module of this network), unassigned (in the network's input feature set but in no module, e.g. hdWGCNA grey), not_tested (not in the input feature set, so says nothing about the biology)",
           "items": {
             "type": "object",
-            "required": ["gene", "present"],
+            "required": ["gene", "status"],
             "properties": {
               "gene": { "type": "string" },
-              "present": { "type": "boolean" }
+              "status": { "enum": ["in_module", "in_network", "unassigned", "not_tested"] }
             }
           }
         },
@@ -143,8 +143,29 @@
           "type": "array",
           "minItems": 3,
           "maxItems": 3,
-          "description": "three genes for figure annotation: from the top 10 hubs by kME, congruent with the label, no housekeeping normalizers, no two from the same gene family",
+          "description": "three genes for figure annotation: from the top 10 hubs by kME, congruent with the label, no housekeeping normalizers (unless justified in display_hub_overrides), no two from the same gene family",
           "items": { "type": "string" }
+        },
+        "display_hub_overrides": {
+          "type": "array",
+          "description": "optional: a housekeeping normalizer kept as a display hub because it is genuinely the module's biology, with the reason",
+          "items": {
+            "type": "object",
+            "required": ["gene", "reason"],
+            "properties": {
+              "gene": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "related_module": {
+          "type": "object",
+          "description": "optional: another module of this network capturing the same program, recorded instead of inventing a distinction; lets two modules share a label",
+          "required": ["module_id", "relationship"],
+          "properties": {
+            "module_id": { "type": "string" },
+            "relationship": { "enum": ["overlapping program", "weaker partial version", "technical counterpart"] }
+          }
         }
       }
     },

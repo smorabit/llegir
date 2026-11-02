@@ -4,7 +4,7 @@
 \alias{.label_artifact_screen}
 \title{Artifact screen for one module (label mode)}
 \usage{
-.label_artifact_screen(ms, module_id, sample_col = NULL)
+.label_artifact_screen(ms, module_id, sample_col = NULL, depth_cols = NULL)
 }
 \arguments{
 \item{ms}{A \code{ModuleSet}.}
@@ -13,17 +13,23 @@
 
 \item{sample_col}{Optional metadata column (e.g. \code{'Patient'}) for the
 single-sample share. Default \code{NULL} skips that line.}
+
+\item{depth_cols}{Optional metadata columns holding per-cell sequencing
+depth (e.g. \code{c('nCount_RNA', 'nFeature_RNA')}). Default \code{NULL} skips that
+line.}
 }
 \value{
 A single character string.
 }
 \description{
 The deterministic inputs to the label-mode artifact gate, rendered as a
-text block appended to each module's \code{label_evidence} file: module size,
+text block appended to each module's \code{label_evidence} file: module size;
 how many of the dissociation-stress (immediate-early / heat-shock) genes
-sit among the top hubs and in the whole module, and, when \code{sample_col}
-names a metadata column (e.g. patient), how much of the module's top-decile
-activity comes from a single sample. Not an evidence fragment: it may
-inform the gate but is never cited in \code{supporting_claims}.
+sit among the top 25 hubs and in the whole module; when \code{depth_cols} are
+available, the module score's Spearman correlation with sequencing depth;
+and, when \code{sample_col} names a metadata column (e.g. patient), how much of
+the module's top-decile activity comes from a single sample. Each line
+states its threshold and whether the module meets it. Not an evidence
+fragment: it informs the gate but is never cited in \code{supporting_claims}.
 }
 \keyword{internal}

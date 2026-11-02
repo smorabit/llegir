@@ -25,16 +25,25 @@ through \code{\link[=synthesize_interpretation]{synthesize_interpretation()}} vi
 required \code{review} block against the ModuleSet itself:
 \itemize{
 \item every supporting hub is among the module's top 25 hubs, with the kME
-stated (within 0.01);
-\item every expected marker's \code{present} call matches the module's membership;
+stated (within 0.01), and at least one is from the top 10;
+\item at least 3 expected markers, each with the right status (\code{in_module},
+\code{in_network}, \code{unassigned}, \code{not_tested}; the last two are told apart
+only when the workspace ships the input feature set);
 \item the 3 display hubs are among the top 10 hubs, exclude housekeeping
-normalizers, and do not repeat a gene family;
+normalizers unless \code{review$display_hub_overrides} gives a reason, and do
+not repeat a gene family;
 \item \code{confidence$score} lies in the band of \code{review$confidence_level}
 (high 0.75-0.95, moderate 0.5-0.75, low 0.25-0.5, very_low 0-0.25);
 \item a technical artifact gate, a \code{technical_artifact} evidence tier and the
 \code{possible_artifact} flag go together;
-\item working notes exist at \verb{labels/notes/<module_id>.md};
-\item no two modules in the workspace share a \code{proposed_label}.
+\item a module meeting the artifact screen's dissociation-stress or
+depth-correlation threshold does not \code{pass} the gate, and one meeting
+the sample-concentration threshold is at most \code{moderate} and flagged
+\code{label_low_specificity};
+\item working notes exist at \verb{labels/notes/<module_id>.md}, and every script
+in \verb{queries/<module_id>/} has its captured \code{.out} and is cited in them;
+\item no two modules in the workspace share a \code{proposed_label}, unless one's
+\code{review$related_module} names the other.
 }
 }
 \details{

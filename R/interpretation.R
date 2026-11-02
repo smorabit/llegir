@@ -173,6 +173,8 @@ validate_interpretation <- function(interp){
 .review_tiers <- c('hub_genes', 'geneset_enrichment', 'technical_artifact', 'insufficient')
 .review_gate_status <- c('pass', 'technical', 'uncertain')
 .review_confidence_levels <- c('high', 'moderate', 'low', 'very_low')
+.review_marker_status <- c('in_module', 'in_network', 'unassigned', 'not_tested')
+.review_relationships <- c('overlapping program', 'weaker partial version', 'technical counterpart')
 
 .validate_review <- function(review){
     if (!is.list(review)) stop('review must be a list')
@@ -201,12 +203,23 @@ validate_interpretation <- function(interp){
     for (hub in review$supporting_hubs) {
         if (!is_string(hub$gene) || !is.numeric(hub$kme) || length(hub$kme) != 1) stop('each review$supporting_hubs entry needs a gene and a numeric kme')
     }
+    # how many markers is a protocol question (check_agent_labels() asks for 3);
+    # the shape only needs one well-formed entry
     if (!is.list(review$expected_markers) || length(review$expected_markers) < 1) stop('review$expected_markers needs at least 1 gene')
     for (marker in review$expected_markers) {
-        if (!is_string(marker$gene) || !is.logical(marker$present) || length(marker$present) != 1) stop('each review$expected_markers entry needs a gene and a logical present')
+        if (!is_string(marker$gene) || !(is_string(marker$status) && marker$status %in% .review_marker_status)) {
+            stop('each review$expected_markers entry needs a gene and a status, one of: ', paste(.review_marker_status, collapse = ', '))
+        }
     }
     display_hubs <- unlist(review$display_hubs)
     if (!is.character(display_hubs) || length(display_hubs) != 3) stop('review$display_hubs must be exactly 3 genes')
+    for (override in review$display_hub_overrides) {
+        if (!is_string(override$gene) || !is_string(override$reason)) stop('each review$display_hub_overrides entry needs a gene and a reason')
+    }
+    related <- review$related_module
+    if (!is.null(related) && !(is_string(related$module_id) && is_string(related$relationship) && related$relationship %in% .review_relationships)) {
+        stop('review$related_module needs a module_id and a relationship, one of: ', paste(.review_relationships, collapse = ', '))
+    }
     invisible(TRUE)
 }
 

@@ -87,6 +87,9 @@ write_interpretation_report <- function(interps, packets, desc,
     if (identical(mode, 'label')) {
         labels_dir <- file.path(out_dir, 'labels')
         dir.create(file.path(labels_dir, 'notes'), showWarnings = FALSE, recursive = TRUE)
+        # queries/ is the retained methods record: one numbered script (+ .out)
+        # per query, per module; _network/ for whole-network scripts
+        dir.create(file.path(out_dir, 'queries', '_network'), showWarnings = FALSE, recursive = TRUE)
     }
     list(art_dir = art_dir, scratch_dir = scratch_dir, labels_dir = labels_dir)
 }
@@ -99,7 +102,7 @@ write_interpretation_report <- function(interps, packets, desc,
 # schema is the model-facing one with the review block required; the dataset
 # description is serialized so collect_agent_labels() can rebuild the
 # synthesis inputs from the workspace alone
-.write_label_artifacts <- function(ms, packets, desc, art_dir, sample_col = NULL){
+.write_label_artifacts <- function(ms, packets, desc, art_dir, sample_col = NULL, depth_cols = NULL, feature_genes = NULL){
     desc_path <- file.path(art_dir, 'dataset_description.qs2')
     qs2::qs_save(desc, desc_path)
 
@@ -109,15 +112,23 @@ write_interpretation_report <- function(interps, packets, desc,
     evidence_dir <- file.path(art_dir, 'label_evidence')
     dir.create(evidence_dir, showWarnings = FALSE)
     for (mid in names(packets)) {
-        evidence <- paste0(render_packet_compact(packets[[mid]]), '\n\n', .label_artifact_screen(ms, mid, sample_col))
+        evidence <- paste0(render_packet_compact(packets[[mid]]), '\n\n', .label_artifact_screen(ms, mid, sample_col, depth_cols))
         writeLines(evidence, file.path(evidence_dir, paste0(mid, '.md')))
     }
 
-    lapply(list(
+    paths <- list(
         dataset_description = desc_path,
         label_schema = schema_path,
         label_evidence_dir = evidence_dir
-    ), normalizePath, mustWork = TRUE)
+    )
+    # the genes eligible for module assignment, which is what lets a marker
+    # missing from every module be told apart as unassigned vs not_tested
+    if (!is.null(feature_genes)) {
+        feature_path <- file.path(art_dir, 'feature_genes.txt')
+        writeLines(sort(unique(feature_genes)), feature_path)
+        paths$feature_genes <- feature_path
+    }
+    lapply(paths, normalizePath, mustWork = TRUE)
 }
 
 # the declared grouping / sample-id column name for a ModuleSet, if any --
@@ -503,7 +514,8 @@ read_agent_manifest <- function(path){
         interpretations_dir_json = 'directory[json]',
         dataset_description = 'dataset_description',
         label_schema = 'json schema',
-        label_evidence_dir = 'directory[md]'
+        label_evidence_dir = 'directory[md]',
+        feature_genes = 'text'
     )
     notes <- list(
         moduleset_lite = 'default -- load this. qs2::qs_read() to a ModuleSet with expression()/counts() dropped; every other getter/tool works unchanged',
@@ -516,7 +528,8 @@ read_agent_manifest <- function(path){
         interpretations_dir_json = 'one <module_id>.json per interpretation; text mirror of interpretations',
         dataset_description = 'qs2::qs_read() to the dataset_description (label mode)',
         label_schema = 'the schema every labels/<module_id>.json must fill (label mode)',
-        label_evidence_dir = 'one <module_id>.md per module: its packet rendered exactly as the synthesis model sees it (label mode)'
+        label_evidence_dir = 'one <module_id>.md per module: the packet as the synthesis model sees it (render_packet_compact()), followed by llegir\'s [artifact_screen] block, which the model never sees (label mode)',
+        feature_genes = 'one gene per line: every gene eligible for module assignment in this network (label mode)'
     )
     lapply(names(paths), function(nm){
         list(
@@ -583,7 +596,8 @@ read_agent_manifest <- function(path){
 # portable if zipped/moved, resolvable against the absolute workspace_root
 # also recorded here. capabilities are always the FULL ms's -- nothing is
 # dropped from the docs just because the default load is the lite object.
-.build_front_matter <- function(ms, desc, paths, workspace_root, mode = 'explore'){
+.build_front_matter <- function(ms, desc, paths, workspace_root, mode = 'explore',
+                                sample_col = NULL, depth_cols = NULL){
     front <- list(
         llegir_manifest_version = .llegir_manifest_version,
         generated_at = .iso8601_now(),
@@ -603,6 +617,9 @@ read_agent_manifest <- function(path){
         front$mode <- 'label'
         front$labels_dir <- 'labels'
         front$prompt_template_version <- PROMPT_TEMPLATE_VERSION
+        # what check_agent_labels() recomputes the artifact screen from
+        if (!is.null(sample_col)) front$sample_col <- sample_col
+        if (length(depth_cols)) front$depth_cols <- as.list(depth_cols)
     }
     yaml::as.yaml(front, handlers = .yaml_bool_handler)
 }
@@ -660,11 +677,20 @@ read_agent_manifest <- function(path){
 #'   sample (e.g. patient) for the artifact screen's single-sample share of a
 #'   module's top-decile activity. Defaults to the `ModuleSet`'s declared
 #'   sample-id column, if any; `NULL` skips that line.
+#' @param depth_cols Label mode only: metadata columns holding per-cell
+#'   sequencing depth (e.g. `c('nCount_RNA', 'nFeature_RNA')`), for the
+#'   artifact screen's module-score/depth correlation. `NULL` (default) skips
+#'   that line.
+#' @param feature_genes Label mode only: every gene that was eligible for
+#'   module assignment (e.g. `hdWGCNA::GetWGCNAGenes()`, grey included), so a
+#'   marker in no module can be classed `unassigned` rather than `not_tested`.
+#'   `NULL` (default) accepts either for such a gene.
 #' @return The absolute path to the written manifest, invisibly.
 #' @export
 export_agent_workspace <- function(ms, dataset_context, packets, desc, interps = NULL,
                                    out_dir = 'agent_workspace', write_json = TRUE,
-                                   mode = c('explore', 'label'), sample_col = .ms_sample_col(ms)){
+                                   mode = c('explore', 'label'), sample_col = .ms_sample_col(ms),
+                                   depth_cols = NULL, feature_genes = NULL){
     mode <- match.arg(mode)
     validate_moduleset(ms)
     validate_dataset_description(desc)
@@ -682,7 +708,9 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc, interps =
     ms_lite <- .make_moduleset_lite(ms)
     lite_caps <- capabilities(ms_lite)
     paths <- .write_workspace_artifacts(ms, ms_lite, dataset_context, packets, interps, scaffold$art_dir, write_json)
-    if (identical(mode, 'label')) paths <- c(paths, .write_label_artifacts(ms, packets, desc, scaffold$art_dir, sample_col))
+    if (identical(mode, 'label')) {
+        paths <- c(paths, .write_label_artifacts(ms, packets, desc, scaffold$art_dir, sample_col, depth_cols, feature_genes))
+    }
 
     provenance <- make_provenance(
         tool_version = as.character(utils::packageVersion('llegir')),
@@ -696,7 +724,8 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc, interps =
     # derive the sections that must track the live registry/adapter
     #---------------------------------------------------------
     manifest_model <- list(
-        front_matter = .build_front_matter(ms, desc, paths, out_dir, mode = mode),
+        front_matter = .build_front_matter(ms, desc, paths, out_dir, mode = mode,
+                                           sample_col = sample_col, depth_cols = depth_cols),
         desc_block = render_dataset_description(desc, ms$data_level, ms$aggregated),
         context_block = render_dataset_context_compact(dataset_context),
         topography_block = .render_data_topography_block(.build_data_topography(ms, ms_lite, dataset_context, paths, out_dir)),
@@ -712,6 +741,11 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc, interps =
         display_excluded = paste(.display_hub_excluded, collapse = ', '),
         support_rank = .review_max_support_rank,
         display_rank = .review_max_display_rank,
+        min_markers = .review_min_markers,
+        stress_min_hubs = .screen_stress_min_hubs,
+        depth_min_rho = .screen_depth_min_rho,
+        sample_share_pct = round(100 * .screen_sample_share_cap),
+        has_feature_genes = !is.null(feature_genes),
         api_cheatsheet = .build_api_cheatsheet(ms, lite_caps),
         tool_cheatsheet = .build_tool_cheatsheet(ms, lite_caps),
         recipes = .build_safe_recipes(ms, lite_caps),

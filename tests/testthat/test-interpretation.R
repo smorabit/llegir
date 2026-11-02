@@ -132,7 +132,7 @@ test_that('an interpretation with a review is schema 0.3 and round-trips through
         evidence_tier = 'hub_genes',
         artifact_gate = list(status = 'pass', reasons = 'clean'),
         supporting_hubs = list(list(gene = 'A', kme = 0.9), list(gene = 'B', kme = 0.8), list(gene = 'C', kme = 0.7)),
-        expected_markers = list(list(gene = 'D', present = FALSE)),
+        expected_markers = list(list(gene = 'D', status = 'unassigned')),
         contradicting_evidence = 'D absent',
         alternative_label = list(label = 'y', reason_rejected = 'z'),
         confidence_level = 'moderate',
@@ -151,7 +151,7 @@ test_that('an interpretation with a review is schema 0.3 and round-trips through
     back <- interpretation_from_json(interpretation_to_json(interp))
     expect_equal(back$review$display_hubs, c('A', 'B', 'C'))
     expect_equal(back$review$supporting_hubs[[2]]$kme, 0.8)
-    expect_false(back$review$expected_markers[[1]]$present)
+    expect_equal(back$review$expected_markers[[1]]$status, 'unassigned')
     expect_true(validate_interpretation(back))
 
     bad <- interp
@@ -160,4 +160,10 @@ test_that('an interpretation with a review is schema 0.3 and round-trips through
     bad <- interp
     bad$review$display_hubs <- c('A', 'B')
     expect_error(validate_interpretation(bad), 'exactly 3')
+    bad <- interp
+    bad$review$expected_markers[[1]]$status <- 'absent'
+    expect_error(validate_interpretation(bad), 'status')
+    bad <- interp
+    bad$review$related_module <- list(module_id = 'MM2', relationship = 'same')
+    expect_error(validate_interpretation(bad), 'related_module')
 })
