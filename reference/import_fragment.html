@@ -76,7 +76,8 @@ tool-computed fragments; the synthesis layer treats both identically.</p>
 
 <dt id="arg-type">type<a class="anchor" aria-label="anchor" href="#arg-type"></a></dt>
 <dd><p>One of the supported fragment types: <code>'geneset_enrichment'</code>,
-<code>'categorical_association'</code>.</p></dd>
+<code>'categorical_association'</code>, <code>'state_expression'</code>, <code>'cross_condition_delta'</code>,
+<code>'signature_correlation'</code>, <code>'continuous_correlation'</code>.</p></dd>
 
 
 <dt id="arg-result">result<a class="anchor" aria-label="anchor" href="#arg-result"></a></dt>
@@ -96,7 +97,13 @@ tool-computed fragments; the synthesis layer treats both identically.</p>
 <dd><p>Named list of column-name overrides (e.g. <code>term_col</code>,
 <code>significance_col</code>, <code>effect_col</code>) and other normalizer options (e.g.
 <code>n_top</code>), since a user-supplied table won't share this package's exact
-column names.</p></dd>
+column names. For <code>'geneset_enrichment'</code>: <code>alpha</code> (default 0.05) is the
+significance threshold stated in <code>compact_summary</code> (and <code>direction</code> is
+<code>'na'</code> when no term passes it); <code>overlap_col</code> and <code>jaccard_col</code> name the
+overlap-size and Jaccard columns, auto-detected from common names
+(<code>size_intersection</code>, <code>ngenes</code>, <code>n_overlap</code>, <code>overlap_size</code>, <code>Overlap</code>,
+<code>overlap</code>; <code>jaccard</code>, <code>Jaccard</code>) when not given. <code>'k/n'</code> or <code>'k|n'</code>
+overlap strings are reduced to the count <code>k</code>.</p></dd>
 
 
 <dt id="arg-source-file">source_file<a class="anchor" aria-label="anchor" href="#arg-source-file"></a></dt>

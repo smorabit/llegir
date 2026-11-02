@@ -31,7 +31,9 @@ import_fragment(
 - type:
 
   One of the supported fragment types: `'geneset_enrichment'`,
-  `'categorical_association'`.
+  `'categorical_association'`, `'state_expression'`,
+  `'cross_condition_delta'`, `'signature_correlation'`,
+  `'continuous_correlation'`.
 
 - result:
 
@@ -50,7 +52,14 @@ import_fragment(
   Named list of column-name overrides (e.g. `term_col`,
   `significance_col`, `effect_col`) and other normalizer options (e.g.
   `n_top`), since a user-supplied table won't share this package's exact
-  column names.
+  column names. For `'geneset_enrichment'`: `alpha` (default 0.05) is
+  the significance threshold stated in `compact_summary` (and
+  `direction` is `'na'` when no term passes it); `overlap_col` and
+  `jaccard_col` name the overlap-size and Jaccard columns, auto-detected
+  from common names (`size_intersection`, `ngenes`, `n_overlap`,
+  `overlap_size`, `Overlap`, `overlap`; `jaccard`, `Jaccard`) when not
+  given. `'k/n'` or `'k|n'` overlap strings are reduced to the count
+  `k`.
 
 - source_file:
 

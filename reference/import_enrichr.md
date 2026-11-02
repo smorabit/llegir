@@ -26,7 +26,10 @@ import_enrichr(module_id, result, column_map = list(), source_file = NULL, ...)
 
   Named list of column overrides: `term_col` (default `'Term'`),
   `effect_col` (default `'Odds.Ratio'`), `significance_col` (default
-  `'Adjusted.P.value'`).
+  `'Adjusted.P.value'`), plus optional `overlap_col` / `jaccard_col` /
+  `alpha` (see
+  [`import_fragment()`](https://smorabit.github.io/llegir/reference/import_fragment.md));
+  EnrichR's `Overlap` (`'k/n'`) column is picked up automatically.
 
 - source_file:
 

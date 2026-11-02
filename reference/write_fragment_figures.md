@@ -7,7 +7,10 @@ renders each fragment's live `plot_obj` to
 that path back onto the spec as `image_path`, so a report rendered from
 a re-read packet (where `plot_obj` has already been stripped; see
 [`attach_plots()`](https://smorabit.github.io/llegir/reference/attach_plots.md))
-can still embed the figure. Fragments with no plots are skipped.
+can still embed the figure. A spec's own `width`/`height`/`dpi` (see
+[`attach_plots()`](https://smorabit.github.io/llegir/reference/attach_plots.md))
+are honored when set; otherwise `save_plot_to_png()`'s `7`/`4`/`150`
+defaults apply. Fragments with no plots are skipped.
 
 ## Usage
 

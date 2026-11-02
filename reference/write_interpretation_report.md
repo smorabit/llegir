@@ -12,6 +12,7 @@ write_interpretation_report(
   interps,
   packets,
   desc,
+  dataset_context = NULL,
   output_file = "output/report.html",
   quiet = TRUE
 )
@@ -34,6 +35,18 @@ write_interpretation_report(
 - desc:
 
   The `dataset_description` used for this synthesis run.
+
+- dataset_context:
+
+  Optional dataset context (as built by
+  [`build_dataset_context()`](https://smorabit.github.io/llegir/reference/build_dataset_context.md)
+  /
+  [`run_dataset_context()`](https://smorabit.github.io/llegir/reference/run_dataset_context.md)).
+  When supplied, its `dataset_fragments` render in a "Dataset-level
+  evidence" section above the per-module sections – each fragment's
+  `compact_summary`, `top_findings` table, and any attached `plots`.
+  `NULL` (default) omits the section, and the report is byte-identical
+  to one produced without the argument.
 
 - output_file:
 

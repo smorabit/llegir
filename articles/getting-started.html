@@ -275,7 +275,7 @@ synthesis on unchanged packets doesn’t spend another API call.</p>
 <span><span class="va">interps</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/run_synthesis_orchestrator.html">run_synthesis_orchestrator</a></span><span class="op">(</span></span>
 <span>    <span class="va">packets</span>, <span class="va">desc</span>, backend <span class="op">=</span> <span class="va">backend</span>, output_dir <span class="op">=</span> <span class="st">'output/interpretations'</span>, dataset_context <span class="op">=</span> <span class="va">dataset_ctx</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<p>Inspect one interpretation: its proposed label, fused confidence, and
+<p>Inspect one interpretation: its proposed label, model confidence, and
 the rendered paragraph.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">interp</span> <span class="op">&lt;-</span> <span class="va">interps</span><span class="op">[[</span><span class="st">'MM1'</span><span class="op">]</span><span class="op">]</span></span>

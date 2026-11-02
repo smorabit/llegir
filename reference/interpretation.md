@@ -2,11 +2,12 @@
 
 One module's filled schema, produced by the synthesis layer
 ([`synthesize_interpretation()`](https://smorabit.github.io/llegir/reference/synthesize_interpretation.md))
-from a fixed evidence packet. `confidence$score` starts out equal to
-`confidence$model_score` and is overwritten in place by confidence
-fusion
-([`fuse_confidence()`](https://smorabit.github.io/llegir/reference/fuse_confidence.md));
-`provenance` is attached by the orchestrator, never by the model itself.
+from a fixed evidence packet. `confidence$score` equals
+`confidence$model_score` (the deterministic fused blend is shelved as of
+Part 4.5;
+[`fuse_confidence()`](https://smorabit.github.io/llegir/reference/fuse_confidence.md)
+now only adds review flags and leaves the score alone); `provenance` is
+attached by the orchestrator, never by the model itself.
 
 ## Usage
 
@@ -14,17 +15,15 @@ fusion
 interpretation(
   module_id,
   proposed_label,
-  one_line_summary,
   dominant_biology,
+  interpretation,
   supporting_claims,
   confidence,
   provenance,
-  cell_state = NA_character_,
-  condition_dynamics = NA_character_,
-  metadata_associations = list(),
   literature = list(),
   flags = list(),
-  schema_version = "0.1"
+  review = NULL,
+  schema_version = if (is.null(review)) "0.2" else "0.3"
 )
 ```
 
@@ -38,13 +37,16 @@ interpretation(
 
   Short program name, e.g. `'Interferon response'`.
 
-- one_line_summary:
-
-  A one-line summary of the module.
-
 - dominant_biology:
 
-  Description of the main program.
+  The main program, as a short label.
+
+- interpretation:
+
+  1-3 sentences of prose supporting the `dominant_biology` call,
+  grounded in the cited fragments; folds in where the module is
+  expressed and how its activity shifts across the tested condition
+  where relevant.
 
 - supporting_claims:
 
@@ -60,18 +62,6 @@ interpretation(
   A provenance list, typically built with
   [`make_interpretation_provenance()`](https://smorabit.github.io/llegir/reference/make_interpretation_provenance.md).
 
-- cell_state:
-
-  Where the module is expressed (from `cluster_dme`), if known.
-
-- condition_dynamics:
-
-  Condition-dependent dynamics, if applicable.
-
-- metadata_associations:
-
-  A list of `list(variable, summary, fragment_id)`.
-
 - literature:
 
   A list of `list(statement, pmids)`. Always empty in the current
@@ -83,9 +73,17 @@ interpretation(
   `'needs_human_review'`, `'possible_artifact'`, `'tool_conflict'`,
   `'label_low_specificity'`.
 
+- review:
+
+  Optional structured self-review (schema 0.3), attached by an agent
+  labelling run (see
+  [`export_agent_workspace()`](https://smorabit.github.io/llegir/reference/export_agent_workspace.md)
+  with `mode = 'label'`); `NULL` (default) for LLM synthesis.
+
 - schema_version:
 
-  Schema version tag. Default `'0.1'`.
+  Schema version tag. Defaults to `'0.2'`, or `'0.3'` when `review` is
+  supplied (the only 0.3 addition).
 
 ## Value
 

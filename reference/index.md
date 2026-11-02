@@ -85,6 +85,10 @@ Core deterministic evidence tools; each returns one evidence_fragment.
 - [`cluster_dme_tool()`](https://smorabit.github.io/llegir/reference/cluster_dme_tool.md)
   : Evidence tool: which cell states express this module
 
+- [`cluster_expression_profile_tool()`](https://smorabit.github.io/llegir/reference/cluster_expression_profile_tool.md)
+  : Evidence tool: where each cell state sits in the module's global
+  score distribution
+
 - [`geneset_enrichment_tool()`](https://smorabit.github.io/llegir/reference/geneset_enrichment_tool.md)
   : Evidence tool: gene-set enrichment among a module's hub genes
 
@@ -218,6 +222,9 @@ experiment rather than one module.
 - [`import_milo_da()`](https://smorabit.github.io/llegir/reference/import_milo_da.md)
   : Import a miloR differential-abundance neighborhood table
 
+- [`write_dataset_figures()`](https://smorabit.github.io/llegir/reference/write_dataset_figures.md)
+  : Materialize a dataset context's live plots to PNG files
+
 ## Orchestration
 
 Run tools/synthesis over a module set and write results to disk.
@@ -291,9 +298,11 @@ Guardrails between the model’s output and the deterministic evidence.
 - [`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
   : Calculate the deterministic fused evidence confidence for a packet
 - [`fuse_confidence()`](https://smorabit.github.io/llegir/reference/fuse_confidence.md)
-  : Fuse model and deterministic confidence into a final score and flags
+  : Apply deterministic review flags to an interpretation
 - [`needs_review()`](https://smorabit.github.io/llegir/reference/needs_review.md)
   : Does an interpretation need human review?
+- [`housekeeping_composition_note()`](https://smorabit.github.io/llegir/reference/housekeeping_composition_note.md)
+  : Housekeeping-composition note for a packet's hub-gene list
 
 ## Interpretation objects
 
@@ -337,12 +346,21 @@ Guardrails between the model’s output and the deterministic evidence.
 
 export_agent_workspace() serializes a completed run and renders a static
 launchpad file for an external terminal coding agent to run open-ended,
-read-only queries against it; see docs/agent_workspace.md.
+read-only queries against it; see docs/agent_workspace.md. With mode =
+‘label’ the workspace instead commissions the agent to write (or refine)
+module labels, which collect_agent_labels() runs through the same checks
+as LLM synthesis.
 
 - [`export_agent_workspace()`](https://smorabit.github.io/llegir/reference/export_agent_workspace.md)
   : Export a self-contained agent workspace and manifest
 - [`read_agent_manifest()`](https://smorabit.github.io/llegir/reference/read_agent_manifest.md)
   : Read an agent workspace manifest's front-matter
+- [`check_agent_labels()`](https://smorabit.github.io/llegir/reference/check_agent_labels.md)
+  : Check an agent's label files against their evidence packets
+- [`collect_agent_labels()`](https://smorabit.github.io/llegir/reference/collect_agent_labels.md)
+  : Collect an agent's labels as validated interpretations
+- [`agent_label_backend()`](https://smorabit.github.io/llegir/reference/agent_label_backend.md)
+  : Backend that replays agent-written label files
 
 ## Statistical helpers
 

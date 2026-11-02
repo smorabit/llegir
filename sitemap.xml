@@ -10,6 +10,7 @@
 <url><loc>https://smorabit.github.io/llegir/news/index.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/PROMPT_TEMPLATE_VERSION.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/RENDER_TEMPLATE_VERSION.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/agent_label_backend.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/assert_faithfulness.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/attach_plots.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/build_dataset_context.html</loc></url>
@@ -22,8 +23,11 @@
 <url><loc>https://smorabit.github.io/llegir/reference/calculate_fusion_score.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/capabilities.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/categorical_group_test.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/check_agent_labels.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/check_faithfulness.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/cluster_dme_tool.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/cluster_expression_profile_tool.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/collect_agent_labels.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/components_ModuleSet.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/compute_evidence_signals.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/counts.html</loc></url>
@@ -37,6 +41,7 @@
 <url><loc>https://smorabit.github.io/llegir/reference/dataset_variance_structure_tool.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/describe_flags.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/differential_module_activity_tool.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/dot-label_artifact_screen.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/dot-make_moduleset_lite.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/ellmer_backend.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/enforce_faithfulness.html</loc></url>
@@ -52,6 +57,7 @@
 <url><loc>https://smorabit.github.io/llegir/reference/get_tool.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/has_capability.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/hdWGCNA_ModuleSet.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/housekeeping_composition_note.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/import_dataset_fragment.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/import_dataset_fragment_tool.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/import_enrichr.html</loc></url>
@@ -111,6 +117,7 @@
 <url><loc>https://smorabit.github.io/llegir/reference/validate_moduleset.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/with_pseudobulk.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_dataset_context.html</loc></url>
+<url><loc>https://smorabit.github.io/llegir/reference/write_dataset_figures.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_evidence_packet.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_fragment_figures.html</loc></url>
 <url><loc>https://smorabit.github.io/llegir/reference/write_fragment_tables.html</loc></url>

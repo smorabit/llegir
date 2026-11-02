@@ -24,6 +24,11 @@ geneset_enrichment_tool(ctx)
   A tool context list: `list(ms, module_id, params)`, as built by
   [`run_module()`](https://smorabit.github.io/llegir/reference/run_module.md).
   `ctx$params$n_hubs` (default 25) is the number of hub genes tested.
+  `ctx$params$alpha` (default 0.05) is the FDR threshold below which a
+  term counts as significant: the fragment's `compact_summary` states
+  whether any term passes it, and `direction` is `'up'` only when one
+  does (`'na'` otherwise). Each `top_findings` entry carries the term's
+  FDR, odds ratio, overlap size (`n_overlap`) and Jaccard index.
   `ctx$params$db_files` (required for a non-empty result) is a named
   character vector of local GMT file paths, e.g.
   `c(GO_BP = 'path/to/GO_Biological_Process.txt')`.

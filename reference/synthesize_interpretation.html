@@ -111,17 +111,13 @@ schema shipped with the package.</p></dd>
 
 
 <dt id="arg-user-weights">user_weights<a class="anchor" aria-label="anchor" href="#arg-user-weights"></a></dt>
-<dd><p>Named list of per-<code>tool_id</code> weight multipliers passed
-to <code><a href="calculate_fusion_score.html">calculate_fusion_score()</a></code> for the EVIDENCE CONFIDENCE MATRIX injected
-into the user prompt (see <code><a href="build_user_prompt.html">build_user_prompt()</a></code>). Default <code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code>.</p></dd>
+<dd><p>Ignored; retained for call-site compatibility since the
+fused evidence score is shelved (Part 4.5). Default <code><a href="https://rdrr.io/r/base/list.html" class="external-link">list()</a></code>.</p></dd>
 
 
 <dt id="arg-fusion">fusion<a class="anchor" aria-label="anchor" href="#arg-fusion"></a></dt>
-<dd><p>An optional pre-computed <code><a href="calculate_fusion_score.html">calculate_fusion_score()</a></code> result to
-inject into the user prompt; <code>NULL</code> (default) computes it from
-<code>packet$fragments</code> and <code>user_weights</code>. <code><a href="synthesize_module.html">synthesize_module()</a></code> computes it
-once and passes the same object here and to <code><a href="fuse_confidence.html">fuse_confidence()</a></code>, so the
-prompt and the final fused score are guaranteed to agree.</p></dd>
+<dd><p>Ignored; retained for call-site compatibility. The EVIDENCE
+CONFIDENCE MATRIX is no longer part of the prompt.</p></dd>
 
 
 <dt id="arg-dataset-context">dataset_context<a class="anchor" aria-label="anchor" href="#arg-dataset-context"></a></dt>
@@ -148,11 +144,11 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> $proposed_label</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Myeloid activation program (mock)"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $one_line_summary</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Mock synthesis output for offline testing; not derived from the evidence packet."</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $dominant_biology</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Not evaluated by the mock backend."</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> $interpretation</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Mock synthesis output for offline testing; not derived from the evidence packet."</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims[[1]]</span>
@@ -171,7 +167,7 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims[[2]]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims[[2]]$claim</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "The module has enriched gene-set terms."</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "Gene-set overlap was tested for the hub genes."</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $supporting_claims[[2]]$fragment_ids</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "geneset_enrichment"</span>
@@ -183,15 +179,6 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $cell_state</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $condition_dynamics</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] NA</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $metadata_associations</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> list()</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $literature</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> list()</span>
@@ -218,7 +205,7 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "mock-0.1"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$prompt_template_version</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "0.4"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "1.3"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$temperature</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0</span>
@@ -235,11 +222,11 @@ confidence-fused; see <code><a href="synthesize_module.html">synthesize_module()
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $provenance$timestamp</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2026-08-04T18:49:44+0200"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "2026-11-02T18:55:11+0100"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> $schema_version</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "0.1"</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "0.2"</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> attr(,"class")</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "interpretation"</span>

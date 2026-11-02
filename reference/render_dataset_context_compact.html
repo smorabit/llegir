@@ -71,7 +71,10 @@ framing and never enters fusion or faithfulness.</p>
 
 <dt id="arg-max-findings">max_findings<a class="anchor" aria-label="anchor" href="#arg-max-findings"></a></dt>
 <dd><p>Maximum number of <code>top_findings</code> entries rendered per
-fragment. Default <code>8</code>.</p></dd>
+fragment. Default <code>8</code>. A fragment carrying its own
+<code>render_max_findings</code> (see <code><a href="dataset_fragment.html">dataset_fragment()</a></code>) overrides this cap for
+itself only, e.g. a census-style fragment with one entry per group that
+must never be head-truncated.</p></dd>
 
 </dl></div>
     <div class="section level2">

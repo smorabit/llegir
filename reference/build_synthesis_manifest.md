@@ -58,10 +58,10 @@ build_synthesis_manifest(list(m1 = interp), desc)
 #> [1] 0
 #> 
 #> $prompt_template_version
-#> [1] "0.4"
+#> [1] "1.3"
 #> 
 #> $render_template_version
-#> [1] "0.1"
+#> [1] "0.2"
 #> 
 #> $models
 #> $models[[1]]
@@ -92,6 +92,6 @@ build_synthesis_manifest(list(m1 = interp), desc)
 #> 
 #> 
 #> $created_at
-#> [1] "2026-08-04T18:49:08+0200"
+#> [1] "2026-11-02T18:54:16+0100"
 #> 
 ```

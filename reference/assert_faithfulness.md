@@ -2,7 +2,8 @@
 
 Throws if
 [`check_faithfulness()`](https://smorabit.github.io/llegir/reference/check_faithfulness.md)
-finds any fabricated or direction-mismatched citation.
+finds any fabricated or direction-mismatched citation, or significance
+wording that no significant fragment supports.
 
 ## Usage
 

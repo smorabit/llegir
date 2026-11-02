@@ -5,13 +5,8 @@ Normalizes every fragment onto a unified `[0, 1]` scale
 reliability factor), pools them with a weighted power mean
 (`.pool_evidence()`) using tool-tier + `user_weights` importance
 (`.tool_weight()`), and applies a mass-weighted directional-conflict
-penalty (`.directional_coherence()`). Computed straight from the packet
-*before* synthesis, so the result is reproducible from the packet hash
-alone; it's injected into the synthesis prompt as ground truth
-(`.render_confidence_matrix()`) and re-used by
-[`fuse_confidence()`](https://smorabit.github.io/llegir/reference/fuse_confidence.md)
-as the evidence term, so the printed fusion string can never drift from
-the math.
+penalty (`.directional_coherence()`). Computed straight from the packet,
+so the result is reproducible from the packet hash alone.
 
 ## Usage
 
@@ -63,6 +58,16 @@ A list: `e_evidence` (the final empirical evidence term), `e_pool`
 directional penalty factor), `c_dir` (directional coherence), `lambda`,
 `params` (`beta`, `kappa`), and `matrix` (a per-fragment `data.frame`
 for prompt rendering and audit).
+
+## Details
+
+Shelved as of Part 4.5
+(`docs/prompts/handoff_prompt_serpentine_tcell.md`): no longer injected
+into the synthesis prompt and no longer consumed by
+[`fuse_confidence()`](https://smorabit.github.io/llegir/reference/fuse_confidence.md).
+Kept intact, with
+[`compute_evidence_signals()`](https://smorabit.github.io/llegir/reference/compute_evidence_signals.md),
+for a future redesign of the evidence score.
 
 ## Examples
 

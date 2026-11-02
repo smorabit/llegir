@@ -1,22 +1,22 @@
-# Fuse model and deterministic confidence into a final score and flags
+# Apply deterministic review flags to an interpretation
 
-The model's self-reported confidence (`interp$confidence$model_score`)
-is never trusted alone. It's blended with
-[`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)'s
-deterministic `e_evidence` via a weighted geometric blend
-(`model_score^lambda * e_evidence^(1 - lambda)`), and the blend is what
-can trigger review flags – so a fluent, confident label over weak
-evidence gets caught even if the model never flags itself. `fusion`
-should be the same
-[`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
-result already injected into the synthesis prompt (see `R/prompt.R`), so
-the printed fusion string can never drift from what the model was shown;
-passing `NULL` recomputes it from `packet` and `user_weights`. Mutates
-and returns `interp`: `confidence$score` is overwritten (`model_score`
-is preserved for audit), and `flags` are unioned with whatever the model
-or
+The fused evidence score is shelved
+(`docs/prompts/handoff_prompt_serpentine_tcell.md` Part 4.5): its two
+known flaws – a non-significant dynamics fragment dragging down a
+genuinely stable module, and `top_genes`' top-kME magnitude standing in
+for interpretation confidence when it only measures hub tightness – made
+the blended number misleading, so `confidence$score` is left as the
+model's own calibrated value. This function now only unions the
+deterministic `possible_artifact` flag (hub list dominated by
+IEG/dissociation-stress markers, `.artifact_flagged()`) into
+`interp$flags`;
 [`enforce_faithfulness()`](https://smorabit.github.io/llegir/reference/enforce_faithfulness.md)
-already set.
+sets `needs_human_review` independently, and the model may still set
+`insufficient_evidence` itself.
+[`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
+and
+[`compute_evidence_signals()`](https://smorabit.github.io/llegir/reference/compute_evidence_signals.md)
+are retained, unused here, for a future redesign of the score.
 
 ## Usage
 
@@ -46,32 +46,23 @@ fuse_confidence(
 
 - low_threshold:
 
-  `e_evidence` floor below which the fused score is capped and
-  `'insufficient_evidence'` is flagged.
+  Ignored; retained for call-site compatibility.
 
 - disagreement_threshold:
 
-  Minimum `|model_score - e_evidence|` gap that flags
-  `'needs_human_review'`.
+  Ignored; retained for call-site compatibility.
 
 - user_weights:
 
-  Named list of per-`tool_id` weight multipliers passed to
-  [`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
-  when `fusion` is `NULL`. Default
-  [`list()`](https://rdrr.io/r/base/list.html).
+  Ignored; retained for call-site compatibility.
 
 - fusion:
 
-  An optional pre-computed
-  [`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
-  result (the same one shown to the model in the prompt); `NULL`
-  (default) recomputes it from `packet` and `user_weights`.
+  Ignored; retained for call-site compatibility.
 
 ## Value
 
-`interp`, with `confidence$score`, `confidence$rationale`, and `flags`
-updated.
+`interp`, with `flags` possibly extended by `'possible_artifact'`.
 
 ## Examples
 
@@ -87,11 +78,11 @@ fuse_confidence(interp, packet)
 #> $proposed_label
 #> [1] "Myeloid activation program (mock)"
 #> 
-#> $one_line_summary
-#> [1] "Mock synthesis output for offline testing; not derived from the evidence packet."
-#> 
 #> $dominant_biology
 #> [1] "Not evaluated by the mock backend."
+#> 
+#> $interpretation
+#> [1] "Mock synthesis output for offline testing; not derived from the evidence packet."
 #> 
 #> $supporting_claims
 #> $supporting_claims[[1]]
@@ -110,7 +101,7 @@ fuse_confidence(interp, packet)
 #> 
 #> $supporting_claims[[2]]
 #> $supporting_claims[[2]]$claim
-#> [1] "The module has enriched gene-set terms."
+#> [1] "Gene-set overlap was tested for the hub genes."
 #> 
 #> $supporting_claims[[2]]$fragment_ids
 #> [1] "geneset_enrichment"
@@ -123,33 +114,22 @@ fuse_confidence(interp, packet)
 #> 
 #> 
 #> 
-#> $cell_state
-#> [1] NA
-#> 
-#> $condition_dynamics
-#> [1] NA
-#> 
-#> $metadata_associations
-#> list()
-#> 
 #> $literature
 #> list()
 #> 
 #> $confidence
 #> $confidence$score
-#> [1] 0.7531057
+#> [1] 0.5
 #> 
 #> $confidence$model_score
 #> [1] 0.5
 #> 
 #> $confidence$rationale
-#> [1] "Mock backend: fixed neutral confidence, not evidence-derived. [fusion: model=0.50, evidence=0.94 (E_pool=0.94, P_agree=1.00, C_dir=1.00), lambda=0.35, fused=0.75]"
+#> [1] "Mock backend: fixed neutral confidence, not evidence-derived."
 #> 
 #> 
 #> $flags
-#> $flags[[1]]
-#> [1] "needs_human_review"
-#> 
+#> list()
 #> 
 #> $provenance
 #> $provenance$model
@@ -159,7 +139,7 @@ fuse_confidence(interp, packet)
 #> [1] "mock-0.1"
 #> 
 #> $provenance$prompt_template_version
-#> [1] "0.4"
+#> [1] "1.3"
 #> 
 #> $provenance$temperature
 #> [1] 0
@@ -176,11 +156,11 @@ fuse_confidence(interp, packet)
 #> 
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-04T18:49:32+0200"
+#> [1] "2026-11-02T18:54:50+0100"
 #> 
 #> 
 #> $schema_version
-#> [1] "0.1"
+#> [1] "0.2"
 #> 
 #> attr(,"class")
 #> [1] "interpretation"

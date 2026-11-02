@@ -203,6 +203,13 @@
 
         <dt>
 
+          <code><a href="cluster_expression_profile_tool.html">cluster_expression_profile_tool()</a></code>
+
+        </dt>
+        <dd>Evidence tool: where each cell state sits in the module's global score distribution</dd>
+
+        <dt>
+
           <code><a href="geneset_enrichment_tool.html">geneset_enrichment_tool()</a></code>
 
         </dt>
@@ -509,6 +516,13 @@
 
         </dt>
         <dd>Import a miloR differential-abundance neighborhood table</dd>
+
+        <dt>
+
+          <code><a href="write_dataset_figures.html">write_dataset_figures()</a></code>
+
+        </dt>
+        <dd>Materialize a dataset context's live plots to PNG files</dd>
       </dl></div><div class="section level2">
       <h2 id="orchestration">Orchestration<a class="anchor" aria-label="anchor" href="#orchestration"></a></h2>
 
@@ -733,7 +747,7 @@
           <code><a href="fuse_confidence.html">fuse_confidence()</a></code>
 
         </dt>
-        <dd>Fuse model and deterministic confidence into a final score and flags</dd>
+        <dd>Apply deterministic review flags to an interpretation</dd>
 
         <dt>
 
@@ -741,6 +755,13 @@
 
         </dt>
         <dd>Does an interpretation need human review?</dd>
+
+        <dt>
+
+          <code><a href="housekeeping_composition_note.html">housekeeping_composition_note()</a></code>
+
+        </dt>
+        <dd>Housekeeping-composition note for a packet's hub-gene list</dd>
       </dl></div><div class="section level2">
       <h2 id="interpretation-objects">Interpretation objects<a class="anchor" aria-label="anchor" href="#interpretation-objects"></a></h2>
 
@@ -874,7 +895,7 @@
       </dl></div><div class="section level2">
       <h2 id="agent-workspace">Agent workspace<a class="anchor" aria-label="anchor" href="#agent-workspace"></a></h2>
 
-      <div class="section-desc"><p>export_agent_workspace() serializes a completed run and renders a static launchpad file for an external terminal coding agent to run open-ended, read-only queries against it; see docs/agent_workspace.md.</p></div>
+      <div class="section-desc"><p>export_agent_workspace() serializes a completed run and renders a static launchpad file for an external terminal coding agent to run open-ended, read-only queries against it; see docs/agent_workspace.md. With mode = ‘label’ the workspace instead commissions the agent to write (or refine) module labels, which collect_agent_labels() runs through the same checks as LLM synthesis.</p></div>
 
       <dl></dl></div><div class="section level2">
 
@@ -894,6 +915,27 @@
 
         </dt>
         <dd>Read an agent workspace manifest's front-matter</dd>
+
+        <dt>
+
+          <code><a href="check_agent_labels.html">check_agent_labels()</a></code>
+
+        </dt>
+        <dd>Check an agent's label files against their evidence packets</dd>
+
+        <dt>
+
+          <code><a href="collect_agent_labels.html">collect_agent_labels()</a></code>
+
+        </dt>
+        <dd>Collect an agent's labels as validated interpretations</dd>
+
+        <dt>
+
+          <code><a href="agent_label_backend.html">agent_label_backend()</a></code>
+
+        </dt>
+        <dd>Backend that replays agent-written label files</dd>
       </dl></div><div class="section level2">
       <h2 id="statistical-helpers">Statistical helpers<a class="anchor" aria-label="anchor" href="#statistical-helpers"></a></h2>
 

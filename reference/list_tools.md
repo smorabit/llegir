@@ -25,11 +25,11 @@ A sorted character vector of tool ids.
 
 ``` r
 list_tools()
-#> [1] "baseline_expression"          "cluster_dme"                 
-#> [3] "composition"                  "differential_module_activity"
-#> [5] "geneset_enrichment"           "pseudobulk_de_limma"         
-#> [7] "signature_correlation"        "top_genes"                   
-#> [9] "variance_structure"          
+#>  [1] "baseline_expression"          "cluster_dme"                 
+#>  [3] "cluster_expression_profile"   "composition"                 
+#>  [5] "differential_module_activity" "geneset_enrichment"          
+#>  [7] "pseudobulk_de_limma"          "signature_correlation"       
+#>  [9] "top_genes"                    "variance_structure"          
 list_tools('dataset')
 #> [1] "baseline_expression" "composition"         "variance_structure" 
 ```

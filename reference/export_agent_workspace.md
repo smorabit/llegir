@@ -19,7 +19,11 @@ export_agent_workspace(
   desc,
   interps = NULL,
   out_dir = "agent_workspace",
-  write_json = TRUE
+  write_json = TRUE,
+  mode = c("explore", "label"),
+  sample_col = .ms_sample_col(ms),
+  depth_cols = NULL,
+  feature_genes = NULL
 )
 ```
 
@@ -62,6 +66,49 @@ export_agent_workspace(
 
   Also emit portable JSON copies of the context, packets, and (if
   present) interpretations. Default `TRUE`.
+
+- mode:
+
+  `'explore'` (default) exports the read-only query workspace described
+  above, unchanged. `'label'` additionally commissions the agent to
+  write module labels: the manifest gains a Labeling Task section
+  carrying the synthesis prompt's rules
+  ([`build_system_prompt()`](https://smorabit.github.io/llegir/reference/build_system_prompt.md))
+  and the model-facing schema, each module's packet is rendered to
+  `artifacts/label_evidence/<module_id>.md` exactly as the synthesis
+  model sees it, a `labels/` directory is created for the agent's output
+  (one `<module_id>.json` per module), and `validate_labels.R` is
+  shipped so the agent can check its labels with
+  [`check_agent_labels()`](https://smorabit.github.io/llegir/reference/check_agent_labels.md).
+  The manifest also sets a refinement protocol (artifact gate, evidence
+  hierarchy, falsification against expected markers, anchored
+  confidence, unique labels), each label must carry the interpretation's
+  `review` block, and each evidence file ends with a deterministic
+  artifact screen. Supplying `interps` in label mode ships them as
+  drafts for the agent to refine. Collect the result with
+  [`collect_agent_labels()`](https://smorabit.github.io/llegir/reference/collect_agent_labels.md).
+
+- sample_col:
+
+  Label mode only: metadata column naming the biological sample (e.g.
+  patient) for the artifact screen's single-sample share of a module's
+  top-decile activity. Defaults to the `ModuleSet`'s declared sample-id
+  column, if any; `NULL` skips that line.
+
+- depth_cols:
+
+  Label mode only: metadata columns holding per-cell sequencing depth
+  (e.g. `c('nCount_RNA', 'nFeature_RNA')`), for the artifact screen's
+  module-score/depth correlation. `NULL` (default) skips that line.
+
+- feature_genes:
+
+  Label mode only: every gene that was eligible for module assignment
+  (e.g.
+  [`hdWGCNA::GetWGCNAGenes()`](https://smorabit.github.io/hdWGCNA/reference/GetWGCNAGenes.html),
+  grey included), so a marker in no module can be classed `unassigned`
+  rather than `not_tested`. `NULL` (default) accepts either for such a
+  gene.
 
 ## Value
 

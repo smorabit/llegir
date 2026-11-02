@@ -25,7 +25,10 @@ render_dataset_context_compact(dataset_context, max_findings = 8)
 - max_findings:
 
   Maximum number of `top_findings` entries rendered per fragment.
-  Default `8`.
+  Default `8`. A fragment carrying its own `render_max_findings` (see
+  [`dataset_fragment()`](https://smorabit.github.io/llegir/reference/dataset_fragment.md))
+  overrides this cap for itself only, e.g. a census-style fragment with
+  one entry per group that must never be head-truncated.
 
 ## Value
 

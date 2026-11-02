@@ -70,8 +70,11 @@ through to the report.</p>
 <dd><p>A named list of plot specs. Each spec is a list with either a
 live <code>plot_obj</code> (a <code>ggplot</code>/<code>grob</code>/<code>gtable</code>/<code>patchwork</code>/<code>recordedplot</code>/
 <code>trellis</code> object) or a character <code>image_path</code>, plus optional <code>legend</code>
-(a single string) and <code>placement</code> (<code>'above'</code> or <code>'below'</code>, default
-<code>'below'</code>).</p></dd>
+(a single string), <code>placement</code> (<code>'above'</code> or <code>'below'</code>, default
+<code>'below'</code>), and <code>width</code>/<code>height</code>/<code>dpi</code> (single positive numbers,
+inches/inches/pixels-per-inch) honored by <code><a href="write_fragment_figures.html">write_fragment_figures()</a></code> /
+<code><a href="write_dataset_figures.html">write_dataset_figures()</a></code> when rendering a live <code>plot_obj</code> to PNG –
+default <code>7</code>/<code>4</code>/<code>150</code> (see <code>save_plot_to_png()</code>) when omitted.</p></dd>
 
 </dl></div>
     <div class="section level2">

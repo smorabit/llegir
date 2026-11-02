@@ -1,9 +1,12 @@
 # Import a miloR differential-abundance neighborhood table
 
-Sensible defaults for `miloR::testNhoods()` output merged with
-`miloR::annotateNhoods()` (`logFC`, `SpatialFDR`, and a majority-vote
-cell-type annotation column defaulting to `celltype`). Neighborhoods are
-aggregated per annotation group into a `'composition_summary'`
+Sensible defaults for
+[`miloR::testNhoods()`](https://marionilab.github.io/miloR/reference/testNhoods.html)
+output merged with
+[`miloR::annotateNhoods()`](https://marionilab.github.io/miloR/reference/annotateNhoods.html)
+(`logFC`, `SpatialFDR`, and a majority-vote cell-type annotation column
+defaulting to `celltype`). Neighborhoods are aggregated per annotation
+group into a `'composition_summary'`
 [`dataset_fragment()`](https://smorabit.github.io/llegir/reference/dataset_fragment.md):
 how many neighborhoods per cell state shift significantly and in which
 direction – never the raw per-neighborhood table.

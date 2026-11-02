@@ -71,7 +71,11 @@ manual step. Pure exporter: writes files and returns a path, never calls
 <span>  <span class="va">desc</span>,</span>
 <span>  interps <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  out_dir <span class="op">=</span> <span class="st">"agent_workspace"</span>,</span>
-<span>  write_json <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  write_json <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  mode <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"explore"</span>, <span class="st">"label"</span><span class="op">)</span>,</span>
+<span>  sample_col <span class="op">=</span> <span class="fu">.ms_sample_col</span><span class="op">(</span><span class="va">ms</span><span class="op">)</span>,</span>
+<span>  depth_cols <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  feature_genes <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -112,6 +116,45 @@ mock-synthesize one.</p></dd>
 <dt id="arg-write-json">write_json<a class="anchor" aria-label="anchor" href="#arg-write-json"></a></dt>
 <dd><p>Also emit portable JSON copies of the context, packets,
 and (if present) interpretations. Default <code>TRUE</code>.</p></dd>
+
+
+<dt id="arg-mode">mode<a class="anchor" aria-label="anchor" href="#arg-mode"></a></dt>
+<dd><p><code>'explore'</code> (default) exports the read-only query workspace
+described above, unchanged. <code>'label'</code> additionally commissions the agent
+to write module labels: the manifest gains a Labeling Task section
+carrying the synthesis prompt's rules (<code><a href="build_system_prompt.html">build_system_prompt()</a></code>) and the
+model-facing schema, each module's packet is rendered to
+<code>artifacts/label_evidence/&lt;module_id&gt;.md</code> exactly as the synthesis model
+sees it, a <code>labels/</code> directory is created for the agent's output (one
+<code>&lt;module_id&gt;.json</code> per module), and <code>validate_labels.R</code> is shipped so the
+agent can check its labels with <code><a href="check_agent_labels.html">check_agent_labels()</a></code>. The manifest
+also sets a refinement protocol (artifact gate, evidence hierarchy,
+falsification against expected markers, anchored confidence, unique
+labels), each label must carry the interpretation's <code>review</code> block, and
+each evidence file ends with a deterministic artifact screen. Supplying
+<code>interps</code> in label mode ships them as drafts for the agent to refine.
+Collect the result with <code><a href="collect_agent_labels.html">collect_agent_labels()</a></code>.</p></dd>
+
+
+<dt id="arg-sample-col">sample_col<a class="anchor" aria-label="anchor" href="#arg-sample-col"></a></dt>
+<dd><p>Label mode only: metadata column naming the biological
+sample (e.g. patient) for the artifact screen's single-sample share of a
+module's top-decile activity. Defaults to the <code>ModuleSet</code>'s declared
+sample-id column, if any; <code>NULL</code> skips that line.</p></dd>
+
+
+<dt id="arg-depth-cols">depth_cols<a class="anchor" aria-label="anchor" href="#arg-depth-cols"></a></dt>
+<dd><p>Label mode only: metadata columns holding per-cell
+sequencing depth (e.g. <code>c('nCount_RNA', 'nFeature_RNA')</code>), for the
+artifact screen's module-score/depth correlation. <code>NULL</code> (default) skips
+that line.</p></dd>
+
+
+<dt id="arg-feature-genes">feature_genes<a class="anchor" aria-label="anchor" href="#arg-feature-genes"></a></dt>
+<dd><p>Label mode only: every gene that was eligible for
+module assignment (e.g. <code><a href="https://smorabit.github.io/hdWGCNA/reference/GetWGCNAGenes.html" class="external-link">hdWGCNA::GetWGCNAGenes()</a></code>, grey included), so a
+marker in no module can be classed <code>unassigned</code> rather than <code>not_tested</code>.
+<code>NULL</code> (default) accepts either for such a gene.</p></dd>
 
 </dl></div>
     <div class="section level2">

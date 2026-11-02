@@ -38,5 +38,5 @@ cat(render_packet_compact(packet))
 #> 
 #> [top_genes] type=ranked_genes direction=na effect_strength=0.9389 significance=NA
 #> top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6
-#> top_findings: [{"gene":"GENEA4","kme":0.9389},{"gene":"GENEA9","kme":0.9368},{"gene":"GENEA5","kme":0.9331},{"gene":"GENEA10","kme":0.9324},{"gene":"GENEA8","kme":0.9305},{"gene":"GENEA1","kme":0.93},{"gene":"GENEA2","kme":0.9243},{"gene":"GENEA7","kme":0.9236}]
+#> top_findings: [{"gene":"GENEA4","kme":0.9389},{"gene":"GENEA9","kme":0.9368},{"gene":"GENEA5","kme":0.9331},{"gene":"GENEA10","kme":0.9324},{"gene":"GENEA8","kme":0.9305},{"gene":"GENEA1","kme":0.93},{"gene":"GENEA2","kme":0.9243},{"gene":"GENEA7","kme":0.9236},{"gene":"GENEA3","kme":0.9158},{"gene":"GENEA6","kme":0.9102}]
 ```

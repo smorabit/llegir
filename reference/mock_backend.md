@@ -2,10 +2,10 @@
 
 A canned, fixed-response backend: the first-class offline backend used
 by tests and CI, and never touches the network. It cites fragment_ids
-(`'top_genes'`, `'geneset_enrichment'`) and directions (`'na'`, `'up'`)
-that hold on every packet produced by the core tools (`top_genes` is
-always direction `'na'`, `geneset_enrichment` is always direction
-`'up'`), so it passes
+`'top_genes'` (always direction `'na'`) and `'geneset_enrichment'`,
+whose direction (`'up'` only when a term reaches significance, else
+`'na'`) is read back from the rendered packet in the user prompt, and
+its claim text avoids significance wording, so it passes
 [`check_faithfulness()`](https://smorabit.github.io/llegir/reference/check_faithfulness.md)
 against any real evidence packet without per-module logic.
 

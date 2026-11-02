@@ -68,22 +68,14 @@ synthesize_interpretation(
 
 - user_weights:
 
-  Named list of per-`tool_id` weight multipliers passed to
-  [`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
-  for the EVIDENCE CONFIDENCE MATRIX injected into the user prompt (see
-  [`build_user_prompt()`](https://smorabit.github.io/llegir/reference/build_user_prompt.md)).
-  Default [`list()`](https://rdrr.io/r/base/list.html).
+  Ignored; retained for call-site compatibility since the fused evidence
+  score is shelved (Part 4.5). Default
+  [`list()`](https://rdrr.io/r/base/list.html).
 
 - fusion:
 
-  An optional pre-computed
-  [`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
-  result to inject into the user prompt; `NULL` (default) computes it
-  from `packet$fragments` and `user_weights`.
-  [`synthesize_module()`](https://smorabit.github.io/llegir/reference/synthesize_module.md)
-  computes it once and passes the same object here and to
-  [`fuse_confidence()`](https://smorabit.github.io/llegir/reference/fuse_confidence.md),
-  so the prompt and the final fused score are guaranteed to agree.
+  Ignored; retained for call-site compatibility. The EVIDENCE CONFIDENCE
+  MATRIX is no longer part of the prompt.
 
 - dataset_context:
 
@@ -115,11 +107,11 @@ synthesize_interpretation(packet, desc, mock_backend())
 #> $proposed_label
 #> [1] "Myeloid activation program (mock)"
 #> 
-#> $one_line_summary
-#> [1] "Mock synthesis output for offline testing; not derived from the evidence packet."
-#> 
 #> $dominant_biology
 #> [1] "Not evaluated by the mock backend."
+#> 
+#> $interpretation
+#> [1] "Mock synthesis output for offline testing; not derived from the evidence packet."
 #> 
 #> $supporting_claims
 #> $supporting_claims[[1]]
@@ -138,7 +130,7 @@ synthesize_interpretation(packet, desc, mock_backend())
 #> 
 #> $supporting_claims[[2]]
 #> $supporting_claims[[2]]$claim
-#> [1] "The module has enriched gene-set terms."
+#> [1] "Gene-set overlap was tested for the hub genes."
 #> 
 #> $supporting_claims[[2]]$fragment_ids
 #> [1] "geneset_enrichment"
@@ -150,15 +142,6 @@ synthesize_interpretation(packet, desc, mock_backend())
 #> [1] NA
 #> 
 #> 
-#> 
-#> $cell_state
-#> [1] NA
-#> 
-#> $condition_dynamics
-#> [1] NA
-#> 
-#> $metadata_associations
-#> list()
 #> 
 #> $literature
 #> list()
@@ -185,7 +168,7 @@ synthesize_interpretation(packet, desc, mock_backend())
 #> [1] "mock-0.1"
 #> 
 #> $provenance$prompt_template_version
-#> [1] "0.4"
+#> [1] "1.3"
 #> 
 #> $provenance$temperature
 #> [1] 0
@@ -202,11 +185,11 @@ synthesize_interpretation(packet, desc, mock_backend())
 #> 
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-04T18:49:44+0200"
+#> [1] "2026-11-02T18:55:11+0100"
 #> 
 #> 
 #> $schema_version
-#> [1] "0.1"
+#> [1] "0.2"
 #> 
 #> attr(,"class")
 #> [1] "interpretation"

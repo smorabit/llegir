@@ -30,13 +30,14 @@ interp <- synthesize_interpretation(packet, desc, mock_backend())
 cat(render_paragraph(interp))
 #> **Myeloid activation program (mock)** (module_a)
 #> 
-#> Mock synthesis output for offline testing; not derived from the evidence packet.
-#> 
+#> Synthesized biological interpretation:
 #> Dominant biology: Not evaluated by the mock backend.
+#> 
+#> Mock synthesis output for offline testing; not derived from the evidence packet.
 #> 
 #> Supporting evidence:
 #> - Top genes were computed by the deterministic core. (top_genes; direction: na)
-#> - The module has enriched gene-set terms. (geneset_enrichment; direction: up)
+#> - Gene-set overlap was tested for the hub genes. (geneset_enrichment; direction: up)
 #> 
 #> Confidence: 0.50 -- Mock backend: fixed neutral confidence, not evidence-derived.
 ```

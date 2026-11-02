@@ -64,7 +64,8 @@ of <code><a href="evidence_fragment.html">evidence_fragment()</a></code>: no <co
 <span>  <span class="va">top_findings</span>,</span>
 <span>  caveats <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  provenance <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  plots <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  plots <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  render_max_findings <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -110,6 +111,17 @@ controlled vocab. Default <code><a href="https://rdrr.io/r/base/list.html" class
 <dt id="arg-plots">plots<a class="anchor" aria-label="anchor" href="#arg-plots"></a></dt>
 <dd><p>Optional named list of plot specs to attach; see
 <code><a href="attach_plots.html">attach_plots()</a></code>. Default <code>NULL</code>.</p></dd>
+
+
+<dt id="arg-render-max-findings">render_max_findings<a class="anchor" aria-label="anchor" href="#arg-render-max-findings"></a></dt>
+<dd><p>Optional override for how many <code>top_findings</code>
+entries <code>.render_dataset_fragment_compact()</code> renders for this fragment,
+for a fragment whose findings are a census (one entry per group) rather
+than a top-N ranking, e.g. a cluster reference card with one row per
+cluster. <code>NULL</code> (default) means "use the caller's cap"; see
+<code><a href="build_user_prompt.html">build_user_prompt()</a></code>. Never added to <code>required</code>, so a fragment that
+omits it validates, serializes, and hashes exactly as one built before
+this field existed.</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -59,7 +59,7 @@
     "previous_headings": "",
     "what": "Interpreting evidence",
     "title": "Getting started with llegir",
-    "text": "run_synthesis_orchestrator() turns evidence packets written interpretations. module’s evidence packet sent user-specified LLM, checks every claim actually backed evidence (enforce_faithfulness()), combines model’s confidence evidence-based confidence (fuse_confidence()). saves interpretation readable Markdown paragraph per module, plus review_queue.tsv manifest.json whole run. language model’s role deliberately limited: ever sees summarized evidence, never raw data tables, never runs analysis . can use different model providers resolve_backend() ('github'; 'gemini' also works), reads API key environment (e.g. GITHUB_PAT GEMINI_API_KEY). Wrapping cached_backend() saves result disk, re-running synthesis unchanged packets doesn’t spend another API call. Inspect one interpretation: proposed label, fused confidence, rendered paragraph. review queue (build_review_queue()) collects interpretations flagged closer look (needs_review()), sorted lowest-confidence first, know modules check hand:",
+    "text": "run_synthesis_orchestrator() turns evidence packets written interpretations. module’s evidence packet sent user-specified LLM, checks every claim actually backed evidence (enforce_faithfulness()), combines model’s confidence evidence-based confidence (fuse_confidence()). saves interpretation readable Markdown paragraph per module, plus review_queue.tsv manifest.json whole run. language model’s role deliberately limited: ever sees summarized evidence, never raw data tables, never runs analysis . can use different model providers resolve_backend() ('github'; 'gemini' also works), reads API key environment (e.g. GITHUB_PAT GEMINI_API_KEY). Wrapping cached_backend() saves result disk, re-running synthesis unchanged packets doesn’t spend another API call. Inspect one interpretation: proposed label, model confidence, rendered paragraph. review queue (build_review_queue()) collects interpretations flagged closer look (needs_review()), sorted lowest-confidence first, know modules check hand:",
     "code": "backend <- cached_backend(     resolve_backend('github'),     provider = 'github',     model = 'gpt-4o-mini',     prompt_template_version = PROMPT_TEMPLATE_VERSION )  interps <- run_synthesis_orchestrator(     packets, desc, backend = backend, output_dir = 'output/interpretations', dataset_context = dataset_ctx ) interp <- interps[['MM1']] interp$proposed_label interp$confidence$score cat(render_paragraph(interp)) build_review_queue(interps)"
   },
   {
@@ -226,13 +226,63 @@
     "code": ""
   },
   {
+    "path": "https://smorabit.github.io/llegir/reference/agent_label_backend.html",
+    "id": null,
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Backend that replays agent-written label files — agent_label_backend",
+    "title": "Backend that replays agent-written label files — agent_label_backend",
+    "text": "synthesis backend (see mock_backend() contract) whose \"model output\" JSON file external coding agent wrote labels_dir/<module_id>.json workspace exported export_agent_workspace(mode = 'label'). packet call resolved packet_hash, plugs synthesize_module() run_synthesis_orchestrator() unchanged.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/agent_label_backend.html",
+    "id": "ref-usage",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Usage",
+    "title": "Backend that replays agent-written label files — agent_label_backend",
+    "text": "",
+    "code": "agent_label_backend(labels_dir, packets, agent = \"coding-agent\")"
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/agent_label_backend.html",
+    "id": "arguments",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Arguments",
+    "title": "Backend that replays agent-written label files — agent_label_backend",
+    "text": "labels_dir Directory holding one <module_id>.json per module, filling model-facing schema (model_output_schema_json()). packets named list evidence packets labels describe. agent Short name agent wrote labels, recorded interpretation's provenance model = 'agent:<agent>'.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/agent_label_backend.html",
+    "id": "value",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Value",
+    "title": "Backend that replays agent-written label files — agent_label_backend",
+    "text": "backend function.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/agent_label_backend.html",
+    "id": "ref-examples",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Examples",
+    "title": "Backend that replays agent-written label files — agent_label_backend",
+    "text": "",
+    "code": "if (FALSE) { # \\dontrun{ backend <- agent_label_backend('agent_workspace/labels', packets, agent = 'claude-code') synthesize_module(packets[[1]], desc, backend) } # }"
+  },
+  {
     "path": "https://smorabit.github.io/llegir/reference/assert_faithfulness.html",
     "id": null,
     "dir": "Reference",
     "previous_headings": "",
     "what": "Hard-reject an interpretation with any faithfulness violation — assert_faithfulness",
     "title": "Hard-reject an interpretation with any faithfulness violation — assert_faithfulness",
-    "text": "Throws check_faithfulness() finds fabricated direction-mismatched citation.",
+    "text": "Throws check_faithfulness() finds fabricated direction-mismatched citation, significance wording significant fragment supports.",
     "code": ""
   },
   {
@@ -292,7 +342,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Attach plots to an evidence or dataset fragment — attach_plots",
-    "text": "frag evidence_fragment dataset_fragment object. plots named list plot specs. spec list either live plot_obj (ggplot/grob/gtable/patchwork/recordedplot/ trellis object) character image_path, plus optional legend (single string) placement ('' '', default '').",
+    "text": "frag evidence_fragment dataset_fragment object. plots named list plot specs. spec list either live plot_obj (ggplot/grob/gtable/patchwork/recordedplot/ trellis object) character image_path, plus optional legend (single string), placement ('' '', default ''), width/height/dpi (single positive numbers, inches/inches/pixels-per-inch) honored write_fragment_figures() / write_dataset_figures() rendering live plot_obj PNG – default 7/4/150 (see save_plot_to_png()) omitted.",
     "code": ""
   },
   {
@@ -483,7 +533,7 @@
     "what": "Examples",
     "title": "Build a run-level synthesis manifest — build_synthesis_manifest",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') interp <- synthesize_interpretation(packet, desc, mock_backend()) build_synthesis_manifest(list(m1 = interp), desc) #> $n_modules #> [1] 1 #>  #> $n_synthesized #> [1] 1 #>  #> $n_flagged #> [1] 0 #>  #> $prompt_template_version #> [1] \"0.4\" #>  #> $render_template_version #> [1] \"0.1\" #>  #> $models #> $models[[1]] #> [1] \"mock\" #>  #>  #> $dataset_description #> $dataset_description$species #> [1] \"human\" #>  #> $dataset_description$tissue #> [1] \"CSF\" #>  #> $dataset_description$cell_compartment #> [1] \"myeloid\" #>  #> $dataset_description$assay #> [1] \"scRNA-seq\" #>  #> $dataset_description$conditions #> character(0) #>  #> $dataset_description$notes #> [1] NA #>  #> $dataset_description$module_method #> [1] NA #>  #>  #> $created_at #> [1] \"2026-08-04T18:49:08+0200\" #>"
+    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') interp <- synthesize_interpretation(packet, desc, mock_backend()) build_synthesis_manifest(list(m1 = interp), desc) #> $n_modules #> [1] 1 #>  #> $n_synthesized #> [1] 1 #>  #> $n_flagged #> [1] 0 #>  #> $prompt_template_version #> [1] \"1.3\" #>  #> $render_template_version #> [1] \"0.2\" #>  #> $models #> $models[[1]] #> [1] \"mock\" #>  #>  #> $dataset_description #> $dataset_description$species #> [1] \"human\" #>  #> $dataset_description$tissue #> [1] \"CSF\" #>  #> $dataset_description$cell_compartment #> [1] \"myeloid\" #>  #> $dataset_description$assay #> [1] \"scRNA-seq\" #>  #> $dataset_description$conditions #> character(0) #>  #> $dataset_description$notes #> [1] NA #>  #> $dataset_description$module_method #> [1] NA #>  #>  #> $created_at #> [1] \"2026-11-02T18:54:16+0100\" #>"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/build_system_prompt.html",
@@ -492,7 +542,7 @@
     "previous_headings": "",
     "what": "Build the synthesis system prompt — build_system_prompt",
     "title": "Build the synthesis system prompt — build_system_prompt",
-    "text": "fixed set rules governing backend must fill model-facing interpretation schema: evidence-claims, citation requirements, direction consistency, controlled vocabularies, empty-literature constraint, confidence.score must relate deterministic EVIDENCE CONFIDENCE MATRIX (calculate_fusion_score()) injected user prompt build_user_prompt().",
+    "text": "fixed set rules governing backend must fill model-facing interpretation schema: evidence-claims, citation requirements, direction consistency, controlled vocabularies, empty-literature constraint, self-calibrated confidence.score. deterministic fused evidence score shelved (docs/prompts/handoff_prompt_serpentine_tcell.md Part 4.5): EVIDENCE CONFIDENCE MATRIX longer injected model reports certainty, enforce_faithfulness() fuse_confidence()'s possible_artifact check still set review flags.",
     "code": ""
   },
   {
@@ -523,7 +573,7 @@
     "what": "Examples",
     "title": "Build the synthesis system prompt — build_system_prompt",
     "text": "",
-    "code": "cat(build_system_prompt()) #> You are filling a structured interpretation of one gene co-expression module #> from a fixed evidence packet produced by a deterministic analysis pipeline. #>  #> Rules: #> - Use only the evidence given below. Do not invent genes, terms, or results, and do not run or imagine any analysis. #> - Every entry in supporting_claims must cite the fragment_id(s) it is based on, and its direction must match the direction reported by those fragments. #> - A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report. #> - metadata_associations entries must cite a real fragment_id the same way. #> - Each fragment has a type from a controlled vocabulary: ranked_genes, categorical_association, continuous_correlation, geneset_enrichment, signature_correlation, cross_condition_delta, state_expression. #> - flags must be drawn only from: insufficient_evidence, needs_human_review, possible_artifact, tool_conflict, label_low_specificity. #> - If the evidence is weak, sparse, or inconsistent, do not invent a confident story: set flags to include insufficient_evidence, keep supporting_claims minimal (or empty), and give a low confidence score. #> - The user prompt includes an EVIDENCE CONFIDENCE MATRIX computed deterministically upstream: treat it as ground truth, do not recompute or contradict it. #> - confidence.score must be consistent with the matrix's E_evidence: it may not exceed E_evidence + 0.10, and must fall below the matrix's stated insufficient_evidence threshold when E_evidence does. #> - Every quantitative certainty statement in your response must reference E_evidence rather than restating your own separate estimate. #> - You may not assert a direction (e.g. in dominant_biology or condition_dynamics) that contradicts the sign of the directional coherence reported in the matrix. #> - literature must be left empty; literature grounding is not available in this pipeline. #> - A DATASET CONTEXT block, when present, is global framing (composition, variance structure, and similar dataset-wide context) for confounder awareness -- it is not a per-module fragment, so never cite it in supporting_claims or metadata_associations."
+    "code": "cat(build_system_prompt()) #> You are filling a structured interpretation of one gene co-expression module #> from a fixed evidence packet produced by a deterministic analysis pipeline. #>  #> Rules: #> - FIRST STEP, before drafting anything else: find the ranked_genes fragment (e.g. top_genes) and read its top_findings gene list. Using your own biological knowledge of those specific gene symbols, identify the single most specific biological state or program they mark as a set (e.g. a named signaling pathway, a metabolic program, a cell-cycle or proliferation program, a differentiation or response program) -- this gene-identity call is the module's core biological identity and must anchor proposed_label and dominant_biology. Scan the whole top_findings gene list, not just the top-ranked gene: the identity of a coherent set of hub genes is rarely captured by any single entry. Only after that, use the other fragments (state_expression, differential_module_activity, signature_correlation, geneset_enrichment, etc.) to add supporting context, localization, and condition dynamics around that identity -- never let a different fragment's numeric ranking override or replace the gene-identity call, and do not default to whichever fragment happens to report the single largest effect_strength number: a top-ranked item within one fragment's top_findings can reflect a small-sample statistical artifact rather than the module's dominant biology, so weigh a fragment's top_findings list as a whole rather than only its top-ranked entry. A DATASET CONTEXT block, when present, may state the compartment being profiled and whether a proposed_label should name a program rather than a population -- follow that framing when it is given. #> - Use only the evidence given below. Do not invent genes, terms, or results, and do not run or imagine any analysis. #> - Every entry in supporting_claims must cite the fragment_id(s) it is based on, and its direction must match the direction reported by those fragments. #> - A single supporting_claims entry may only cite fragment_ids that all share the same direction. ranked_genes fragments (e.g. top_genes) always report direction na, so never combine one in the same claim as a directional fragment (e.g. geneset_enrichment, direction up/down) -- cite them as separate supporting_claims entries instead, each using the direction its own fragment(s) actually report. Concrete example of what NOT to do: {\"claim\": \"genes X/Y/Z indicate a hypoxia program, consistent with geneset_enrichment\", \"fragment_ids\": [\"top_genes\", \"geneset_enrichment\"], \"direction\": \"up\"} is INVALID because top_genes reports direction na, not up. Instead write two entries: {\"claim\": \"the module's hub genes (X, Y, Z) mark a hypoxia program\", \"fragment_ids\": [\"top_genes\"], \"direction\": \"na\"} and {\"claim\": \"consistent with this, geneset_enrichment shows hypoxia-related terms enriched\", \"fragment_ids\": [\"geneset_enrichment\"], \"direction\": \"up\"}. #> - Statistical wording must match the numbers. Only call a result \"significant\", \"significantly enriched\", \"enriched\", or \"over-represented\" when the fragment you cite reports a significance value below 0.05 (for a geneset_enrichment fragment, its compact_summary says how many terms reach FDR < 0.05). When a fragment reports significance of 0.05 or above, or its compact_summary says no term reaches the threshold, describe it as not significant (for example \"a non-significant 2-gene overlap with DNA_damage\"), treat it as descriptive context only, and never use it as support for proposed_label or dominant_biology. A significant term backed by only a handful of overlapping genes (see n_overlap) is still weak evidence; say so rather than calling it a program. #> - Write the interpretation field as 1 to 3 sentences of plain prose that support the dominant_biology call, grounded only in the fragments you cite in supporting_claims. Fold in where the module is expressed (from a state_expression fragment, if one is present) and how its activity shifts across the tested condition (from a cross_condition_delta fragment, if one is present) when that context is relevant; do not add localization or dynamics claims the packet does not contain. Keep it consistent with supporting_claims -- do not introduce a program, gene, or term that no cited fragment supports. #> - Each fragment has a type from a controlled vocabulary: ranked_genes, categorical_association, continuous_correlation, geneset_enrichment, signature_correlation, cross_condition_delta, state_expression. #> - flags must be drawn only from: insufficient_evidence, needs_human_review, possible_artifact, tool_conflict, label_low_specificity. #> - If the evidence is weak, sparse, or inconsistent, do not invent a confident story: set flags to include insufficient_evidence, keep supporting_claims minimal (or empty), and give a low confidence score. #> - Set confidence.score (0 to 1) to your own calibrated certainty that proposed_label is the right call given only the evidence in this packet: high when several fragments converge on one identity, low when the packet is thin, the hub genes are non-specific, or the fragments disagree. #> - literature must be left empty; literature grounding is not available in this pipeline. #> - A DATASET CONTEXT block, when present, is global framing (composition, variance structure, and similar dataset-wide context) for confounder awareness -- it is not a per-module fragment, so never cite it in supporting_claims."
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/build_user_prompt.html",
@@ -532,7 +582,7 @@
     "previous_headings": "",
     "what": "Build the synthesis user prompt for one module — build_user_prompt",
     "title": "Build the synthesis user prompt for one module — build_user_prompt",
-    "text": "Concatenates rendered dataset_description(), optional render_dataset_context_compact() block, compact evidence packet (render_packet_compact()), deterministic EVIDENCE CONFIDENCE MATRIX (calculate_fusion_score()) grounds model's confidence.score numbers fuse_confidence() later re-derives final fused score .",
+    "text": "Concatenates rendered dataset_description(), optional render_dataset_context_compact() block, compact evidence packet (render_packet_compact()). deterministic EVIDENCE CONFIDENCE MATRIX longer injected (Part 4.5: fused score shelved); model sets confidence.score calibrated certainty.",
     "code": ""
   },
   {
@@ -552,7 +602,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Build the synthesis user prompt for one module — build_user_prompt",
-    "text": "packet evidence packet, built build_evidence_packet(). desc dataset_description; see dataset_description(). fusion optional pre-computed calculate_fusion_score() result; NULL (default) computes packet$fragments user_weights. Pass object used later fuse_confidence() prompt final score guaranteed agree. data_level Observation-unit descriptor ModuleSet packet built ; see render_dataset_description(). Default 'cell'. aggregated Whether ModuleSet's expression/scores already aggregated across cells; see render_dataset_description(). Default FALSE. user_weights Named list per-tool_id weight multipliers passed calculate_fusion_score() fusion NULL. Default list(). dataset_context optional dataset context, built build_dataset_context() / run_dataset_context(). Rendered via render_dataset_context_compact() dataset description evidence packet. NULL (default) omits block entirely, matching prior prompt output exactly.",
+    "text": "packet evidence packet, built build_evidence_packet(). desc dataset_description; see dataset_description(). fusion Ignored; retained call-site compatibility. fused evidence matrix longer part prompt. data_level Observation-unit descriptor ModuleSet packet built ; see render_dataset_description(). Default 'cell'. aggregated Whether ModuleSet's expression/scores already aggregated across cells; see render_dataset_description(). Default FALSE. user_weights Ignored; retained call-site compatibility. dataset_context optional dataset context, built build_dataset_context() / run_dataset_context(). Rendered via render_dataset_context_compact() dataset description evidence packet. NULL (default) omits block entirely.",
     "code": ""
   },
   {
@@ -573,7 +623,7 @@
     "what": "Examples",
     "title": "Build the synthesis user prompt for one module — build_user_prompt",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') cat(build_user_prompt(packet, desc)) #> Dataset context: #> - species: human #> - tissue: CSF #> - cell compartment: myeloid #> - assay: scRNA-seq #> - data level: cell #> - aggregated: FALSE #>  #> Module module_a evidence packet (1 fragments): #>  #> [top_genes] type=ranked_genes direction=na effect_strength=0.9389 significance=NA #> top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6 #> top_findings: [{\"gene\":\"GENEA4\",\"kme\":0.9389},{\"gene\":\"GENEA9\",\"kme\":0.9368},{\"gene\":\"GENEA5\",\"kme\":0.9331},{\"gene\":\"GENEA10\",\"kme\":0.9324},{\"gene\":\"GENEA8\",\"kme\":0.9305},{\"gene\":\"GENEA1\",\"kme\":0.93},{\"gene\":\"GENEA2\",\"kme\":0.9243},{\"gene\":\"GENEA7\",\"kme\":0.9236}] #>  #> EVIDENCE CONFIDENCE MATRIX  (computed deterministically upstream -- treat as ground truth, do not recompute or contradict) #>  #> fragment_id        type               weight magnitude reliability e_score direction #> top_genes          ranked_genes         0.60      0.94        1.00    0.94 na #>  #> pooled_evidence  E_pool  = 0.94   (weighted power mean, beta = 0.50) #> directional      C_dir   = 1.00  ->  P_agree = 1.00 #> empirical        E_evidence      = 0.94 #> model_trust      lambda          = 0.35 #>  #> CONSTRAINTS: #> - confidence.score must be consistent with E_evidence; it may not exceed E_evidence + 0.10 (E_evidence = 0.94). #> - Any directional claim must agree with the sign of the directional mass above (coherence 1.00, net \"none\"). #> - If E_evidence < 0.35, set flags to include insufficient_evidence and keep supporting_claims minimal. #> - Explain what the numbers mean for this module; do not restate or recompute them."
+    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') cat(build_user_prompt(packet, desc)) #> Dataset context: #> - species: human #> - tissue: CSF #> - cell compartment: myeloid #> - assay: scRNA-seq #> - data level: cell #> - aggregated: FALSE #>  #> Module module_a evidence packet (1 fragments): #>  #> [top_genes] type=ranked_genes direction=na effect_strength=0.9389 significance=NA #> top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6 #> top_findings: [{\"gene\":\"GENEA4\",\"kme\":0.9389},{\"gene\":\"GENEA9\",\"kme\":0.9368},{\"gene\":\"GENEA5\",\"kme\":0.9331},{\"gene\":\"GENEA10\",\"kme\":0.9324},{\"gene\":\"GENEA8\",\"kme\":0.9305},{\"gene\":\"GENEA1\",\"kme\":0.93},{\"gene\":\"GENEA2\",\"kme\":0.9243},{\"gene\":\"GENEA7\",\"kme\":0.9236},{\"gene\":\"GENEA3\",\"kme\":0.9158},{\"gene\":\"GENEA6\",\"kme\":0.9102}]"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/cached_backend.html",
@@ -632,7 +682,7 @@
     "previous_headings": "",
     "what": "Calculate the deterministic fused evidence confidence for a packet — calculate_fusion_score",
     "title": "Calculate the deterministic fused evidence confidence for a packet — calculate_fusion_score",
-    "text": "Normalizes every fragment onto unified [0, 1] scale (.fragment_score(): type-aware magnitude link times significance- reliability factor), pools weighted power mean (.pool_evidence()) using tool-tier + user_weights importance (.tool_weight()), applies mass-weighted directional-conflict penalty (.directional_coherence()). Computed straight packet synthesis, result reproducible packet hash alone; injected synthesis prompt ground truth (.render_confidence_matrix()) re-used fuse_confidence() evidence term, printed fusion string can never drift math.",
+    "text": "Normalizes every fragment onto unified [0, 1] scale (.fragment_score(): type-aware magnitude link times significance- reliability factor), pools weighted power mean (.pool_evidence()) using tool-tier + user_weights importance (.tool_weight()), applies mass-weighted directional-conflict penalty (.directional_coherence()). Computed straight packet, result reproducible packet hash alone.",
     "code": ""
   },
   {
@@ -663,6 +713,16 @@
     "what": "Value",
     "title": "Calculate the deterministic fused evidence confidence for a packet — calculate_fusion_score",
     "text": "list: e_evidence (final empirical evidence term), e_pool (pooled evidence directional penalty), p_agree (directional penalty factor), c_dir (directional coherence), lambda, params (beta, kappa), matrix (per-fragment data.frame prompt rendering audit).",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/calculate_fusion_score.html",
+    "id": "details",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Details",
+    "title": "Calculate the deterministic fused evidence confidence for a packet — calculate_fusion_score",
+    "text": "Shelved Part 4.5 (docs/prompts/handoff_prompt_serpentine_tcell.md): longer injected synthesis prompt longer consumed fuse_confidence(). Kept intact, compute_evidence_signals(), future redesign evidence score.",
     "code": ""
   },
   {
@@ -756,13 +816,63 @@
     "code": ""
   },
   {
+    "path": "https://smorabit.github.io/llegir/reference/check_agent_labels.html",
+    "id": null,
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Check an agent's label files against their evidence packets — check_agent_labels",
+    "title": "Check an agent's label files against their evidence packets — check_agent_labels",
+    "text": "every module workspace exported export_agent_workspace(mode = 'label'), replays labels/<module_id>.json synthesize_interpretation() via agent_label_backend(), runs check_faithfulness() module's packet, checks required review block ModuleSet : every supporting hub among module's top 25 hubs, kME stated (within 0.01), least one top 10; least 3 expected markers, right status (in_module, in_network, unassigned, not_tested; last two told apart workspace ships input feature set); 3 display hubs among top 10 hubs, exclude housekeeping normalizers unless review$display_hub_overrides gives reason, repeat gene family; confidence$score lies band review$confidence_level (high 0.75-0.95, moderate 0.5-0.75, low 0.25-0.5, very_low 0-0.25); technical artifact gate, technical_artifact evidence tier possible_artifact flag go together; module meeting artifact screen's dissociation-stress depth-correlation threshold pass gate, one meeting sample-concentration threshold moderate flagged label_low_specificity; working notes exist labels/notes/<module_id>.md, every script queries/<module_id>/ captured .cited ; two modules workspace share proposed_label, unless one's review$related_module names .",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/check_agent_labels.html",
+    "id": "ref-usage",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Usage",
+    "title": "Check an agent's label files against their evidence packets — check_agent_labels",
+    "text": "",
+    "code": "check_agent_labels(workspace_dir, alpha = 0.05)"
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/check_agent_labels.html",
+    "id": "arguments",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Arguments",
+    "title": "Check an agent's label files against their evidence packets — check_agent_labels",
+    "text": "workspace_dir Path exported workspace. alpha Significance threshold faithfulness wording check.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/check_agent_labels.html",
+    "id": "value",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Value",
+    "title": "Check an agent's label files against their evidence packets — check_agent_labels",
+    "text": "data.frame one row per module (plus one per unexpected label file): module_id, status ('ok', 'missing', 'invalid', 'unfaithful', 'needs_revision' 'unexpected'), proposed_label detail.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/check_agent_labels.html",
+    "id": "details",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Details",
+    "title": "Check an agent's label files against their evidence packets — check_agent_labels",
+    "text": "workspace's validate_labels.R runs, agent can iterate every module 'ok'.",
+    "code": ""
+  },
+  {
     "path": "https://smorabit.github.io/llegir/reference/check_faithfulness.html",
     "id": null,
     "dir": "Reference",
     "previous_headings": "",
     "what": "Check citation faithfulness of an interpretation against its packet — check_faithfulness",
     "title": "Check citation faithfulness of an interpretation against its packet — check_faithfulness",
-    "text": "Every fragment_id cited supporting_claims / metadata_associations must exist module's evidence packet, supporting_claims entry's direction must match direction actually reported fragment(s) cites. Pure non-throwing; see assert_faithfulness() hard-rejecting variant.",
+    "text": "Every fragment_id cited supporting_claims must exist module's evidence packet, supporting_claims entry's direction must match direction actually reported fragment(s) cites. Significance wording (\"significant\", \"enriched\", \"-represented\"; negated uses \"significant\" allowed) must backed fragment whose significance alpha: supporting_claims entry, none cited fragments passes alpha least one tested result (non-NA significance, geneset_enrichment fragment) – claim hub genes \"enriched ribosomal proteins\", citing ranked_genes fragment, flagged; sentence interpretation text, fragments sentence names (fragment_id, every geneset_enrichment fragment speaks enrichment without naming one) include none passes alpha.",
     "code": ""
   },
   {
@@ -773,7 +883,7 @@
     "what": "Usage",
     "title": "Check citation faithfulness of an interpretation against its packet — check_faithfulness",
     "text": "",
-    "code": "check_faithfulness(interp, packet)"
+    "code": "check_faithfulness(interp, packet, alpha = 0.05)"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/check_faithfulness.html",
@@ -782,7 +892,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Check citation faithfulness of an interpretation against its packet — check_faithfulness",
-    "text": "interp interpretation object. packet evidence packet interp synthesized .",
+    "text": "interp interpretation object. packet evidence packet interp synthesized . alpha Significance threshold wording check. Default 0.05.",
     "code": ""
   },
   {
@@ -792,7 +902,17 @@
     "previous_headings": "",
     "what": "Value",
     "title": "Check citation faithfulness of an interpretation against its packet — check_faithfulness",
-    "text": "list violation records (empty faithful); record list location, index, fragment_id, issue ('missing_fragment' 'direction_mismatch'), , 'direction_mismatch', claim_direction/fragment_direction.",
+    "text": "list violation records (empty faithful); record list location ('supporting_claims' 'interpretation'), index (claim sentence number), fragment_id, issue ('missing_fragment', 'direction_mismatch' 'unsupported_significance'), , 'direction_mismatch', claim_direction/fragment_direction.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/check_faithfulness.html",
+    "id": "details",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Details",
+    "title": "Check citation faithfulness of an interpretation against its packet — check_faithfulness",
+    "text": "Pure non-throwing; see assert_faithfulness() hard-rejecting variant.",
     "code": ""
   },
   {
@@ -853,7 +973,107 @@
     "what": "Examples",
     "title": "Evidence tool: which cell states express this module — cluster_dme_tool",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() cluster_dme_tool(list(ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type'))) #> $fragment_id #> [1] \"cluster_dme\" #>  #> $tool_id #> [1] \"cluster_dme\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"state_expression\" #>  #> $result #>       group  n mean_score median_score rank_biserial   p_value       fdr #> 2 myeloid_a 99 0.04339845  -0.07218409    0.06950695 0.3962589 0.3962589 #>   direction #> 2        up #>  #> $compact_summary #> [1] \"strongest state: myeloid_a (r=0.07, FDR=0.4); omnibus Kruskal p=0.4\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$cluster #> [1] \"myeloid_a\" #>  #> $top_findings[[1]]$mean_score #> [1] 0.04339845 #>  #> $top_findings[[1]]$rank_biserial #> [1] 0.06950695 #>  #> $top_findings[[1]]$fdr #> [1] 0.3962589 #>  #>  #>  #> $effect_strength #> [1] 0.06950695 #>  #> $significance #> [1] 0.3955787 #>  #> $direction #> [1] \"up\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$group_by #> [1] \"cell_type\" #>  #> $provenance$params$method #> [1] \"per_cell\" #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:25+0200\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\""
+    "code": "ms <- llegir_example_moduleset() cluster_dme_tool(list(ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type'))) #> $fragment_id #> [1] \"cluster_dme\" #>  #> $tool_id #> [1] \"cluster_dme\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"state_expression\" #>  #> $result #>       group  n mean_score median_score rank_biserial   p_value       fdr #> 2 myeloid_a 99 0.04339845  -0.07218409    0.06950695 0.3962589 0.3962589 #>   direction #> 2        up #>  #> $compact_summary #> [1] \"strongest state: myeloid_a (r=0.07, FDR=0.4); omnibus Kruskal p=0.4\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$cluster #> [1] \"myeloid_a\" #>  #> $top_findings[[1]]$mean_score #> [1] 0.04339845 #>  #> $top_findings[[1]]$rank_biserial #> [1] 0.06950695 #>  #> $top_findings[[1]]$fdr #> [1] 0.3962589 #>  #>  #>  #> $effect_strength #> [1] 0.06950695 #>  #> $significance #> [1] 0.3955787 #>  #> $direction #> [1] \"up\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$group_by #> [1] \"cell_type\" #>  #> $provenance$params$method #> [1] \"per_cell\" #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:54:40+0100\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/cluster_expression_profile_tool.html",
+    "id": null,
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Evidence tool: where each cell state sits in the module's global score distribution — cluster_expression_profile_tool",
+    "title": "Evidence tool: where each cell state sits in the module's global score distribution — cluster_expression_profile_tool",
+    "text": "core evidence tool, non-differential sibling cluster_dme_tool(). cluster_dme_tool() reports single enriched state one-vs-test, can hide state expresses module medium intensity. tool instead bins every cell's module score deciles module's global score distribution (cells ctx$ms, re-binned per state) reports, per state, mean/median decile cells occupy, mean raw module activity (eigengene) cells, share cells top bin – graded profile, contrast, carries direction = 'na'. raw mean_activity sits alongside rank-based mean_decile reader can tell absolute activity difference distributional one. Touches ModuleSet adapter contract (module_scores(), metadata(), pkg_versions()) plus base R quantile binning, works backend.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/cluster_expression_profile_tool.html",
+    "id": "ref-usage",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Usage",
+    "title": "Evidence tool: where each cell state sits in the module's global score distribution — cluster_expression_profile_tool",
+    "text": "",
+    "code": "cluster_expression_profile_tool(ctx)"
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/cluster_expression_profile_tool.html",
+    "id": "arguments",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Arguments",
+    "title": "Evidence tool: where each cell state sits in the module's global score distribution — cluster_expression_profile_tool",
+    "text": "ctx tool context list: list(ms, module_id, params), built run_module(). ctx$params$group_by (required) metadata column naming cell-state grouping (e.g. 'cell_type'). ctx$params$n_deciles (default 10) number global bins requested; module score distribution heavy ties can realize fewer unique bins requested, case realized bin count used throughout (see Details).",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/cluster_expression_profile_tool.html",
+    "id": "value",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Value",
+    "title": "Evidence tool: where each cell state sits in the module's global score distribution — cluster_expression_profile_tool",
+    "text": "evidence_fragment type 'state_expression', NULL ctx$ms lacks grouping module_scores capability (see capabilities()), module's score distribution spread (single unique value, bin boundaries exist) – graceful skips, errors.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/cluster_expression_profile_tool.html",
+    "id": "ref-examples",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Examples",
+    "title": "Evidence tool: where each cell state sits in the module's global score distribution — cluster_expression_profile_tool",
+    "text": "",
+    "code": "ms <- llegir_example_moduleset() cluster_expression_profile_tool(list(     ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type') )) #> $fragment_id #> [1] \"cluster_expression_profile\" #>  #> $tool_id #> [1] \"cluster_expression_profile\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"state_expression\" #>  #> $result #>       group   n mean_activity mean_decile median_decile  pct_high #> 1 myeloid_a  99    0.04339845    5.686869             6 0.1010101 #> 2 myeloid_b 101   -0.04253907    5.316832             5 0.0990099 #>  #> $compact_summary #> [1] \"global module-score deciles (10 realized bins of 10 requested): highest state myeloid_a (mean_decile=5.7/10, mean_activity=0.0434, 10% of its cells in the top bin); 2 states profiled\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$cluster #> [1] \"myeloid_a\" #>  #> $top_findings[[1]]$mean_decile #> [1] 5.686869 #>  #> $top_findings[[1]]$mean_activity #> [1] 0.04339845 #>  #> $top_findings[[1]]$pct_high #> [1] 0.1010101 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$cluster #> [1] \"myeloid_b\" #>  #> $top_findings[[2]]$mean_decile #> [1] 5.316832 #>  #> $top_findings[[2]]$mean_activity #> [1] -0.04253907 #>  #> $top_findings[[2]]$pct_high #> [1] 0.0990099 #>  #>  #>  #> $effect_strength #> [1] 0.5686869 #>  #> $significance #> [1] NA #>  #> $direction #> [1] \"na\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$group_by #> [1] \"cell_type\" #>  #> $provenance$params$n_deciles #> [1] 10 #>  #> $provenance$params$method #> [1] \"global_decile\" #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:54:40+0100\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/collect_agent_labels.html",
+    "id": null,
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Collect an agent's labels as validated interpretations — collect_agent_labels",
+    "title": "Collect an agent's labels as validated interpretations — collect_agent_labels",
+    "text": "Turns label files workspace exported export_agent_workspace(mode = 'label') interpretation objects via pipeline LLM synthesis (synthesize_module(): validation, enforce_faithfulness(), fuse_confidence()). output_dir, delegates run_synthesis_orchestrator(), also writes per-module JSON/Markdown, review_queue.tsv manifest.json, exactly LLM run. Provenance records model = 'agent:<agent>' current PROMPT_TEMPLATE_VERSION, whose rules workspace manifest handed agent.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/collect_agent_labels.html",
+    "id": "ref-usage",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Usage",
+    "title": "Collect an agent's labels as validated interpretations — collect_agent_labels",
+    "text": "",
+    "code": "collect_agent_labels(workspace_dir, output_dir = NULL, agent = \"coding-agent\")"
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/collect_agent_labels.html",
+    "id": "arguments",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Arguments",
+    "title": "Collect an agent's labels as validated interpretations — collect_agent_labels",
+    "text": "workspace_dir Path exported workspace. output_dir Optional directory write synthesis outputs . agent Short name agent wrote labels.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/collect_agent_labels.html",
+    "id": "value",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Value",
+    "title": "Collect an agent's labels as validated interpretations — collect_agent_labels",
+    "text": "named list interpretation objects (NULL module whose label missing invalid, warning), invisibly output_dir given.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/collect_agent_labels.html",
+    "id": "ref-examples",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Examples",
+    "title": "Collect an agent's labels as validated interpretations — collect_agent_labels",
+    "text": "",
+    "code": "if (FALSE) { # \\dontrun{ interps <- collect_agent_labels('agent_workspace', output_dir = 'interpretations', agent = 'claude-code') } # }"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/components_ModuleSet.html",
@@ -1043,7 +1263,7 @@
     "what": "Examples",
     "title": "Dataset tool: dataset-wide baseline expression and housekeeping signal — dataset_baseline_expression_tool",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() dataset_baseline_expression_tool(list(ms = ms, params = list())) #> $fragment_id #> [1] \"baseline_expression\" #>  #> $tool_id #> [1] \"dataset_baseline_expression\" #>  #> $type #> [1] \"baseline_expression\" #>  #> $result #>    gene_name mean_expr detection_rate        cv #> 1     GENEA9 0.6814702          0.700 0.9788913 #> 2     GENEA6 0.6555608          0.715 0.9573628 #> 3     GENEA3 0.6549227          0.720 0.9859497 #> 4     GENEA8 0.6536075          0.705 0.9995474 #> 5     GENEA1 0.6533208          0.725 1.0038584 #> 6     GENEA5 0.6443494          0.685 0.9848878 #> 7     GENEA2 0.6439812          0.710 0.9904205 #> 8     GENEA4 0.6268506          0.720 0.9905032 #> 9    GENEA10 0.6251210          0.715 0.9796510 #> 10    GENEB2 0.6153008          0.670 1.0584346 #> 11    GENEA7 0.6146316          0.700 1.0260310 #> 12    GENEB3 0.6078200          0.720 1.0558462 #> 13    GENEB4 0.6075764          0.695 1.0380350 #> 14    GENEB1 0.6041303          0.690 1.0457950 #> 15    GENEB5 0.6012699          0.640 1.0787665 #>  #> $compact_summary #> [1] \"baseline expression across 200 cells: most dominant gene GENEA9 (mean=0.68); ribosomal mass=0%, mitochondrial mass=0%; depth median=19.7\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$gene_name #> [1] \"GENEA9\" #>  #> $top_findings[[1]]$mean_expr #> [1] 0.681 #>  #> $top_findings[[1]]$detection_rate #> [1] 0.7 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$gene_name #> [1] \"GENEA6\" #>  #> $top_findings[[2]]$mean_expr #> [1] 0.656 #>  #> $top_findings[[2]]$detection_rate #> [1] 0.715 #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$gene_name #> [1] \"GENEA3\" #>  #> $top_findings[[3]]$mean_expr #> [1] 0.655 #>  #> $top_findings[[3]]$detection_rate #> [1] 0.72 #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$gene_name #> [1] \"GENEA8\" #>  #> $top_findings[[4]]$mean_expr #> [1] 0.654 #>  #> $top_findings[[4]]$detection_rate #> [1] 0.705 #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$gene_name #> [1] \"GENEA1\" #>  #> $top_findings[[5]]$mean_expr #> [1] 0.653 #>  #> $top_findings[[5]]$detection_rate #> [1] 0.725 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$gene_name #> [1] \"GENEA5\" #>  #> $top_findings[[6]]$mean_expr #> [1] 0.644 #>  #> $top_findings[[6]]$detection_rate #> [1] 0.685 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$gene_name #> [1] \"GENEA2\" #>  #> $top_findings[[7]]$mean_expr #> [1] 0.644 #>  #> $top_findings[[7]]$detection_rate #> [1] 0.71 #>  #>  #> $top_findings[[8]] #> $top_findings[[8]]$gene_name #> [1] \"GENEA4\" #>  #> $top_findings[[8]]$mean_expr #> [1] 0.627 #>  #> $top_findings[[8]]$detection_rate #> [1] 0.72 #>  #>  #> $top_findings[[9]] #> $top_findings[[9]]$gene_name #> [1] \"GENEA10\" #>  #> $top_findings[[9]]$mean_expr #> [1] 0.625 #>  #> $top_findings[[9]]$detection_rate #> [1] 0.715 #>  #>  #> $top_findings[[10]] #> $top_findings[[10]]$gene_name #> [1] \"GENEB2\" #>  #> $top_findings[[10]]$mean_expr #> [1] 0.615 #>  #> $top_findings[[10]]$detection_rate #> [1] 0.67 #>  #>  #> $top_findings[[11]] #> $top_findings[[11]]$gene_name #> [1] \"GENEA7\" #>  #> $top_findings[[11]]$mean_expr #> [1] 0.615 #>  #> $top_findings[[11]]$detection_rate #> [1] 0.7 #>  #>  #> $top_findings[[12]] #> $top_findings[[12]]$gene_name #> [1] \"GENEB3\" #>  #> $top_findings[[12]]$mean_expr #> [1] 0.608 #>  #> $top_findings[[12]]$detection_rate #> [1] 0.72 #>  #>  #> $top_findings[[13]] #> $top_findings[[13]]$gene_name #> [1] \"GENEB4\" #>  #> $top_findings[[13]]$mean_expr #> [1] 0.608 #>  #> $top_findings[[13]]$detection_rate #> [1] 0.695 #>  #>  #> $top_findings[[14]] #> $top_findings[[14]]$gene_name #> [1] \"GENEB1\" #>  #> $top_findings[[14]]$mean_expr #> [1] 0.604 #>  #> $top_findings[[14]]$detection_rate #> [1] 0.69 #>  #>  #> $top_findings[[15]] #> $top_findings[[15]]$gene_name #> [1] \"GENEB5\" #>  #> $top_findings[[15]]$mean_expr #> [1] 0.601 #>  #> $top_findings[[15]]$detection_rate #> [1] 0.64 #>  #>  #> $top_findings[[16]] #> $top_findings[[16]]$metric #> [1] \"pct_ribo_mass\" #>  #> $top_findings[[16]]$value #> [1] 0 #>  #>  #> $top_findings[[17]] #> $top_findings[[17]]$metric #> [1] \"pct_mito_mass\" #>  #> $top_findings[[17]]$value #> [1] 0 #>  #>  #> $top_findings[[18]] #> $top_findings[[18]]$metric #> [1] \"depth_distribution\" #>  #> $top_findings[[18]]$min #> [1] 4.8 #>  #> $top_findings[[18]]$median #> [1] 19.7 #>  #> $top_findings[[18]]$mean #> [1] 20.2 #>  #> $top_findings[[18]]$max #> [1] 42.5 #>  #>  #>  #> $caveats #> list() #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$top_n #> [1] 15 #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:26+0200\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"dataset_fragment\""
+    "code": "ms <- llegir_example_moduleset() dataset_baseline_expression_tool(list(ms = ms, params = list())) #> $fragment_id #> [1] \"baseline_expression\" #>  #> $tool_id #> [1] \"dataset_baseline_expression\" #>  #> $type #> [1] \"baseline_expression\" #>  #> $result #>    gene_name mean_expr detection_rate        cv #> 1     GENEA9 0.6814702          0.700 0.9788913 #> 2     GENEA6 0.6555608          0.715 0.9573628 #> 3     GENEA3 0.6549227          0.720 0.9859497 #> 4     GENEA8 0.6536075          0.705 0.9995474 #> 5     GENEA1 0.6533208          0.725 1.0038584 #> 6     GENEA5 0.6443494          0.685 0.9848878 #> 7     GENEA2 0.6439812          0.710 0.9904205 #> 8     GENEA4 0.6268506          0.720 0.9905032 #> 9    GENEA10 0.6251210          0.715 0.9796510 #> 10    GENEB2 0.6153008          0.670 1.0584346 #> 11    GENEA7 0.6146316          0.700 1.0260310 #> 12    GENEB3 0.6078200          0.720 1.0558462 #> 13    GENEB4 0.6075764          0.695 1.0380350 #> 14    GENEB1 0.6041303          0.690 1.0457950 #> 15    GENEB5 0.6012699          0.640 1.0787665 #>  #> $compact_summary #> [1] \"baseline expression across 200 cells: most dominant gene GENEA9 (mean=0.68); ribosomal mass=0%, mitochondrial mass=0%; depth median=19.7\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$gene_name #> [1] \"GENEA9\" #>  #> $top_findings[[1]]$mean_expr #> [1] 0.681 #>  #> $top_findings[[1]]$detection_rate #> [1] 0.7 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$gene_name #> [1] \"GENEA6\" #>  #> $top_findings[[2]]$mean_expr #> [1] 0.656 #>  #> $top_findings[[2]]$detection_rate #> [1] 0.715 #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$gene_name #> [1] \"GENEA3\" #>  #> $top_findings[[3]]$mean_expr #> [1] 0.655 #>  #> $top_findings[[3]]$detection_rate #> [1] 0.72 #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$gene_name #> [1] \"GENEA8\" #>  #> $top_findings[[4]]$mean_expr #> [1] 0.654 #>  #> $top_findings[[4]]$detection_rate #> [1] 0.705 #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$gene_name #> [1] \"GENEA1\" #>  #> $top_findings[[5]]$mean_expr #> [1] 0.653 #>  #> $top_findings[[5]]$detection_rate #> [1] 0.725 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$gene_name #> [1] \"GENEA5\" #>  #> $top_findings[[6]]$mean_expr #> [1] 0.644 #>  #> $top_findings[[6]]$detection_rate #> [1] 0.685 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$gene_name #> [1] \"GENEA2\" #>  #> $top_findings[[7]]$mean_expr #> [1] 0.644 #>  #> $top_findings[[7]]$detection_rate #> [1] 0.71 #>  #>  #> $top_findings[[8]] #> $top_findings[[8]]$gene_name #> [1] \"GENEA4\" #>  #> $top_findings[[8]]$mean_expr #> [1] 0.627 #>  #> $top_findings[[8]]$detection_rate #> [1] 0.72 #>  #>  #> $top_findings[[9]] #> $top_findings[[9]]$gene_name #> [1] \"GENEA10\" #>  #> $top_findings[[9]]$mean_expr #> [1] 0.625 #>  #> $top_findings[[9]]$detection_rate #> [1] 0.715 #>  #>  #> $top_findings[[10]] #> $top_findings[[10]]$gene_name #> [1] \"GENEB2\" #>  #> $top_findings[[10]]$mean_expr #> [1] 0.615 #>  #> $top_findings[[10]]$detection_rate #> [1] 0.67 #>  #>  #> $top_findings[[11]] #> $top_findings[[11]]$gene_name #> [1] \"GENEA7\" #>  #> $top_findings[[11]]$mean_expr #> [1] 0.615 #>  #> $top_findings[[11]]$detection_rate #> [1] 0.7 #>  #>  #> $top_findings[[12]] #> $top_findings[[12]]$gene_name #> [1] \"GENEB3\" #>  #> $top_findings[[12]]$mean_expr #> [1] 0.608 #>  #> $top_findings[[12]]$detection_rate #> [1] 0.72 #>  #>  #> $top_findings[[13]] #> $top_findings[[13]]$gene_name #> [1] \"GENEB4\" #>  #> $top_findings[[13]]$mean_expr #> [1] 0.608 #>  #> $top_findings[[13]]$detection_rate #> [1] 0.695 #>  #>  #> $top_findings[[14]] #> $top_findings[[14]]$gene_name #> [1] \"GENEB1\" #>  #> $top_findings[[14]]$mean_expr #> [1] 0.604 #>  #> $top_findings[[14]]$detection_rate #> [1] 0.69 #>  #>  #> $top_findings[[15]] #> $top_findings[[15]]$gene_name #> [1] \"GENEB5\" #>  #> $top_findings[[15]]$mean_expr #> [1] 0.601 #>  #> $top_findings[[15]]$detection_rate #> [1] 0.64 #>  #>  #> $top_findings[[16]] #> $top_findings[[16]]$metric #> [1] \"pct_ribo_mass\" #>  #> $top_findings[[16]]$value #> [1] 0 #>  #>  #> $top_findings[[17]] #> $top_findings[[17]]$metric #> [1] \"pct_mito_mass\" #>  #> $top_findings[[17]]$value #> [1] 0 #>  #>  #> $top_findings[[18]] #> $top_findings[[18]]$metric #> [1] \"depth_distribution\" #>  #> $top_findings[[18]]$min #> [1] 4.8 #>  #> $top_findings[[18]]$median #> [1] 19.7 #>  #> $top_findings[[18]]$mean #> [1] 20.2 #>  #> $top_findings[[18]]$max #> [1] 42.5 #>  #>  #>  #> $caveats #> list() #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$top_n #> [1] 15 #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:54:42+0100\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"dataset_fragment\""
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/dataset_composition_tool.html",
@@ -1093,7 +1313,7 @@
     "what": "Examples",
     "title": "Dataset tool: cell-state census and condition covariate balance — dataset_composition_tool",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() params <- list(group_col = 'cell_type', condition_col = 'diagnosis') dataset_composition_tool(list(ms = ms, params = params)) #> $fragment_id #> [1] \"composition\" #>  #> $tool_id #> [1] \"dataset_composition\" #>  #> $type #> [1] \"composition_summary\" #>  #> $result #>       group condition  n prop_of_condition expected  std_resid #> 1 myeloid_a      case 53         0.5196078    50.49  0.7101127 #> 2 myeloid_b      case 49         0.4803922    51.51 -0.7101127 #> 3 myeloid_a   control 46         0.4693878    48.51 -0.7101127 #> 4 myeloid_b   control 52         0.5306122    49.49  0.7101127 #>  #> $compact_summary #> [1] \"across 200 cells: cell_type spans 2 levels (entropy=0.69); strongest skew vs diagnosis: myeloid_a in case (z=0.71)\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$group #> [1] \"myeloid_a\" #>  #> $top_findings[[1]]$condition #> [1] \"case\" #>  #> $top_findings[[1]]$n #> [1] 53 #>  #> $top_findings[[1]]$std_resid #> [1] 0.71 #>  #> $top_findings[[1]]$direction #> [1] \"over\" #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$group #> [1] \"myeloid_b\" #>  #> $top_findings[[2]]$condition #> [1] \"case\" #>  #> $top_findings[[2]]$n #> [1] 49 #>  #> $top_findings[[2]]$std_resid #> [1] -0.71 #>  #> $top_findings[[2]]$direction #> [1] \"under\" #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$group #> [1] \"myeloid_a\" #>  #> $top_findings[[3]]$condition #> [1] \"control\" #>  #> $top_findings[[3]]$n #> [1] 46 #>  #> $top_findings[[3]]$std_resid #> [1] -0.71 #>  #> $top_findings[[3]]$direction #> [1] \"under\" #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$group #> [1] \"myeloid_b\" #>  #> $top_findings[[4]]$condition #> [1] \"control\" #>  #> $top_findings[[4]]$n #> [1] 52 #>  #> $top_findings[[4]]$std_resid #> [1] 0.71 #>  #> $top_findings[[4]]$direction #> [1] \"over\" #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$metric #> [1] \"shannon_entropy\" #>  #> $top_findings[[5]]$value #> [1] 0.693 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$metric #> [1] \"samples_per_condition\" #>  #> $top_findings[[6]]$condition #> [1] \"case\" #>  #> $top_findings[[6]]$n_samples #> [1] 4 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$metric #> [1] \"samples_per_condition\" #>  #> $top_findings[[7]]$condition #> [1] \"control\" #>  #> $top_findings[[7]]$n_samples #> [1] 4 #>  #>  #>  #> $caveats #> list() #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$group_col #> [1] \"cell_type\" #>  #> $provenance$params$condition_col #> [1] \"diagnosis\" #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:27+0200\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"dataset_fragment\""
+    "code": "ms <- llegir_example_moduleset() params <- list(group_col = 'cell_type', condition_col = 'diagnosis') dataset_composition_tool(list(ms = ms, params = params)) #> $fragment_id #> [1] \"composition\" #>  #> $tool_id #> [1] \"dataset_composition\" #>  #> $type #> [1] \"composition_summary\" #>  #> $result #>       group condition  n prop_of_condition expected  std_resid #> 1 myeloid_a      case 53         0.5196078    50.49  0.7101127 #> 2 myeloid_b      case 49         0.4803922    51.51 -0.7101127 #> 3 myeloid_a   control 46         0.4693878    48.51 -0.7101127 #> 4 myeloid_b   control 52         0.5306122    49.49  0.7101127 #>  #> $compact_summary #> [1] \"across 200 cells: cell_type spans 2 levels (entropy=0.69); strongest skew vs diagnosis: myeloid_a in case (z=0.71)\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$group #> [1] \"myeloid_a\" #>  #> $top_findings[[1]]$condition #> [1] \"case\" #>  #> $top_findings[[1]]$n #> [1] 53 #>  #> $top_findings[[1]]$std_resid #> [1] 0.71 #>  #> $top_findings[[1]]$direction #> [1] \"over\" #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$group #> [1] \"myeloid_b\" #>  #> $top_findings[[2]]$condition #> [1] \"case\" #>  #> $top_findings[[2]]$n #> [1] 49 #>  #> $top_findings[[2]]$std_resid #> [1] -0.71 #>  #> $top_findings[[2]]$direction #> [1] \"under\" #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$group #> [1] \"myeloid_a\" #>  #> $top_findings[[3]]$condition #> [1] \"control\" #>  #> $top_findings[[3]]$n #> [1] 46 #>  #> $top_findings[[3]]$std_resid #> [1] -0.71 #>  #> $top_findings[[3]]$direction #> [1] \"under\" #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$group #> [1] \"myeloid_b\" #>  #> $top_findings[[4]]$condition #> [1] \"control\" #>  #> $top_findings[[4]]$n #> [1] 52 #>  #> $top_findings[[4]]$std_resid #> [1] 0.71 #>  #> $top_findings[[4]]$direction #> [1] \"over\" #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$metric #> [1] \"shannon_entropy\" #>  #> $top_findings[[5]]$value #> [1] 0.693 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$metric #> [1] \"samples_per_condition\" #>  #> $top_findings[[6]]$condition #> [1] \"case\" #>  #> $top_findings[[6]]$n_samples #> [1] 4 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$metric #> [1] \"samples_per_condition\" #>  #> $top_findings[[7]]$condition #> [1] \"control\" #>  #> $top_findings[[7]]$n_samples #> [1] 4 #>  #>  #>  #> $caveats #> list() #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$group_col #> [1] \"cell_type\" #>  #> $provenance$params$condition_col #> [1] \"diagnosis\" #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:54:42+0100\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"dataset_fragment\""
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/dataset_context_to_json.html",
@@ -1203,7 +1423,7 @@
     "what": "Usage",
     "title": "Construct a dataset fragment — dataset_fragment",
     "text": "",
-    "code": "dataset_fragment(   fragment_id,   tool_id,   type,   result,   compact_summary,   top_findings,   caveats = list(),   provenance = list(),   plots = NULL )"
+    "code": "dataset_fragment(   fragment_id,   tool_id,   type,   result,   compact_summary,   top_findings,   caveats = list(),   provenance = list(),   plots = NULL,   render_max_findings = NULL )"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/dataset_fragment.html",
@@ -1212,7 +1432,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Construct a dataset fragment — dataset_fragment",
-    "text": "fragment_id Unique id within dataset_context, e.g. 'composition' 'milo::abundance'. tool_id tool produced fragment. type One controlled vocabulary: 'composition_summary', 'baseline_expression', 'variance_structure', 'module_landscape'. result small tidy summary (data.frame); never raw matrix. compact_summary Short digest model (token-efficient, raw tables). top_findings list salient items (cell states / covariates / genes). caveats list machine-readable confounder flags, drawn controlled vocab. Default list(). provenance provenance list, typically built make_provenance(). plots Optional named list plot specs attach; see attach_plots(). Default NULL.",
+    "text": "fragment_id Unique id within dataset_context, e.g. 'composition' 'milo::abundance'. tool_id tool produced fragment. type One controlled vocabulary: 'composition_summary', 'baseline_expression', 'variance_structure', 'module_landscape'. result small tidy summary (data.frame); never raw matrix. compact_summary Short digest model (token-efficient, raw tables). top_findings list salient items (cell states / covariates / genes). caveats list machine-readable confounder flags, drawn controlled vocab. Default list(). provenance provenance list, typically built make_provenance(). plots Optional named list plot specs attach; see attach_plots(). Default NULL. render_max_findings Optional override many top_findings entries .render_dataset_fragment_compact() renders fragment, fragment whose findings census (one entry per group) rather top-N ranking, e.g. cluster reference card one row per cluster. NULL (default) means \"use caller's cap\"; see build_user_prompt(). Never added required, fragment omits validates, serializes, hashes exactly one built field existed.",
     "code": ""
   },
   {
@@ -1466,6 +1686,46 @@
     "code": "if (FALSE) { # \\dontrun{ pb_ms <- pseudobulk_ModuleSet(pb_counts, list(module_a = c('GENE1', 'GENE2')), pb_meta) differential_module_activity_tool(list(     ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'condition') )) } # }"
   },
   {
+    "path": "https://smorabit.github.io/llegir/reference/dot-label_artifact_screen.html",
+    "id": null,
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Artifact screen for one module (label mode) — .label_artifact_screen",
+    "title": "Artifact screen for one module (label mode) — .label_artifact_screen",
+    "text": "deterministic inputs label-mode artifact gate, rendered text block appended module's label_evidence file: module size; many dissociation-stress (immediate-early / heat-shock) genes sit among top 25 hubs whole module; depth_cols available, module score's Spearman correlation sequencing depth; , sample_col names metadata column (e.g. patient), much module's top-decile activity comes single sample. line states threshold whether module meets . evidence fragment: informs gate never cited supporting_claims.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/dot-label_artifact_screen.html",
+    "id": "ref-usage",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Usage",
+    "title": "Artifact screen for one module (label mode) — .label_artifact_screen",
+    "text": "",
+    "code": ".label_artifact_screen(ms, module_id, sample_col = NULL, depth_cols = NULL)"
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/dot-label_artifact_screen.html",
+    "id": "arguments",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Arguments",
+    "title": "Artifact screen for one module (label mode) — .label_artifact_screen",
+    "text": "ms ModuleSet. module_id module screen. sample_col Optional metadata column (e.g. 'Patient') single-sample share. Default NULL skips line. depth_cols Optional metadata columns holding per-cell sequencing depth (e.g. c('nCount_RNA', 'nFeature_RNA')). Default NULL skips line.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/dot-label_artifact_screen.html",
+    "id": "value",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Value",
+    "title": "Artifact screen for one module (label mode) — .label_artifact_screen",
+    "text": "single character string.",
+    "code": ""
+  },
+  {
     "path": "https://smorabit.github.io/llegir/reference/dot-make_moduleset_lite.html",
     "id": null,
     "dir": "Reference",
@@ -1663,7 +1923,7 @@
     "what": "Usage",
     "title": "Export a self-contained agent workspace and manifest — export_agent_workspace",
     "text": "",
-    "code": "export_agent_workspace(   ms,   dataset_context,   packets,   desc,   interps = NULL,   out_dir = \"agent_workspace\",   write_json = TRUE )"
+    "code": "export_agent_workspace(   ms,   dataset_context,   packets,   desc,   interps = NULL,   out_dir = \"agent_workspace\",   write_json = TRUE,   mode = c(\"explore\", \"label\"),   sample_col = .ms_sample_col(ms),   depth_cols = NULL,   feature_genes = NULL )"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/export_agent_workspace.html",
@@ -1672,7 +1932,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Export a self-contained agent workspace and manifest — export_agent_workspace",
-    "text": "ms validated ModuleSet. dataset_context dataset_context (see build_dataset_context()). packets named list evidence packets, keyed module id (e.g. return value run_orchestrator()). desc dataset_description run. interps named list interpretation objects, keyed module id (e.g. return value run_synthesis_orchestrator()), NULL (default) run synthesize . NULL, interpretation artifacts written manifest records run shipped interpretations, guest agent mock-synthesize one. out_dir Destination workspace directory. Default 'agent_workspace'. write_json Also emit portable JSON copies context, packets, (present) interpretations. Default TRUE.",
+    "text": "ms validated ModuleSet. dataset_context dataset_context (see build_dataset_context()). packets named list evidence packets, keyed module id (e.g. return value run_orchestrator()). desc dataset_description run. interps named list interpretation objects, keyed module id (e.g. return value run_synthesis_orchestrator()), NULL (default) run synthesize . NULL, interpretation artifacts written manifest records run shipped interpretations, guest agent mock-synthesize one. out_dir Destination workspace directory. Default 'agent_workspace'. write_json Also emit portable JSON copies context, packets, (present) interpretations. Default TRUE. mode 'explore' (default) exports read-query workspace described , unchanged. 'label' additionally commissions agent write module labels: manifest gains Labeling Task section carrying synthesis prompt's rules (build_system_prompt()) model-facing schema, module's packet rendered artifacts/label_evidence/<module_id>.md exactly synthesis model sees , labels/ directory created agent's output (one <module_id>.json per module), validate_labels.R shipped agent can check labels check_agent_labels(). manifest also sets refinement protocol (artifact gate, evidence hierarchy, falsification expected markers, anchored confidence, unique labels), label must carry interpretation's review block, evidence file ends deterministic artifact screen. Supplying interps label mode ships drafts agent refine. Collect result collect_agent_labels(). sample_col Label mode : metadata column naming biological sample (e.g. patient) artifact screen's single-sample share module's top-decile activity. Defaults ModuleSet's declared sample-id column, ; NULL skips line. depth_cols Label mode : metadata columns holding per-cell sequencing depth (e.g. c('nCount_RNA', 'nFeature_RNA')), artifact screen's module-score/depth correlation. NULL (default) skips line. feature_genes Label mode : every gene eligible module assignment (e.g. hdWGCNA::GetWGCNAGenes(), grey included), marker module can classed unassigned rather not_tested. NULL (default) accepts either gene.",
     "code": ""
   },
   {
@@ -1830,9 +2090,9 @@
     "id": null,
     "dir": "Reference",
     "previous_headings": "",
-    "what": "Fuse model and deterministic confidence into a final score and flags — fuse_confidence",
-    "title": "Fuse model and deterministic confidence into a final score and flags — fuse_confidence",
-    "text": "model's self-reported confidence (interp$confidence$model_score) never trusted alone. blended calculate_fusion_score()'s deterministic e_evidence via weighted geometric blend (model_score^lambda * e_evidence^(1 - lambda)), blend can trigger review flags – fluent, confident label weak evidence gets caught even model never flags . fusion calculate_fusion_score() result already injected synthesis prompt (see R/prompt.R), printed fusion string can never drift model shown; passing NULL recomputes packet user_weights. Mutates returns interp: confidence$score overwritten (model_score preserved audit), flags unioned whatever model enforce_faithfulness() already set.",
+    "what": "Apply deterministic review flags to an interpretation — fuse_confidence",
+    "title": "Apply deterministic review flags to an interpretation — fuse_confidence",
+    "text": "fused evidence score shelved (docs/prompts/handoff_prompt_serpentine_tcell.md Part 4.5): two known flaws – non-significant dynamics fragment dragging genuinely stable module, top_genes' top-kME magnitude standing interpretation confidence measures hub tightness – made blended number misleading, confidence$score left model's calibrated value. function now unions deterministic possible_artifact flag (hub list dominated IEG/dissociation-stress markers, .artifact_flagged()) interp$flags; enforce_faithfulness() sets needs_human_review independently, model may still set insufficient_evidence . calculate_fusion_score() compute_evidence_signals() retained, unused , future redesign score.",
     "code": ""
   },
   {
@@ -1841,7 +2101,7 @@
     "dir": "Reference",
     "previous_headings": "",
     "what": "Usage",
-    "title": "Fuse model and deterministic confidence into a final score and flags — fuse_confidence",
+    "title": "Apply deterministic review flags to an interpretation — fuse_confidence",
     "text": "",
     "code": "fuse_confidence(   interp,   packet,   low_threshold = 0.35,   disagreement_threshold = 0.35,   user_weights = list(),   fusion = NULL )"
   },
@@ -1851,8 +2111,8 @@
     "dir": "Reference",
     "previous_headings": "",
     "what": "Arguments",
-    "title": "Fuse model and deterministic confidence into a final score and flags — fuse_confidence",
-    "text": "interp interpretation object, returned synthesize_interpretation() (enforce_faithfulness()). packet evidence packet interp synthesized . low_threshold e_evidence floor fused score capped 'insufficient_evidence' flagged. disagreement_threshold Minimum |model_score - e_evidence| gap flags 'needs_human_review'. user_weights Named list per-tool_id weight multipliers passed calculate_fusion_score() fusion NULL. Default list(). fusion optional pre-computed calculate_fusion_score() result (one shown model prompt); NULL (default) recomputes packet user_weights.",
+    "title": "Apply deterministic review flags to an interpretation — fuse_confidence",
+    "text": "interp interpretation object, returned synthesize_interpretation() (enforce_faithfulness()). packet evidence packet interp synthesized . low_threshold Ignored; retained call-site compatibility. disagreement_threshold Ignored; retained call-site compatibility. user_weights Ignored; retained call-site compatibility. fusion Ignored; retained call-site compatibility.",
     "code": ""
   },
   {
@@ -1861,8 +2121,8 @@
     "dir": "Reference",
     "previous_headings": "",
     "what": "Value",
-    "title": "Fuse model and deterministic confidence into a final score and flags — fuse_confidence",
-    "text": "interp, confidence$score, confidence$rationale, flags updated.",
+    "title": "Apply deterministic review flags to an interpretation — fuse_confidence",
+    "text": "interp, flags possibly extended 'possible_artifact'.",
     "code": ""
   },
   {
@@ -1871,9 +2131,9 @@
     "dir": "Reference",
     "previous_headings": "",
     "what": "Examples",
-    "title": "Fuse model and deterministic confidence into a final score and flags — fuse_confidence",
+    "title": "Apply deterministic review flags to an interpretation — fuse_confidence",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') interp <- synthesize_interpretation(packet, desc, mock_backend()) fuse_confidence(interp, packet) #> $module_id #> [1] \"module_a\" #>  #> $proposed_label #> [1] \"Myeloid activation program (mock)\" #>  #> $one_line_summary #> [1] \"Mock synthesis output for offline testing; not derived from the evidence packet.\" #>  #> $dominant_biology #> [1] \"Not evaluated by the mock backend.\" #>  #> $supporting_claims #> $supporting_claims[[1]] #> $supporting_claims[[1]]$claim #> [1] \"Top genes were computed by the deterministic core.\" #>  #> $supporting_claims[[1]]$fragment_ids #> [1] \"top_genes\" #>  #> $supporting_claims[[1]]$direction #> [1] \"na\" #>  #> $supporting_claims[[1]]$strength #> [1] NA #>  #>  #> $supporting_claims[[2]] #> $supporting_claims[[2]]$claim #> [1] \"The module has enriched gene-set terms.\" #>  #> $supporting_claims[[2]]$fragment_ids #> [1] \"geneset_enrichment\" #>  #> $supporting_claims[[2]]$direction #> [1] \"up\" #>  #> $supporting_claims[[2]]$strength #> [1] NA #>  #>  #>  #> $cell_state #> [1] NA #>  #> $condition_dynamics #> [1] NA #>  #> $metadata_associations #> list() #>  #> $literature #> list() #>  #> $confidence #> $confidence$score #> [1] 0.7531057 #>  #> $confidence$model_score #> [1] 0.5 #>  #> $confidence$rationale #> [1] \"Mock backend: fixed neutral confidence, not evidence-derived. [fusion: model=0.50, evidence=0.94 (E_pool=0.94, P_agree=1.00, C_dir=1.00), lambda=0.35, fused=0.75]\" #>  #>  #> $flags #> $flags[[1]] #> [1] \"needs_human_review\" #>  #>  #> $provenance #> $provenance$model #> [1] \"mock\" #>  #> $provenance$model_version #> [1] \"mock-0.1\" #>  #> $provenance$prompt_template_version #> [1] \"0.4\" #>  #> $provenance$temperature #> [1] 0 #>  #> $provenance$seed #> [1] NA #>  #> $provenance$input_packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $provenance$ellmer_call #> $provenance$ellmer_call$backend #> [1] \"mock\" #>  #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:32+0200\" #>  #>  #> $schema_version #> [1] \"0.1\" #>  #> attr(,\"class\") #> [1] \"interpretation\""
+    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') interp <- synthesize_interpretation(packet, desc, mock_backend()) fuse_confidence(interp, packet) #> $module_id #> [1] \"module_a\" #>  #> $proposed_label #> [1] \"Myeloid activation program (mock)\" #>  #> $dominant_biology #> [1] \"Not evaluated by the mock backend.\" #>  #> $interpretation #> [1] \"Mock synthesis output for offline testing; not derived from the evidence packet.\" #>  #> $supporting_claims #> $supporting_claims[[1]] #> $supporting_claims[[1]]$claim #> [1] \"Top genes were computed by the deterministic core.\" #>  #> $supporting_claims[[1]]$fragment_ids #> [1] \"top_genes\" #>  #> $supporting_claims[[1]]$direction #> [1] \"na\" #>  #> $supporting_claims[[1]]$strength #> [1] NA #>  #>  #> $supporting_claims[[2]] #> $supporting_claims[[2]]$claim #> [1] \"Gene-set overlap was tested for the hub genes.\" #>  #> $supporting_claims[[2]]$fragment_ids #> [1] \"geneset_enrichment\" #>  #> $supporting_claims[[2]]$direction #> [1] \"up\" #>  #> $supporting_claims[[2]]$strength #> [1] NA #>  #>  #>  #> $literature #> list() #>  #> $confidence #> $confidence$score #> [1] 0.5 #>  #> $confidence$model_score #> [1] 0.5 #>  #> $confidence$rationale #> [1] \"Mock backend: fixed neutral confidence, not evidence-derived.\" #>  #>  #> $flags #> list() #>  #> $provenance #> $provenance$model #> [1] \"mock\" #>  #> $provenance$model_version #> [1] \"mock-0.1\" #>  #> $provenance$prompt_template_version #> [1] \"1.3\" #>  #> $provenance$temperature #> [1] 0 #>  #> $provenance$seed #> [1] NA #>  #> $provenance$input_packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $provenance$ellmer_call #> $provenance$ellmer_call$backend #> [1] \"mock\" #>  #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:54:50+0100\" #>  #>  #> $schema_version #> [1] \"0.2\" #>  #> attr(,\"class\") #> [1] \"interpretation\""
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/gene_list_ModuleSet.html",
@@ -1992,7 +2252,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Evidence tool: gene-set enrichment among a module's hub genes — geneset_enrichment_tool",
-    "text": "ctx tool context list: list(ms, module_id, params), built run_module(). ctx$params$n_hubs (default 25) number hub genes tested. ctx$params$db_files (required non-empty result) named character vector local GMT file paths, e.g. c(GO_BP = 'path//GO_Biological_Process.txt').",
+    "text": "ctx tool context list: list(ms, module_id, params), built run_module(). ctx$params$n_hubs (default 25) number hub genes tested. ctx$params$alpha (default 0.05) FDR threshold term counts significant: fragment's compact_summary states whether term passes , direction '' one ('na' otherwise). top_findings entry carries term's FDR, odds ratio, overlap size (n_overlap) Jaccard index. ctx$params$db_files (required non-empty result) named character vector local GMT file paths, e.g. c(GO_BP = 'path//GO_Biological_Process.txt').",
     "code": ""
   },
   {
@@ -2063,7 +2323,7 @@
     "what": "Examples",
     "title": "Look up a registered tool spec by id — get_tool",
     "text": "",
-    "code": "get_tool('top_genes') #> $id #> [1] \"top_genes\" #>  #> $fn #> function (ctx)  #> { #>     n_hubs <- ctx$params$n_hubs %||% 25 #>     gm <- gene_membership(ctx$ms, ctx$module_id) #>     top <- utils::head(gm, n_hubs) #>     top_findings <- lapply(seq_len(nrow(top)), function(i) { #>         list(gene = top$gene_name[i], kme = top$kme[i]) #>     }) #>     compact_summary <- paste0(\"top \", nrow(top), \" genes by kME: \",  #>         paste(utils::head(top$gene_name, 10), collapse = \", \"),  #>         if (nrow(top) > 10)  #>             \", ...\" #>         else \"\") #>     evidence_fragment(fragment_id = \"top_genes\", tool_id = \"top_genes\",  #>         module_id = ctx$module_id, type = \"ranked_genes\", result = top,  #>         compact_summary = compact_summary, top_findings = top_findings,  #>         effect_strength = if (nrow(top) > 0)  #>             max(top$kme) #>         else 0, direction = \"na\", provenance = make_provenance(tool_version = \"0.1\",  #>             params = list(n_hubs = n_hubs), pkg_versions = pkg_versions(ctx$ms),  #>             module_method = ctx$module_method %||% NA_character_)) #> } #> <bytecode: 0x55fa70772da8> #> <environment: namespace:llegir> #>  #> $type #> [1] \"ranked_genes\" #>  #> $description #> [1] \"Top module genes ranked by membership (kME)\" #>  #> $requires #> character(0) #>  #> $tier #> [1] \"medium\" #>  #> $scope #> [1] \"module\" #>  #> attr(,\"class\") #> [1] \"tool_spec\""
+    "code": "get_tool('top_genes') #> $id #> [1] \"top_genes\" #>  #> $fn #> function (ctx)  #> { #>     n_hubs <- ctx$params$n_hubs %||% 25 #>     gm <- gene_membership(ctx$ms, ctx$module_id) #>     top <- utils::head(gm, n_hubs) #>     top_findings <- lapply(seq_len(nrow(top)), function(i) { #>         list(gene = top$gene_name[i], kme = top$kme[i]) #>     }) #>     compact_summary <- paste0(\"top \", nrow(top), \" genes by kME: \",  #>         paste(utils::head(top$gene_name, 10), collapse = \", \"),  #>         if (nrow(top) > 10)  #>             \", ...\" #>         else \"\") #>     evidence_fragment(fragment_id = \"top_genes\", tool_id = \"top_genes\",  #>         module_id = ctx$module_id, type = \"ranked_genes\", result = top,  #>         compact_summary = compact_summary, top_findings = top_findings,  #>         effect_strength = if (nrow(top) > 0)  #>             max(top$kme) #>         else 0, direction = \"na\", provenance = make_provenance(tool_version = \"0.1\",  #>             params = list(n_hubs = n_hubs), pkg_versions = pkg_versions(ctx$ms),  #>             module_method = ctx$module_method %||% NA_character_)) #> } #> <bytecode: 0x56103b9e5d10> #> <environment: namespace:llegir> #>  #> $type #> [1] \"ranked_genes\" #>  #> $description #> [1] \"Top module genes ranked by membership (kME)\" #>  #> $requires #> character(0) #>  #> $tier #> [1] \"medium\" #>  #> $scope #> [1] \"module\" #>  #> attr(,\"class\") #> [1] \"tool_spec\""
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/has_capability.html",
@@ -2154,6 +2414,56 @@
     "title": "Build a ModuleSet from a Seurat object with an hdWGCNA experiment — hdWGCNA_ModuleSet",
     "text": "",
     "code": "if (FALSE) { # \\dontrun{ library(Seurat) seurat_obj <- readRDS('my_hdwgcna_object.rds') ms <- hdWGCNA_ModuleSet(seurat_obj) modules(ms) } # }"
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/housekeeping_composition_note.html",
+    "id": null,
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Housekeeping-composition note for a packet's hub-gene list — housekeeping_composition_note",
+    "title": "Housekeeping-composition note for a packet's hub-gene list — housekeeping_composition_note",
+    "text": "fraction module's top hub genes cytoplasmic ribosomal (RPS*/RPL*) mitochondrially encoded (MT-*). Surfaced synthesis via render_packet_compact() short note appended ranked_genes fragment, module whose hub list part housekeeping reads \" ribosomal-high\" instead housekeeping genes quietly dilute biological call. Deterministic, packet-, – unlike .artifact_flagged()'s IEG pattern – never sets flag .",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/housekeeping_composition_note.html",
+    "id": "ref-usage",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Usage",
+    "title": "Housekeeping-composition note for a packet's hub-gene list — housekeeping_composition_note",
+    "text": "",
+    "code": "housekeeping_composition_note(packet, top_n = 20, min_fraction = 0.15)"
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/housekeeping_composition_note.html",
+    "id": "arguments",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Arguments",
+    "title": "Housekeeping-composition note for a packet's hub-gene list — housekeeping_composition_note",
+    "text": "packet evidence packet, built build_evidence_packet(). top_n Number top hub genes inspect. Default 20. min_fraction Fraction family must reach worth noting. Default 0.15.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/housekeeping_composition_note.html",
+    "id": "value",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Value",
+    "title": "Housekeeping-composition note for a packet's hub-gene list — housekeeping_composition_note",
+    "text": "single-string note, NULL neither family clears min_fraction packet carries ranked_genes fragment.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/housekeeping_composition_note.html",
+    "id": "ref-examples",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Examples",
+    "title": "Housekeeping-composition note for a packet's hub-gene list — housekeeping_composition_note",
+    "text": "",
+    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) housekeeping_composition_note(packet) #> NULL"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/import_dataset_fragment.html",
@@ -2262,7 +2572,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Import an EnrichR / GeneOverlap enrichment table — import_enrichr",
-    "text": "module_id module fragment describes. result tidy enrichment result data.frame. column_map Named list column overrides: term_col (default 'Term'), effect_col (default 'Odds.Ratio'), significance_col (default 'Adjusted.P.value'). source_file Optional path result read ; see import_fragment(). ... Passed import_fragment() (e.g. fragment_id, tool_id).",
+    "text": "module_id module fragment describes. result tidy enrichment result data.frame. column_map Named list column overrides: term_col (default 'Term'), effect_col (default 'Odds.Ratio'), significance_col (default 'Adjusted.P.value'), plus optional overlap_col / jaccard_col / alpha (see import_fragment()); EnrichR's Overlap ('k/n') column picked automatically. source_file Optional path result read ; see import_fragment(). ... Passed import_fragment() (e.g. fragment_id, tool_id).",
     "code": ""
   },
   {
@@ -2302,7 +2612,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Import a user-supplied result table as an evidence fragment — import_fragment",
-    "text": "module_id module fragment describes. type One supported fragment types: 'geneset_enrichment', 'categorical_association'. result tidy data.frame user's result table. fragment_id Unique id within packet. Defaults paste0('imported::', type). tool_id Tool id recorded provenance. Default 'import_fragment'. params Named list column-name overrides (e.g. term_col, significance_col, effect_col) normalizer options (e.g. n_top), since user-supplied table share package's exact column names. source_file Optional path file result originally read (e.g. FindMarkers() CSV export). Recorded provenance$params$source_file, content-hashed provenance$input_hashes$source_file file still exists, import traceable back origin.",
+    "text": "module_id module fragment describes. type One supported fragment types: 'geneset_enrichment', 'categorical_association', 'state_expression', 'cross_condition_delta', 'signature_correlation', 'continuous_correlation'. result tidy data.frame user's result table. fragment_id Unique id within packet. Defaults paste0('imported::', type). tool_id Tool id recorded provenance. Default 'import_fragment'. params Named list column-name overrides (e.g. term_col, significance_col, effect_col) normalizer options (e.g. n_top), since user-supplied table share package's exact column names. 'geneset_enrichment': alpha (default 0.05) significance threshold stated compact_summary (direction 'na' term passes ); overlap_col jaccard_col name overlap-size Jaccard columns, auto-detected common names (size_intersection, ngenes, n_overlap, overlap_size, Overlap, overlap; jaccard, Jaccard) given. 'k/n' 'k|n' overlap strings reduced count k. source_file Optional path file result originally read (e.g. FindMarkers() CSV export). Recorded provenance$params$source_file, content-hashed provenance$input_hashes$source_file file still exists, import traceable back origin.",
     "code": ""
   },
   {
@@ -2482,7 +2792,7 @@
     "previous_headings": "",
     "what": "Construct an interpretation object — interpretation",
     "title": "Construct an interpretation object — interpretation",
-    "text": "One module's filled schema, produced synthesis layer (synthesize_interpretation()) fixed evidence packet. confidence$score starts equal confidence$model_score overwritten place confidence fusion (fuse_confidence()); provenance attached orchestrator, never model .",
+    "text": "One module's filled schema, produced synthesis layer (synthesize_interpretation()) fixed evidence packet. confidence$score equals confidence$model_score (deterministic fused blend shelved Part 4.5; fuse_confidence() now adds review flags leaves score alone); provenance attached orchestrator, never model .",
     "code": ""
   },
   {
@@ -2493,7 +2803,7 @@
     "what": "Usage",
     "title": "Construct an interpretation object — interpretation",
     "text": "",
-    "code": "interpretation(   module_id,   proposed_label,   one_line_summary,   dominant_biology,   supporting_claims,   confidence,   provenance,   cell_state = NA_character_,   condition_dynamics = NA_character_,   metadata_associations = list(),   literature = list(),   flags = list(),   schema_version = \"0.1\" )"
+    "code": "interpretation(   module_id,   proposed_label,   dominant_biology,   interpretation,   supporting_claims,   confidence,   provenance,   literature = list(),   flags = list(),   review = NULL,   schema_version = if (is.null(review)) \"0.2\" else \"0.3\" )"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/interpretation.html",
@@ -2502,7 +2812,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Construct an interpretation object — interpretation",
-    "text": "module_id module interpretation describes. proposed_label Short program name, e.g. 'Interferon response'. one_line_summary one-line summary module. dominant_biology Description main program. supporting_claims list claims, list(claim, fragment_ids, direction, strength). confidence confidence list: list(score, model_score, rationale). provenance provenance list, typically built make_interpretation_provenance(). cell_state module expressed (cluster_dme), known. condition_dynamics Condition-dependent dynamics, applicable. metadata_associations list list(variable, summary, fragment_id). literature list list(statement, pmids). Always empty current synthesis layer. flags subset flag vocabulary: 'insufficient_evidence', 'needs_human_review', 'possible_artifact', 'tool_conflict', 'label_low_specificity'. schema_version Schema version tag. Default '0.1'.",
+    "text": "module_id module interpretation describes. proposed_label Short program name, e.g. 'Interferon response'. dominant_biology main program, short label. interpretation 1-3 sentences prose supporting dominant_biology call, grounded cited fragments; folds module expressed activity shifts across tested condition relevant. supporting_claims list claims, list(claim, fragment_ids, direction, strength). confidence confidence list: list(score, model_score, rationale). provenance provenance list, typically built make_interpretation_provenance(). literature list list(statement, pmids). Always empty current synthesis layer. flags subset flag vocabulary: 'insufficient_evidence', 'needs_human_review', 'possible_artifact', 'tool_conflict', 'label_low_specificity'. review Optional structured self-review (schema 0.3), attached agent labelling run (see export_agent_workspace() mode = 'label'); NULL (default) LLM synthesis. schema_version Schema version tag. Defaults '0.2', '0.3' review supplied (0.3 addition).",
     "code": ""
   },
   {
@@ -2653,7 +2963,7 @@
     "what": "Usage",
     "title": "Is an interpretation faithful to its evidence packet? — is_faithful",
     "text": "",
-    "code": "is_faithful(interp, packet)"
+    "code": "is_faithful(interp, packet, alpha = 0.05)"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/is_faithful.html",
@@ -2662,7 +2972,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Is an interpretation faithful to its evidence packet? — is_faithful",
-    "text": "interp interpretation object. packet evidence packet interp synthesized .",
+    "text": "interp interpretation object. packet evidence packet interp synthesized . alpha Significance threshold passed check_faithfulness().",
     "code": ""
   },
   {
@@ -2723,7 +3033,7 @@
     "what": "Examples",
     "title": "List every registered tool id — list_tools",
     "text": "",
-    "code": "list_tools() #> [1] \"baseline_expression\"          \"cluster_dme\"                  #> [3] \"composition\"                  \"differential_module_activity\" #> [5] \"geneset_enrichment\"           \"pseudobulk_de_limma\"          #> [7] \"signature_correlation\"        \"top_genes\"                    #> [9] \"variance_structure\"           list_tools('dataset') #> [1] \"baseline_expression\" \"composition\"         \"variance_structure\""
+    "code": "list_tools() #>  [1] \"baseline_expression\"          \"cluster_dme\"                  #>  [3] \"cluster_expression_profile\"   \"composition\"                  #>  [5] \"differential_module_activity\" \"geneset_enrichment\"           #>  [7] \"pseudobulk_de_limma\"          \"signature_correlation\"        #>  [9] \"top_genes\"                    \"variance_structure\"           list_tools('dataset') #> [1] \"baseline_expression\" \"composition\"         \"variance_structure\""
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/llegir-package.html",
@@ -3035,7 +3345,7 @@
     "previous_headings": "",
     "what": "Offline mock synthesis backend — mock_backend",
     "title": "Offline mock synthesis backend — mock_backend",
-    "text": "canned, fixed-response backend: first-class offline backend used tests CI, never touches network. cites fragment_ids ('top_genes', 'geneset_enrichment') directions ('na', '') hold every packet produced core tools (top_genes always direction 'na', geneset_enrichment always direction ''), passes check_faithfulness() real evidence packet without per-module logic.",
+    "text": "canned, fixed-response backend: first-class offline backend used tests CI, never touches network. cites fragment_ids 'top_genes' (always direction 'na') 'geneset_enrichment', whose direction ('' term reaches significance, else 'na') read back rendered packet user prompt, claim text avoids significance wording, passes check_faithfulness() real evidence packet without per-module logic.",
     "code": ""
   },
   {
@@ -3075,7 +3385,7 @@
     "previous_headings": "",
     "what": "Model-facing interpretation schema, derived from the canonical schema — model_output_schema_json",
     "title": "Model-facing interpretation schema, derived from the canonical schema — model_output_schema_json",
-    "text": "interpretation JSON schema minus fields model fill: provenance/schema_version orchestrator bookkeeping, confidence$model_score just duplicates confidence$score audit – asking model fill twice invites drift. Derived one canonical schema file (rather hand-duplicated) two never diverge, normalized schema dialect supported across providers.",
+    "text": "interpretation JSON schema minus fields model fill: provenance/schema_version orchestrator bookkeeping, confidence$model_score just duplicates confidence$score audit – asking model fill twice invites drift. Derived one canonical schema file (rather hand-duplicated) two never diverge, normalized schema dialect supported across providers. optional review block (schema 0.3) dropped default: agent-labelling self-review, LLM synthesis never fills.",
     "code": ""
   },
   {
@@ -3086,7 +3396,7 @@
     "what": "Usage",
     "title": "Model-facing interpretation schema, derived from the canonical schema — model_output_schema_json",
     "text": "",
-    "code": "model_output_schema_json(   schema_path = system.file(\"schemas\", \"interpretation.schema.json\", package = \"llegir\") )"
+    "code": "model_output_schema_json(   schema_path = system.file(\"schemas\", \"interpretation.schema.json\", package = \"llegir\"),   include_review = FALSE )"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/model_output_schema_json.html",
@@ -3095,7 +3405,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Model-facing interpretation schema, derived from the canonical schema — model_output_schema_json",
-    "text": "schema_path Path canonical interpretation.schema.json; defaults schema shipped package.",
+    "text": "schema_path Path canonical interpretation.schema.json; defaults schema shipped package. include_review Keep review block make required, label schema export_agent_workspace(mode = 'label') . Default FALSE.",
     "code": ""
   },
   {
@@ -3116,7 +3426,7 @@
     "what": "Examples",
     "title": "Model-facing interpretation schema, derived from the canonical schema — model_output_schema_json",
     "text": "",
-    "code": "model_output_schema_json() #> {\"title\":\"interpretation\",\"description\":\"Produced by the synthesis layer (Milestone 2). Finalized from the M1 draft: confidence now separates the model's raw score from the fused final score, and provenance is required (attached by the synthesis orchestrator, never filled by the model).\",\"type\":\"object\",\"required\":[\"module_id\",\"proposed_label\",\"one_line_summary\",\"dominant_biology\",\"supporting_claims\",\"confidence\"],\"properties\":{\"module_id\":{\"type\":\"string\"},\"proposed_label\":{\"type\":\"string\",\"description\":\"short program name, e.g. 'Interferon response'\"},\"one_line_summary\":{\"type\":\"string\"},\"dominant_biology\":{\"type\":\"string\",\"description\":\"the main program\"},\"supporting_claims\":{\"type\":\"array\",\"description\":\"every fragment_id cited here must exist in the module's packet and its direction must match (faithfulness invariant); may be empty only when flags includes insufficient_evidence\",\"items\":{\"type\":\"object\",\"required\":[\"claim\",\"fragment_ids\",\"direction\"],\"properties\":{\"claim\":{\"type\":\"string\"},\"fragment_ids\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"minItems\":1},\"direction\":{\"enum\":[\"up\",\"down\",\"mixed\",\"na\"],\"type\":\"string\"},\"strength\":{\"type\":\"number\",\"nullable\":true}}}},\"cell_state\":{\"type\":\"string\",\"description\":\"where expressed, from cluster_dme\",\"nullable\":true},\"condition_dynamics\":{\"type\":\"string\",\"nullable\":true},\"metadata_associations\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"required\":[\"variable\",\"summary\",\"fragment_id\"],\"properties\":{\"variable\":{\"type\":\"string\"},\"summary\":{\"type\":\"string\"},\"fragment_id\":{\"type\":\"string\"}}}},\"literature\":{\"type\":\"array\",\"description\":\"empty/unused in M2 (deferred to M3)\",\"items\":{\"type\":\"object\",\"required\":[\"statement\",\"pmids\"],\"properties\":{\"statement\":{\"type\":\"string\"},\"pmids\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}},\"confidence\":{\"type\":\"object\",\"required\":[\"score\",\"rationale\"],\"properties\":{\"score\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1,\"description\":\"final fused confidence (docs/milestone_2.md task 4); equal to model_score until fusion runs\"},\"rationale\":{\"type\":\"string\"}}},\"flags\":{\"type\":\"array\",\"items\":{\"enum\":[\"insufficient_evidence\",\"needs_human_review\",\"possible_artifact\",\"tool_conflict\",\"label_low_specificity\"],\"type\":\"string\"}}}}"
+    "code": "model_output_schema_json() #> {\"title\":\"interpretation\",\"description\":\"Produced by the synthesis layer. As of schema 0.2 the model fills a single free-text `interpretation` field (1-3 sentences supporting the dominant-biology call, folding in cell-state localization and condition dynamics where relevant) in place of the former `one_line_summary` / `cell_state` / `condition_dynamics` / `metadata_associations` fields. `confidence` still separates the model's raw score from the (currently shelved) fused final score; `provenance` is required and attached by the synthesis orchestrator, never filled by the model.\",\"type\":\"object\",\"required\":[\"module_id\",\"proposed_label\",\"dominant_biology\",\"interpretation\",\"supporting_claims\",\"confidence\"],\"properties\":{\"module_id\":{\"type\":\"string\"},\"proposed_label\":{\"type\":\"string\",\"description\":\"short program name, e.g. 'Interferon response'\"},\"dominant_biology\":{\"type\":\"string\",\"description\":\"the main program, as a short label\"},\"interpretation\":{\"type\":\"string\",\"description\":\"1-3 sentences of prose supporting the dominant-biology call, grounded in the cited fragments; folds in where the module is expressed and how its activity shifts across the tested condition where relevant\"},\"supporting_claims\":{\"type\":\"array\",\"description\":\"every fragment_id cited here must exist in the module's packet and its direction must match (faithfulness invariant); may be empty only when flags includes insufficient_evidence\",\"items\":{\"type\":\"object\",\"required\":[\"claim\",\"fragment_ids\",\"direction\"],\"properties\":{\"claim\":{\"type\":\"string\"},\"fragment_ids\":{\"type\":\"array\",\"items\":{\"type\":\"string\"},\"minItems\":1},\"direction\":{\"enum\":[\"up\",\"down\",\"mixed\",\"na\"],\"type\":\"string\"},\"strength\":{\"type\":\"number\",\"nullable\":true}}}},\"literature\":{\"type\":\"array\",\"description\":\"empty/unused in M2 (deferred to M3)\",\"items\":{\"type\":\"object\",\"required\":[\"statement\",\"pmids\"],\"properties\":{\"statement\":{\"type\":\"string\"},\"pmids\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}}}}},\"confidence\":{\"type\":\"object\",\"required\":[\"score\",\"rationale\"],\"properties\":{\"score\":{\"type\":\"number\",\"minimum\":0,\"maximum\":1,\"description\":\"final confidence; equals model_score while the deterministic fusion is shelved (Part 4.5)\"},\"rationale\":{\"type\":\"string\"}}},\"flags\":{\"type\":\"array\",\"items\":{\"enum\":[\"insufficient_evidence\",\"needs_human_review\",\"possible_artifact\",\"tool_conflict\",\"label_low_specificity\"],\"type\":\"string\"}}}}"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/module_scores.html",
@@ -3735,7 +4045,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Render a dataset context as a compact model-facing text block — render_dataset_context_compact",
-    "text": "dataset_context dataset context, built build_dataset_context(). max_findings Maximum number top_findings entries rendered per fragment. Default 8.",
+    "text": "dataset_context dataset context, built build_dataset_context(). max_findings Maximum number top_findings entries rendered per fragment. Default 8. fragment carrying render_max_findings (see dataset_fragment()) overrides cap , e.g. census-style fragment one entry per group must never head-truncated.",
     "code": ""
   },
   {
@@ -3856,7 +4166,7 @@
     "what": "Examples",
     "title": "Render an evidence packet as a compact model-facing text block — render_packet_compact",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) cat(render_packet_compact(packet)) #> Module module_a evidence packet (1 fragments): #>  #> [top_genes] type=ranked_genes direction=na effect_strength=0.9389 significance=NA #> top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6 #> top_findings: [{\"gene\":\"GENEA4\",\"kme\":0.9389},{\"gene\":\"GENEA9\",\"kme\":0.9368},{\"gene\":\"GENEA5\",\"kme\":0.9331},{\"gene\":\"GENEA10\",\"kme\":0.9324},{\"gene\":\"GENEA8\",\"kme\":0.9305},{\"gene\":\"GENEA1\",\"kme\":0.93},{\"gene\":\"GENEA2\",\"kme\":0.9243},{\"gene\":\"GENEA7\",\"kme\":0.9236}]"
+    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) cat(render_packet_compact(packet)) #> Module module_a evidence packet (1 fragments): #>  #> [top_genes] type=ranked_genes direction=na effect_strength=0.9389 significance=NA #> top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6 #> top_findings: [{\"gene\":\"GENEA4\",\"kme\":0.9389},{\"gene\":\"GENEA9\",\"kme\":0.9368},{\"gene\":\"GENEA5\",\"kme\":0.9331},{\"gene\":\"GENEA10\",\"kme\":0.9324},{\"gene\":\"GENEA8\",\"kme\":0.9305},{\"gene\":\"GENEA1\",\"kme\":0.93},{\"gene\":\"GENEA2\",\"kme\":0.9243},{\"gene\":\"GENEA7\",\"kme\":0.9236},{\"gene\":\"GENEA3\",\"kme\":0.9158},{\"gene\":\"GENEA6\",\"kme\":0.9102}]"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/render_paragraph.html",
@@ -3906,7 +4216,7 @@
     "what": "Examples",
     "title": "Render an interpretation as a paragraph — render_paragraph",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') interp <- synthesize_interpretation(packet, desc, mock_backend()) cat(render_paragraph(interp)) #> **Myeloid activation program (mock)** (module_a) #>  #> Mock synthesis output for offline testing; not derived from the evidence packet. #>  #> Dominant biology: Not evaluated by the mock backend. #>  #> Supporting evidence: #> - Top genes were computed by the deterministic core. (top_genes; direction: na) #> - The module has enriched gene-set terms. (geneset_enrichment; direction: up) #>  #> Confidence: 0.50 -- Mock backend: fixed neutral confidence, not evidence-derived."
+    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') interp <- synthesize_interpretation(packet, desc, mock_backend()) cat(render_paragraph(interp)) #> **Myeloid activation program (mock)** (module_a) #>  #> Synthesized biological interpretation: #> Dominant biology: Not evaluated by the mock backend. #>  #> Mock synthesis output for offline testing; not derived from the evidence packet. #>  #> Supporting evidence: #> - Top genes were computed by the deterministic core. (top_genes; direction: na) #> - Gene-set overlap was tested for the hub genes. (geneset_enrichment; direction: up) #>  #> Confidence: 0.50 -- Mock backend: fixed neutral confidence, not evidence-derived."
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/resolve_backend.html",
@@ -4006,7 +4316,7 @@
     "what": "Examples",
     "title": "Build a dataset context once per dataset — run_dataset_context",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() run_dataset_context(ms, list()) #> $dataset_fragments #> list() #>  #> $context_hash #> [1] \"28df520b992b4a4bead0a7a527ee2f4fc64fbcc2892ab364f676113761cbeefc\" #>  #> $schema_version #> [1] \"0.1\" #>  #> $provenance #> $provenance$created_at #> [1] \"2026-08-04T18:49:43+0200\" #>  #> $provenance$input_hash #> [1] NA #>  #> $provenance$tool_ids #> character(0) #>  #> $provenance$skipped #> list() #>  #>"
+    "code": "ms <- llegir_example_moduleset() run_dataset_context(ms, list()) #> $dataset_fragments #> list() #>  #> $context_hash #> [1] \"28df520b992b4a4bead0a7a527ee2f4fc64fbcc2892ab364f676113761cbeefc\" #>  #> $schema_version #> [1] \"0.1\" #>  #> $provenance #> $provenance$created_at #> [1] \"2026-11-02T18:55:09+0100\" #>  #> $provenance$input_hash #> [1] NA #>  #> $provenance$tool_ids #> character(0) #>  #> $provenance$skipped #> list() #>  #>"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/run_module.html",
@@ -4056,7 +4366,7 @@
     "what": "Examples",
     "title": "Run one module's evidence tools and build its evidence packet — run_module",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) #> $module_id #> [1] \"module_a\" #>  #> $fragments #> $fragments[[1]] #> $fragment_id #> [1] \"top_genes\" #>  #> $tool_id #> [1] \"top_genes\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"ranked_genes\" #>  #> $result #>    gene_name   module       kme #> 4     GENEA4 module_a 0.9389462 #> 9     GENEA9 module_a 0.9368404 #> 5     GENEA5 module_a 0.9330942 #> 10   GENEA10 module_a 0.9324491 #> 8     GENEA8 module_a 0.9304695 #> 1     GENEA1 module_a 0.9299657 #> 2     GENEA2 module_a 0.9242594 #> 7     GENEA7 module_a 0.9236174 #> 3     GENEA3 module_a 0.9157541 #> 6     GENEA6 module_a 0.9102198 #>  #> $compact_summary #> [1] \"top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$gene #> [1] \"GENEA4\" #>  #> $top_findings[[1]]$kme #> [1] 0.9389462 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$gene #> [1] \"GENEA9\" #>  #> $top_findings[[2]]$kme #> [1] 0.9368404 #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$gene #> [1] \"GENEA5\" #>  #> $top_findings[[3]]$kme #> [1] 0.9330942 #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$gene #> [1] \"GENEA10\" #>  #> $top_findings[[4]]$kme #> [1] 0.9324491 #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$gene #> [1] \"GENEA8\" #>  #> $top_findings[[5]]$kme #> [1] 0.9304695 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$gene #> [1] \"GENEA1\" #>  #> $top_findings[[6]]$kme #> [1] 0.9299657 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$gene #> [1] \"GENEA2\" #>  #> $top_findings[[7]]$kme #> [1] 0.9242594 #>  #>  #> $top_findings[[8]] #> $top_findings[[8]]$gene #> [1] \"GENEA7\" #>  #> $top_findings[[8]]$kme #> [1] 0.9236174 #>  #>  #> $top_findings[[9]] #> $top_findings[[9]]$gene #> [1] \"GENEA3\" #>  #> $top_findings[[9]]$kme #> [1] 0.9157541 #>  #>  #> $top_findings[[10]] #> $top_findings[[10]]$gene #> [1] \"GENEA6\" #>  #> $top_findings[[10]]$kme #> [1] 0.9102198 #>  #>  #>  #> $effect_strength #> [1] 0.9389462 #>  #> $significance #> [1] NA #>  #> $direction #> [1] \"na\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$n_hubs #> [1] 25 #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:43+0200\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\" #>  #>  #> $packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $schema_version #> [1] \"0.1\" #>  #> $provenance #> $provenance$created_at #> [1] \"2026-08-04T18:49:43+0200\" #>  #> $provenance$input_hash #> [1] NA #>  #> $provenance$tool_ids #> [1] \"top_genes\" #>  #> $provenance$skipped #> list() #>  #>  run_module(ms, modules(ms)[1], list(list(id = 'top_genes', params = list()))) #> $module_id #> [1] \"module_a\" #>  #> $fragments #> $fragments[[1]] #> $fragment_id #> [1] \"top_genes\" #>  #> $tool_id #> [1] \"top_genes\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"ranked_genes\" #>  #> $result #>    gene_name   module       kme #> 4     GENEA4 module_a 0.9389462 #> 9     GENEA9 module_a 0.9368404 #> 5     GENEA5 module_a 0.9330942 #> 10   GENEA10 module_a 0.9324491 #> 8     GENEA8 module_a 0.9304695 #> 1     GENEA1 module_a 0.9299657 #> 2     GENEA2 module_a 0.9242594 #> 7     GENEA7 module_a 0.9236174 #> 3     GENEA3 module_a 0.9157541 #> 6     GENEA6 module_a 0.9102198 #>  #> $compact_summary #> [1] \"top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$gene #> [1] \"GENEA4\" #>  #> $top_findings[[1]]$kme #> [1] 0.9389462 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$gene #> [1] \"GENEA9\" #>  #> $top_findings[[2]]$kme #> [1] 0.9368404 #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$gene #> [1] \"GENEA5\" #>  #> $top_findings[[3]]$kme #> [1] 0.9330942 #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$gene #> [1] \"GENEA10\" #>  #> $top_findings[[4]]$kme #> [1] 0.9324491 #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$gene #> [1] \"GENEA8\" #>  #> $top_findings[[5]]$kme #> [1] 0.9304695 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$gene #> [1] \"GENEA1\" #>  #> $top_findings[[6]]$kme #> [1] 0.9299657 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$gene #> [1] \"GENEA2\" #>  #> $top_findings[[7]]$kme #> [1] 0.9242594 #>  #>  #> $top_findings[[8]] #> $top_findings[[8]]$gene #> [1] \"GENEA7\" #>  #> $top_findings[[8]]$kme #> [1] 0.9236174 #>  #>  #> $top_findings[[9]] #> $top_findings[[9]]$gene #> [1] \"GENEA3\" #>  #> $top_findings[[9]]$kme #> [1] 0.9157541 #>  #>  #> $top_findings[[10]] #> $top_findings[[10]]$gene #> [1] \"GENEA6\" #>  #> $top_findings[[10]]$kme #> [1] 0.9102198 #>  #>  #>  #> $effect_strength #> [1] 0.9389462 #>  #> $significance #> [1] NA #>  #> $direction #> [1] \"na\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$n_hubs #> [1] 25 #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:43+0200\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\" #>  #>  #> $packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $schema_version #> [1] \"0.1\" #>  #> $provenance #> $provenance$created_at #> [1] \"2026-08-04T18:49:43+0200\" #>  #> $provenance$input_hash #> [1] NA #>  #> $provenance$tool_ids #> [1] \"top_genes\" #>  #> $provenance$skipped #> list() #>  #>"
+    "code": "ms <- llegir_example_moduleset() run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) #> $module_id #> [1] \"module_a\" #>  #> $fragments #> $fragments[[1]] #> $fragment_id #> [1] \"top_genes\" #>  #> $tool_id #> [1] \"top_genes\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"ranked_genes\" #>  #> $result #>    gene_name   module       kme #> 4     GENEA4 module_a 0.9389462 #> 9     GENEA9 module_a 0.9368404 #> 5     GENEA5 module_a 0.9330942 #> 10   GENEA10 module_a 0.9324491 #> 8     GENEA8 module_a 0.9304695 #> 1     GENEA1 module_a 0.9299657 #> 2     GENEA2 module_a 0.9242594 #> 7     GENEA7 module_a 0.9236174 #> 3     GENEA3 module_a 0.9157541 #> 6     GENEA6 module_a 0.9102198 #>  #> $compact_summary #> [1] \"top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$gene #> [1] \"GENEA4\" #>  #> $top_findings[[1]]$kme #> [1] 0.9389462 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$gene #> [1] \"GENEA9\" #>  #> $top_findings[[2]]$kme #> [1] 0.9368404 #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$gene #> [1] \"GENEA5\" #>  #> $top_findings[[3]]$kme #> [1] 0.9330942 #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$gene #> [1] \"GENEA10\" #>  #> $top_findings[[4]]$kme #> [1] 0.9324491 #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$gene #> [1] \"GENEA8\" #>  #> $top_findings[[5]]$kme #> [1] 0.9304695 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$gene #> [1] \"GENEA1\" #>  #> $top_findings[[6]]$kme #> [1] 0.9299657 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$gene #> [1] \"GENEA2\" #>  #> $top_findings[[7]]$kme #> [1] 0.9242594 #>  #>  #> $top_findings[[8]] #> $top_findings[[8]]$gene #> [1] \"GENEA7\" #>  #> $top_findings[[8]]$kme #> [1] 0.9236174 #>  #>  #> $top_findings[[9]] #> $top_findings[[9]]$gene #> [1] \"GENEA3\" #>  #> $top_findings[[9]]$kme #> [1] 0.9157541 #>  #>  #> $top_findings[[10]] #> $top_findings[[10]]$gene #> [1] \"GENEA6\" #>  #> $top_findings[[10]]$kme #> [1] 0.9102198 #>  #>  #>  #> $effect_strength #> [1] 0.9389462 #>  #> $significance #> [1] NA #>  #> $direction #> [1] \"na\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$n_hubs #> [1] 25 #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:55:09+0100\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\" #>  #>  #> $packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $schema_version #> [1] \"0.1\" #>  #> $provenance #> $provenance$created_at #> [1] \"2026-11-02T18:55:09+0100\" #>  #> $provenance$input_hash #> [1] NA #>  #> $provenance$tool_ids #> [1] \"top_genes\" #>  #> $provenance$skipped #> list() #>  #>  run_module(ms, modules(ms)[1], list(list(id = 'top_genes', params = list()))) #> $module_id #> [1] \"module_a\" #>  #> $fragments #> $fragments[[1]] #> $fragment_id #> [1] \"top_genes\" #>  #> $tool_id #> [1] \"top_genes\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"ranked_genes\" #>  #> $result #>    gene_name   module       kme #> 4     GENEA4 module_a 0.9389462 #> 9     GENEA9 module_a 0.9368404 #> 5     GENEA5 module_a 0.9330942 #> 10   GENEA10 module_a 0.9324491 #> 8     GENEA8 module_a 0.9304695 #> 1     GENEA1 module_a 0.9299657 #> 2     GENEA2 module_a 0.9242594 #> 7     GENEA7 module_a 0.9236174 #> 3     GENEA3 module_a 0.9157541 #> 6     GENEA6 module_a 0.9102198 #>  #> $compact_summary #> [1] \"top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$gene #> [1] \"GENEA4\" #>  #> $top_findings[[1]]$kme #> [1] 0.9389462 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$gene #> [1] \"GENEA9\" #>  #> $top_findings[[2]]$kme #> [1] 0.9368404 #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$gene #> [1] \"GENEA5\" #>  #> $top_findings[[3]]$kme #> [1] 0.9330942 #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$gene #> [1] \"GENEA10\" #>  #> $top_findings[[4]]$kme #> [1] 0.9324491 #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$gene #> [1] \"GENEA8\" #>  #> $top_findings[[5]]$kme #> [1] 0.9304695 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$gene #> [1] \"GENEA1\" #>  #> $top_findings[[6]]$kme #> [1] 0.9299657 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$gene #> [1] \"GENEA2\" #>  #> $top_findings[[7]]$kme #> [1] 0.9242594 #>  #>  #> $top_findings[[8]] #> $top_findings[[8]]$gene #> [1] \"GENEA7\" #>  #> $top_findings[[8]]$kme #> [1] 0.9236174 #>  #>  #> $top_findings[[9]] #> $top_findings[[9]]$gene #> [1] \"GENEA3\" #>  #> $top_findings[[9]]$kme #> [1] 0.9157541 #>  #>  #> $top_findings[[10]] #> $top_findings[[10]]$gene #> [1] \"GENEA6\" #>  #> $top_findings[[10]]$kme #> [1] 0.9102198 #>  #>  #>  #> $effect_strength #> [1] 0.9389462 #>  #> $significance #> [1] NA #>  #> $direction #> [1] \"na\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$n_hubs #> [1] 25 #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:55:09+0100\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\" #>  #>  #> $packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $schema_version #> [1] \"0.1\" #>  #> $provenance #> $provenance$created_at #> [1] \"2026-11-02T18:55:09+0100\" #>  #> $provenance$input_hash #> [1] NA #>  #> $provenance$tool_ids #> [1] \"top_genes\" #>  #> $provenance$skipped #> list() #>  #>"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/run_orchestrator.html",
@@ -4245,7 +4555,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Synthesize one evidence packet into an interpretation via a backend — synthesize_interpretation",
-    "text": "packet evidence packet, built build_evidence_packet(). desc dataset_description; see dataset_description(). Required (hard error via validate_dataset_description() missing/empty). backend backend function; see mock_backend() contract. temperature Sampling temperature passed backend. seed Optional seed, recorded interpretation's provenance. prompt_template_version Prompt template version record interpretation's provenance. schema_path Path interpretation JSON schema; defaults schema shipped package. user_weights Named list per-tool_id weight multipliers passed calculate_fusion_score() EVIDENCE CONFIDENCE MATRIX injected user prompt (see build_user_prompt()). Default list(). fusion optional pre-computed calculate_fusion_score() result inject user prompt; NULL (default) computes packet$fragments user_weights. synthesize_module() computes passes object fuse_confidence(), prompt final fused score guaranteed agree. dataset_context optional dataset context, built build_dataset_context() / run_dataset_context(), threaded build_user_prompt(). NULL (default) omits DATASET CONTEXT block.",
+    "text": "packet evidence packet, built build_evidence_packet(). desc dataset_description; see dataset_description(). Required (hard error via validate_dataset_description() missing/empty). backend backend function; see mock_backend() contract. temperature Sampling temperature passed backend. seed Optional seed, recorded interpretation's provenance. prompt_template_version Prompt template version record interpretation's provenance. schema_path Path interpretation JSON schema; defaults schema shipped package. user_weights Ignored; retained call-site compatibility since fused evidence score shelved (Part 4.5). Default list(). fusion Ignored; retained call-site compatibility. EVIDENCE CONFIDENCE MATRIX longer part prompt. dataset_context optional dataset context, built build_dataset_context() / run_dataset_context(), threaded build_user_prompt(). NULL (default) omits DATASET CONTEXT block.",
     "code": ""
   },
   {
@@ -4266,7 +4576,7 @@
     "what": "Examples",
     "title": "Synthesize one evidence packet into an interpretation via a backend — synthesize_interpretation",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') synthesize_interpretation(packet, desc, mock_backend()) #> $module_id #> [1] \"module_a\" #>  #> $proposed_label #> [1] \"Myeloid activation program (mock)\" #>  #> $one_line_summary #> [1] \"Mock synthesis output for offline testing; not derived from the evidence packet.\" #>  #> $dominant_biology #> [1] \"Not evaluated by the mock backend.\" #>  #> $supporting_claims #> $supporting_claims[[1]] #> $supporting_claims[[1]]$claim #> [1] \"Top genes were computed by the deterministic core.\" #>  #> $supporting_claims[[1]]$fragment_ids #> [1] \"top_genes\" #>  #> $supporting_claims[[1]]$direction #> [1] \"na\" #>  #> $supporting_claims[[1]]$strength #> [1] NA #>  #>  #> $supporting_claims[[2]] #> $supporting_claims[[2]]$claim #> [1] \"The module has enriched gene-set terms.\" #>  #> $supporting_claims[[2]]$fragment_ids #> [1] \"geneset_enrichment\" #>  #> $supporting_claims[[2]]$direction #> [1] \"up\" #>  #> $supporting_claims[[2]]$strength #> [1] NA #>  #>  #>  #> $cell_state #> [1] NA #>  #> $condition_dynamics #> [1] NA #>  #> $metadata_associations #> list() #>  #> $literature #> list() #>  #> $confidence #> $confidence$score #> [1] 0.5 #>  #> $confidence$model_score #> [1] 0.5 #>  #> $confidence$rationale #> [1] \"Mock backend: fixed neutral confidence, not evidence-derived.\" #>  #>  #> $flags #> list() #>  #> $provenance #> $provenance$model #> [1] \"mock\" #>  #> $provenance$model_version #> [1] \"mock-0.1\" #>  #> $provenance$prompt_template_version #> [1] \"0.4\" #>  #> $provenance$temperature #> [1] 0 #>  #> $provenance$seed #> [1] NA #>  #> $provenance$input_packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $provenance$ellmer_call #> $provenance$ellmer_call$backend #> [1] \"mock\" #>  #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:44+0200\" #>  #>  #> $schema_version #> [1] \"0.1\" #>  #> attr(,\"class\") #> [1] \"interpretation\""
+    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') synthesize_interpretation(packet, desc, mock_backend()) #> $module_id #> [1] \"module_a\" #>  #> $proposed_label #> [1] \"Myeloid activation program (mock)\" #>  #> $dominant_biology #> [1] \"Not evaluated by the mock backend.\" #>  #> $interpretation #> [1] \"Mock synthesis output for offline testing; not derived from the evidence packet.\" #>  #> $supporting_claims #> $supporting_claims[[1]] #> $supporting_claims[[1]]$claim #> [1] \"Top genes were computed by the deterministic core.\" #>  #> $supporting_claims[[1]]$fragment_ids #> [1] \"top_genes\" #>  #> $supporting_claims[[1]]$direction #> [1] \"na\" #>  #> $supporting_claims[[1]]$strength #> [1] NA #>  #>  #> $supporting_claims[[2]] #> $supporting_claims[[2]]$claim #> [1] \"Gene-set overlap was tested for the hub genes.\" #>  #> $supporting_claims[[2]]$fragment_ids #> [1] \"geneset_enrichment\" #>  #> $supporting_claims[[2]]$direction #> [1] \"up\" #>  #> $supporting_claims[[2]]$strength #> [1] NA #>  #>  #>  #> $literature #> list() #>  #> $confidence #> $confidence$score #> [1] 0.5 #>  #> $confidence$model_score #> [1] 0.5 #>  #> $confidence$rationale #> [1] \"Mock backend: fixed neutral confidence, not evidence-derived.\" #>  #>  #> $flags #> list() #>  #> $provenance #> $provenance$model #> [1] \"mock\" #>  #> $provenance$model_version #> [1] \"mock-0.1\" #>  #> $provenance$prompt_template_version #> [1] \"1.3\" #>  #> $provenance$temperature #> [1] 0 #>  #> $provenance$seed #> [1] NA #>  #> $provenance$input_packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $provenance$ellmer_call #> $provenance$ellmer_call$backend #> [1] \"mock\" #>  #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:55:11+0100\" #>  #>  #> $schema_version #> [1] \"0.2\" #>  #> attr(,\"class\") #> [1] \"interpretation\""
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/synthesize_module.html",
@@ -4295,7 +4605,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Synthesize one evidence packet into a validated interpretation — synthesize_module",
-    "text": "packet evidence packet, built build_evidence_packet() / run_module(). desc dataset_description; see dataset_description(). backend synthesis backend function; see mock_backend(), ellmer_backend(), resolve_backend(). temperature Sampling temperature passed backend. seed Optional seed, recorded interpretation's provenance. prompt_template_version Prompt template version record interpretation's provenance. schema_path Path interpretation JSON schema; defaults schema shipped package. user_weights Named list per-tool_id weight multipliers calculate_fusion_score(). Computed shared prompt's EVIDENCE CONFIDENCE MATRIX fuse_confidence(), printed fusion string can never drift model shown. Default list(). dataset_context optional dataset context, built build_dataset_context() / run_dataset_context(), threaded build_user_prompt() global framing. Never enters calculate_fusion_score() enforce_faithfulness(). NULL (default) omits DATASET CONTEXT block.",
+    "text": "packet evidence packet, built build_evidence_packet() / run_module(). desc dataset_description; see dataset_description(). backend synthesis backend function; see mock_backend(), ellmer_backend(), resolve_backend(). temperature Sampling temperature passed backend. seed Optional seed, recorded interpretation's provenance. prompt_template_version Prompt template version record interpretation's provenance. schema_path Path interpretation JSON schema; defaults schema shipped package. user_weights Ignored; retained call-site compatibility since fused evidence score shelved (Part 4.5). Default list(). dataset_context optional dataset context, built build_dataset_context() / run_dataset_context(), threaded build_user_prompt() global framing. Never enters enforce_faithfulness(). NULL (default) omits DATASET CONTEXT block.",
     "code": ""
   },
   {
@@ -4316,7 +4626,7 @@
     "what": "Examples",
     "title": "Synthesize one evidence packet into a validated interpretation — synthesize_module",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') synthesize_module(packet, desc, mock_backend()) #> $module_id #> [1] \"module_a\" #>  #> $proposed_label #> [1] \"Myeloid activation program (mock)\" #>  #> $one_line_summary #> [1] \"Mock synthesis output for offline testing; not derived from the evidence packet.\" #>  #> $dominant_biology #> [1] \"Not evaluated by the mock backend.\" #>  #> $supporting_claims #> $supporting_claims[[1]] #> $supporting_claims[[1]]$claim #> [1] \"Top genes were computed by the deterministic core.\" #>  #> $supporting_claims[[1]]$fragment_ids #> [1] \"top_genes\" #>  #> $supporting_claims[[1]]$direction #> [1] \"na\" #>  #> $supporting_claims[[1]]$strength #> [1] NA #>  #>  #> $supporting_claims[[2]] #> $supporting_claims[[2]]$claim #> [1] \"The module has enriched gene-set terms.\" #>  #> $supporting_claims[[2]]$fragment_ids #> [1] \"geneset_enrichment\" #>  #> $supporting_claims[[2]]$direction #> [1] \"up\" #>  #> $supporting_claims[[2]]$strength #> [1] NA #>  #>  #>  #> $cell_state #> [1] NA #>  #> $condition_dynamics #> [1] NA #>  #> $metadata_associations #> list() #>  #> $literature #> list() #>  #> $confidence #> $confidence$score #> [1] 0.7531057 #>  #> $confidence$model_score #> [1] 0.5 #>  #> $confidence$rationale #> [1] \"Mock backend: fixed neutral confidence, not evidence-derived. [fusion: model=0.50, evidence=0.94 (E_pool=0.94, P_agree=1.00, C_dir=1.00), lambda=0.35, fused=0.75]\" #>  #>  #> $flags #> $flags[[1]] #> [1] \"needs_human_review\" #>  #>  #> $provenance #> $provenance$model #> [1] \"mock\" #>  #> $provenance$model_version #> [1] \"mock-0.1\" #>  #> $provenance$prompt_template_version #> [1] \"0.4\" #>  #> $provenance$temperature #> [1] 0 #>  #> $provenance$seed #> [1] NA #>  #> $provenance$input_packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $provenance$ellmer_call #> $provenance$ellmer_call$backend #> [1] \"mock\" #>  #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:45+0200\" #>  #>  #> $schema_version #> [1] \"0.1\" #>  #> attr(,\"class\") #> [1] \"interpretation\""
+    "code": "ms <- llegir_example_moduleset() packet <- run_module(ms, modules(ms)[1], list(list(fn = top_genes_tool, params = list()))) desc <- dataset_description('human', 'CSF', 'myeloid', 'scRNA-seq') synthesize_module(packet, desc, mock_backend()) #> $module_id #> [1] \"module_a\" #>  #> $proposed_label #> [1] \"Myeloid activation program (mock)\" #>  #> $dominant_biology #> [1] \"Not evaluated by the mock backend.\" #>  #> $interpretation #> [1] \"Mock synthesis output for offline testing; not derived from the evidence packet.\" #>  #> $supporting_claims #> $supporting_claims[[1]] #> $supporting_claims[[1]]$claim #> [1] \"Top genes were computed by the deterministic core.\" #>  #> $supporting_claims[[1]]$fragment_ids #> [1] \"top_genes\" #>  #> $supporting_claims[[1]]$direction #> [1] \"na\" #>  #> $supporting_claims[[1]]$strength #> [1] NA #>  #>  #> $supporting_claims[[2]] #> $supporting_claims[[2]]$claim #> [1] \"Gene-set overlap was tested for the hub genes.\" #>  #> $supporting_claims[[2]]$fragment_ids #> [1] \"geneset_enrichment\" #>  #> $supporting_claims[[2]]$direction #> [1] \"up\" #>  #> $supporting_claims[[2]]$strength #> [1] NA #>  #>  #>  #> $literature #> list() #>  #> $confidence #> $confidence$score #> [1] 0.5 #>  #> $confidence$model_score #> [1] 0.5 #>  #> $confidence$rationale #> [1] \"Mock backend: fixed neutral confidence, not evidence-derived.\" #>  #>  #> $flags #> $flags[[1]] #> [1] \"needs_human_review\" #>  #>  #> $provenance #> $provenance$model #> [1] \"mock\" #>  #> $provenance$model_version #> [1] \"mock-0.1\" #>  #> $provenance$prompt_template_version #> [1] \"1.3\" #>  #> $provenance$temperature #> [1] 0 #>  #> $provenance$seed #> [1] NA #>  #> $provenance$input_packet_hash #> [1] \"0e711db672760f68549d5c63c8fffbd76a741d168ec1c8fbceab6241786bc9fc\" #>  #> $provenance$ellmer_call #> $provenance$ellmer_call$backend #> [1] \"mock\" #>  #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:55:12+0100\" #>  #>  #> $schema_version #> [1] \"0.2\" #>  #> attr(,\"class\") #> [1] \"interpretation\""
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/synthetic_ModuleSet.html",
@@ -4416,7 +4726,7 @@
     "what": "Examples",
     "title": "Evidence tool: top module genes ranked by membership (kME) — top_genes_tool",
     "text": "",
-    "code": "ms <- llegir_example_moduleset() top_genes_tool(list(ms = ms, module_id = modules(ms)[1], params = list(n_hubs = 10))) #> $fragment_id #> [1] \"top_genes\" #>  #> $tool_id #> [1] \"top_genes\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"ranked_genes\" #>  #> $result #>    gene_name   module       kme #> 4     GENEA4 module_a 0.9389462 #> 9     GENEA9 module_a 0.9368404 #> 5     GENEA5 module_a 0.9330942 #> 10   GENEA10 module_a 0.9324491 #> 8     GENEA8 module_a 0.9304695 #> 1     GENEA1 module_a 0.9299657 #> 2     GENEA2 module_a 0.9242594 #> 7     GENEA7 module_a 0.9236174 #> 3     GENEA3 module_a 0.9157541 #> 6     GENEA6 module_a 0.9102198 #>  #> $compact_summary #> [1] \"top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$gene #> [1] \"GENEA4\" #>  #> $top_findings[[1]]$kme #> [1] 0.9389462 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$gene #> [1] \"GENEA9\" #>  #> $top_findings[[2]]$kme #> [1] 0.9368404 #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$gene #> [1] \"GENEA5\" #>  #> $top_findings[[3]]$kme #> [1] 0.9330942 #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$gene #> [1] \"GENEA10\" #>  #> $top_findings[[4]]$kme #> [1] 0.9324491 #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$gene #> [1] \"GENEA8\" #>  #> $top_findings[[5]]$kme #> [1] 0.9304695 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$gene #> [1] \"GENEA1\" #>  #> $top_findings[[6]]$kme #> [1] 0.9299657 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$gene #> [1] \"GENEA2\" #>  #> $top_findings[[7]]$kme #> [1] 0.9242594 #>  #>  #> $top_findings[[8]] #> $top_findings[[8]]$gene #> [1] \"GENEA7\" #>  #> $top_findings[[8]]$kme #> [1] 0.9236174 #>  #>  #> $top_findings[[9]] #> $top_findings[[9]]$gene #> [1] \"GENEA3\" #>  #> $top_findings[[9]]$kme #> [1] 0.9157541 #>  #>  #> $top_findings[[10]] #> $top_findings[[10]]$gene #> [1] \"GENEA6\" #>  #> $top_findings[[10]]$kme #> [1] 0.9102198 #>  #>  #>  #> $effect_strength #> [1] 0.9389462 #>  #> $significance #> [1] NA #>  #> $direction #> [1] \"na\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$n_hubs #> [1] 10 #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-08-04T18:49:45+0200\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\""
+    "code": "ms <- llegir_example_moduleset() top_genes_tool(list(ms = ms, module_id = modules(ms)[1], params = list(n_hubs = 10))) #> $fragment_id #> [1] \"top_genes\" #>  #> $tool_id #> [1] \"top_genes\" #>  #> $module_id #> [1] \"module_a\" #>  #> $type #> [1] \"ranked_genes\" #>  #> $result #>    gene_name   module       kme #> 4     GENEA4 module_a 0.9389462 #> 9     GENEA9 module_a 0.9368404 #> 5     GENEA5 module_a 0.9330942 #> 10   GENEA10 module_a 0.9324491 #> 8     GENEA8 module_a 0.9304695 #> 1     GENEA1 module_a 0.9299657 #> 2     GENEA2 module_a 0.9242594 #> 7     GENEA7 module_a 0.9236174 #> 3     GENEA3 module_a 0.9157541 #> 6     GENEA6 module_a 0.9102198 #>  #> $compact_summary #> [1] \"top 10 genes by kME: GENEA4, GENEA9, GENEA5, GENEA10, GENEA8, GENEA1, GENEA2, GENEA7, GENEA3, GENEA6\" #>  #> $top_findings #> $top_findings[[1]] #> $top_findings[[1]]$gene #> [1] \"GENEA4\" #>  #> $top_findings[[1]]$kme #> [1] 0.9389462 #>  #>  #> $top_findings[[2]] #> $top_findings[[2]]$gene #> [1] \"GENEA9\" #>  #> $top_findings[[2]]$kme #> [1] 0.9368404 #>  #>  #> $top_findings[[3]] #> $top_findings[[3]]$gene #> [1] \"GENEA5\" #>  #> $top_findings[[3]]$kme #> [1] 0.9330942 #>  #>  #> $top_findings[[4]] #> $top_findings[[4]]$gene #> [1] \"GENEA10\" #>  #> $top_findings[[4]]$kme #> [1] 0.9324491 #>  #>  #> $top_findings[[5]] #> $top_findings[[5]]$gene #> [1] \"GENEA8\" #>  #> $top_findings[[5]]$kme #> [1] 0.9304695 #>  #>  #> $top_findings[[6]] #> $top_findings[[6]]$gene #> [1] \"GENEA1\" #>  #> $top_findings[[6]]$kme #> [1] 0.9299657 #>  #>  #> $top_findings[[7]] #> $top_findings[[7]]$gene #> [1] \"GENEA2\" #>  #> $top_findings[[7]]$kme #> [1] 0.9242594 #>  #>  #> $top_findings[[8]] #> $top_findings[[8]]$gene #> [1] \"GENEA7\" #>  #> $top_findings[[8]]$kme #> [1] 0.9236174 #>  #>  #> $top_findings[[9]] #> $top_findings[[9]]$gene #> [1] \"GENEA3\" #>  #> $top_findings[[9]]$kme #> [1] 0.9157541 #>  #>  #> $top_findings[[10]] #> $top_findings[[10]]$gene #> [1] \"GENEA6\" #>  #> $top_findings[[10]]$kme #> [1] 0.9102198 #>  #>  #>  #> $effect_strength #> [1] 0.9389462 #>  #> $significance #> [1] NA #>  #> $direction #> [1] \"na\" #>  #> $provenance #> $provenance$tool_version #> [1] \"0.1\" #>  #> $provenance$params #> $provenance$params$n_hubs #> [1] 10 #>  #>  #> $provenance$input_hashes #> list() #>  #> $provenance$pkg_versions #> $provenance$pkg_versions$llegir #> [1] \"0.0.0.9000\" #>  #>  #> $provenance$source #> [1] \"computed\" #>  #> $provenance$module_method #> [1] NA #>  #> $provenance$timestamp #> [1] \"2026-11-02T18:55:13+0100\" #>  #>  #> $plots #> NULL #>  #> attr(,\"class\") #> [1] \"evidence_fragment\""
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/validate_dataset_description.html",
@@ -4729,6 +5039,46 @@
     "code": ""
   },
   {
+    "path": "https://smorabit.github.io/llegir/reference/write_dataset_figures.html",
+    "id": null,
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Materialize a dataset context's live plots to PNG files — write_dataset_figures",
+    "title": "Materialize a dataset context's live plots to PNG files — write_dataset_figures",
+    "text": "dataset-level sibling write_fragment_figures(): renders dataset_fragment's live plot_obj <figures_dir>/dataset/<fragment_id>__<plot_id>.png records path back onto spec image_path, report rendered live plot_obj stripped can still embed figure. spec's width/height/dpi (see attach_plots()) honored set; otherwise save_plot_to_png()'s 7/4/150 defaults apply. Fragments plots skipped.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/write_dataset_figures.html",
+    "id": "ref-usage",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Usage",
+    "title": "Materialize a dataset context's live plots to PNG files — write_dataset_figures",
+    "text": "",
+    "code": "write_dataset_figures(dataset_context, figures_dir)"
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/write_dataset_figures.html",
+    "id": "arguments",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Arguments",
+    "title": "Materialize a dataset context's live plots to PNG files — write_dataset_figures",
+    "text": "dataset_context dataset context, returned build_dataset_context() / run_dataset_context(). figures_dir Output directory.",
+    "code": ""
+  },
+  {
+    "path": "https://smorabit.github.io/llegir/reference/write_dataset_figures.html",
+    "id": "value",
+    "dir": "Reference",
+    "previous_headings": "",
+    "what": "Value",
+    "title": "Materialize a dataset context's live plots to PNG files — write_dataset_figures",
+    "text": "dataset_context, image_path filled every rendered plot spec.",
+    "code": ""
+  },
+  {
     "path": "https://smorabit.github.io/llegir/reference/write_evidence_packet.html",
     "id": null,
     "dir": "Reference",
@@ -4775,7 +5125,7 @@
     "previous_headings": "",
     "what": "Materialize every fragment's live plots to PNG files — write_fragment_figures",
     "title": "Materialize every fragment's live plots to PNG files — write_fragment_figures",
-    "text": "graphical sibling write_fragment_tables(): renders fragment's live plot_obj <figures_dir>/<module_id>/<fragment_id>__<plot_id>.png records path back onto spec image_path, report rendered re-read packet (plot_obj already stripped; see attach_plots()) can still embed figure. Fragments plots skipped.",
+    "text": "graphical sibling write_fragment_tables(): renders fragment's live plot_obj <figures_dir>/<module_id>/<fragment_id>__<plot_id>.png records path back onto spec image_path, report rendered re-read packet (plot_obj already stripped; see attach_plots()) can still embed figure. spec's width/height/dpi (see attach_plots()) honored set; otherwise save_plot_to_png()'s 7/4/150 defaults apply. Fragments plots skipped.",
     "code": ""
   },
   {
@@ -4906,7 +5256,7 @@
     "what": "Usage",
     "title": "Write a combined interpretation + evidence HTML report — write_interpretation_report",
     "text": "",
-    "code": "write_interpretation_report(   interps,   packets,   desc,   output_file = \"output/report.html\",   quiet = TRUE )"
+    "code": "write_interpretation_report(   interps,   packets,   desc,   dataset_context = NULL,   output_file = \"output/report.html\",   quiet = TRUE )"
   },
   {
     "path": "https://smorabit.github.io/llegir/reference/write_interpretation_report.html",
@@ -4915,7 +5265,7 @@
     "previous_headings": "",
     "what": "Arguments",
     "title": "Write a combined interpretation + evidence HTML report — write_interpretation_report",
-    "text": "interps named list interpretation objects, keyed module id (e.g. return value run_synthesis_orchestrator()). packets named list evidence packets, keyed module id (e.g. return value run_orchestrator()). desc dataset_description used synthesis run. output_file Destination HTML path. Default 'output/report.html'. quiet Suppress pandoc/knitr progress output. Default TRUE.",
+    "text": "interps named list interpretation objects, keyed module id (e.g. return value run_synthesis_orchestrator()). packets named list evidence packets, keyed module id (e.g. return value run_orchestrator()). desc dataset_description used synthesis run. dataset_context Optional dataset context (built build_dataset_context() / run_dataset_context()). supplied, dataset_fragments render \"Dataset-level evidence\" section per-module sections – fragment's compact_summary, top_findings table, attached plots. NULL (default) omits section, report byte-identical one produced without argument. output_file Destination HTML path. Default 'output/report.html'. quiet Suppress pandoc/knitr progress output. Default TRUE.",
     "code": ""
   },
   {
@@ -5015,7 +5365,7 @@
     "previous_headings": "",
     "what": "llegir 0.0.0.9000",
     "title": "llegir 0.0.0.9000",
-    "text": "Plot ingestion (docs/milestones/milestone_plot_ingestion.md Parts 1-2): evidence_fragment() dataset_fragment() gained optional plots slot – named list pre-rendered figure specs (live plot_obj /persisted image_path, plus legend/placement hints). llegir ships plotting functions stays strictly asset container; fragment plots validates, serializes, hashes exactly . New exported attach_plots(frag, plots) decorates existing fragment re-validates attach time. raw plot_obj never reaches jsonlite::toJSON() digest::digest(): new internal .strip_plot_objs() guardrail runs every existing unclass() .fragment_hashable()/fragment_to_json()/packet_to_json() dataset_fragment siblings, packet_hash stays reproducible across sessions legends (text, pixels) still serialize count toward hash. New exported write_fragment_figures(packet, figures_dir) renders fragment’s live plots <figures_dir>/<module_id>/<fragment_id>__<plot_id>.png records path back onto spec image_path, graphical sibling write_fragment_tables(). ggplot2 added Suggests (Imports); core pipeline runs without . export_agent_workspace() v0.2 hardening (docs/milestones/milestone_agent_workspace.md Part 4): serialized ModuleSet now split lite/full pair – artifacts/moduleset_lite.qs2 (default load; new internal .make_moduleset_lite() reduction backing expression/counts matrices dropped, built components_ModuleSet()) artifacts/moduleset_full.qs2 (original object, rare expression()/counts() query). Workspace artifacts (moduleset lite/full, dataset_context, packets, interpretations) now serialize via qs2 (qs2::qs_save()/qs2::qs_read()) instead saveRDS()/readRDS(); qs2 added Imports. export_agent_workspace() gained interps = NULL argument – supplied, writes artifacts/interpretations.qs2 plus per-module JSON mirrors records manifest; omitted, manifest explicitly states interpretations shipped guest agent mock-synthesize one. Every cheat-sheet row, tool-registry row, recipe rung tagged (full object ) needs capability lite object dropped. Fixed two bugs found reviewing real exported workspace: “Aggregate--summarize” recipe cluster_dme example invocation used hardcode 'cell_state' grouping column regardless ModuleSet actually declared (now reads real declared column via new internal .ms_group_col()/.ms_sample_col(), omitting rung none declared); “delegate registered tool” recipe used grab packet$fragments[[1]] positionally (now filters fragment_id). Front matter now emits aggregated: false (lowercase) quotes generated_at unambiguously. components_ModuleSet() gained optional pkg_versions override argument now accepts expression = NULL (dropping backing matrix entirely) support lite object. synthetic_ModuleSet() (shared llegir_example_moduleset() fixture) now delegates group_col/sample_col wrapped base. Added export_agent_workspace(): serializes completed run’s ModuleSet, dataset context, evidence packets out_dir/artifacts/ (.rds authoritative, .json portable mirror) renders .llegir_agent_manifest.md – static launchpad external terminal coding agent (Claude Code, Aider, …) points run open-ended, read-queries analysis. manifest’s ModuleSet API Tool Registry cheat-sheets generated live registry ModuleSet’s capabilities() export time, custom register_tool() call propagates next export manual edits. Pure exporter – writes files returns path, never calls ellmer spends budget. Added read_agent_manifest(), inverse parses manifest’s YAML front matter back R list. New packaged templates inst/templates/agent_manifest.md (rendered via whisker, now Imports dependency) inst/templates/query_example.R (vanilla bootstrap script, copied every exported workspace). See docs/agent_workspace.md tests/testthat/test-agent_workspace.R. Added pseudobulk_ModuleSet(): builds ModuleSet user-supplied pseudo-bulk counts matrix + metadata, SummarizedExperiment (SummarizedExperiment Suggests dependency), re-scoring module definitions directly pseudo-bulk matrix via decoupleR::run_ulm() (kME-style gene weights map mor present, else uniform mor = 1). Realized data_level = 'pseudobulk', aggregated = TRUE components_ModuleSet; validate_moduleset() passes. Added attachment API – with_pseudobulk(), pseudobulk(), pseudobulk_view() – pseudo-bulk view can ride alongside cell-level ModuleSet (run_orchestrator()) run standalone. Removed module_by_metadata_tool() (registry entry) along aggregate_by_sample(), is_sample_constant(), continuous_correlation_test() stats_utils.R. Sample-level inference module activity now belongs pseudo-bulk ModuleSet layer rather averaging correlated per-cell scores; categorical-association role replaced differential_module_activity_tool() (), run pseudo-bulk view. signature_correlation_tool() longer aggregates per-cell scores sample level . now resolves pseudo-bulk view via pseudobulk_view(ms): one attached (ms pseudobulk_ModuleSet), signature library re-scored view’s expression correlated re-scored module activity, real p-value independent pseudo-bulk units. pseudo-bulk view available, reports descriptive cell-level Pearson r , without p-value. Sample-level signature_correlation numbers differ prior runs design. Added differential_module_activity_tool(), module-level DME successor: tests whether module’s re-scored pseudo-bulk activity differs across declared contrast_col, independent pseudo-bulk samples via pseudobulk_view(). Emits cross_condition_delta fragment two-level contrast, categorical_association multi-level factor. method = 'limma' (default) fits limma::lmFit()/eBayes() full module-score matrix – variance moderation borrows strength across every module – caching fit across per-module orchestrator loop; method = 'nonparametric' reuses categorical_group_test() per module. Skips gracefully (logged reason) pseudo-bulk view resolves contrast_col isn’t usable. Registered tool registry. Added pseudobulk_de_limma_tool(), gene-level complement: runs limma-voom module’s genes within pseudo-bulk raw counts (counts(pseudobulk_view(ms))), two-level contrast_col plus optional covariates low-count gene filtering. Emits cross_condition_delta fragment (one row per gene). Skips gracefully pseudo-bulk view resolves, view lacks counts capability, gene survives filter. Registered tool registry. Packaged deterministic evidence core synthesis layer installable, documented R package. behavior change pre-package sourced-functions codebase (Milestones 1-2): inputs produce evidence packets, interpretations, rendered paragraphs. Experimental: public API yet stable. ModuleSet adapter contract custom-tool registry expected evolve 1.0 release.",
+    "text": "write_fragment_figures() / write_dataset_figures() now honor plot spec’s width/height/dpi (already part documented -disk plots-slot shape docs/schemas.md / inst/schemas/evidence_fragment.schema.json, silently ignored render time now) instead always using save_plot_to_png()’s 7/4/150 defaults – surfaced Part 6 dotplot 19 rows needed room default canvas. .validate_plots() now rejects non-positive non-scalar width/ height/dpi, matching existing legend/placement checks. write_interpretation_report() gains optional dataset_context argument: supplied, dataset_fragments render (compact_summary, top_findings table, caveats, attached plots) “Dataset-level evidence” section per-module sections. NULL (default) omits section report byte-identical . New write_dataset_figures() dataset-level sibling write_fragment_figures(): materializes dataset context’s live plot objects PNGs <figures_dir>/dataset/ records image_path back spec. Interpretation schema 0.1 -> 0.2 (core contract). model now fills single free-text interpretation field (1-3 sentences supporting dominant_biology call, folding cell-state localization condition dynamics relevant) place one_line_summary, cell_state, condition_dynamics, metadata_associations, removed. interpretation() / validate_interpretation() / interpretation_from_json() model-facing schema (model_output_schema_json()) follow new field set. check_faithfulness() now inspects supporting_claims (metadata_associations loop gone; supporting_claims checking unchanged). build_system_prompt() drops cell_state / condition_dynamics / metadata_associations fill rules instructs model write grounded interpretation prose; PROMPT_TEMPLATE_VERSION -> 1.0 (invalidates synthesis cache). render_paragraph() HTML report render “Synthesized biological interpretation” block (dominant-biology label + prose); RENDER_TEMPLATE_VERSION -> 0.2. Fix: fragment read back disk kept top_findings data.frame (jsonlite’s simplifyDataFrame collapses uniform JSON array read), every tool HTML report’s findings_table() expect list one named-list entry per finding. fragment_from_json(), read_evidence_packet(), dataset_fragment_from_json() read_dataset_context() now restore list--lists shape; ragged empty top_findings unaffected. report’s findings_table() also passes data.frame straight safety net. Without , report rendered re-read packet transposed every evidence table (genes became column headers). deterministic fused evidence score shelved (docs/prompts/handoff_prompt_serpentine_tcell.md Part 4.5). Two known flaws made blended number misleading: non-significant dynamics fragment dragged genuinely stable module, top_genes’ top-kME magnitude stood interpretation confidence measures hub tightness. Changes: PROMPT_TEMPLATE_VERSION bumped 0.9; build_user_prompt() longer injects EVIDENCE CONFIDENCE MATRIX (fusion/user_weights arguments now ignored) internal .render_confidence_matrix() removed; build_system_prompt() drops rules constraining confidence.score E_evidence asks model calibrated certainty instead. fuse_confidence() longer blends overwrites confidence$score – keeps model’s value unions deterministic possible_artifact flag; enforce_faithfulness() still sets needs_human_review. calculate_fusion_score() compute_evidence_signals() retained (unused) future redesign. HTML summary report drops Evidence Confidence Matrix section shows model’s confidence. cluster_expression_profile_tool() now carries mean raw module activity (eigengene) per state: result column mean_activity (mean_score), also surfaced top_findings compact_summary alongside mean_decile/pct_high, absolute activity difference states legible next rank-based decile. New exported housekeeping_composition_note(): fraction module’s top hub genes cytoplasmic ribosomal (RPS*/RPL*) mitochondrially encoded (MT-*). render_packet_compact() appends ranked_genes block part-housekeeping hub list visible synthesis co-occurring program rather quietly diluting call. Deterministic packet-; unlike IEG artifact pattern never sets flag. HTML summary report renders cross_condition_delta fragments full per-state limma table (effect log2FC, raw BH-adjusted p, moderated pulled fragment result, one-line method caption, instead 3-column top_findings preview. New core evidence tool cluster_expression_profile_tool() (registered 'cluster_expression_profile'), non-differential companion cluster_dme_tool(). Instead one-vs-winner, bins every cell’s module score deciles module’s global score distribution (cells ModuleSet, re-binned per state) reports, per cell state, mean/median decile cells occupy share cells top bin – state expresses module medium intensity stays visible instead collapsed away cluster_dme’s winner-take-contrast. Emits 'state_expression' fragment direction = 'na' (graded profile, signed effect) effect_strength set top state’s mean global decile scaled realized bin count, stays comparable across modules even heavy ties score distribution collapse requested n_deciles fewer realized bins. Requires grouping module_scores ModuleSet capabilities, cluster_dme; skips gracefully either unmet. import_fragment() gained normalizers 'signature_correlation' 'continuous_correlation' (docs/milestones/milestone_serpentine_tcell.md Part 3), closing gap two schema types existed controlled vocab native tool (signature_correlation_tool()) import path. signature_correlation normalizes many-rows-per-module table (one row per named signature, e.g. cGEP/program library), top_findings using signature/r field names signature_correlation_tool() produces; continuous_correlation normalizes module’s correlation single continuous variable (variable_col optional, since common shape – one row per module – already scoped one variable). follow existing importer contract: configurable column names via params, effect_strength = max(abs(r)), direction top |r| row’s sign, provenance$source = 'user_supplied'. Plot ingestion (docs/milestones/milestone_plot_ingestion.md Parts 1-2): evidence_fragment() dataset_fragment() gained optional plots slot – named list pre-rendered figure specs (live plot_obj /persisted image_path, plus legend/placement hints). llegir ships plotting functions stays strictly asset container; fragment plots validates, serializes, hashes exactly . New exported attach_plots(frag, plots) decorates existing fragment re-validates attach time. raw plot_obj never reaches jsonlite::toJSON() digest::digest(): new internal .strip_plot_objs() guardrail runs every existing unclass() .fragment_hashable()/fragment_to_json()/packet_to_json() dataset_fragment siblings, packet_hash stays reproducible across sessions legends (text, pixels) still serialize count toward hash. New exported write_fragment_figures(packet, figures_dir) renders fragment’s live plots <figures_dir>/<module_id>/<fragment_id>__<plot_id>.png records path back onto spec image_path, graphical sibling write_fragment_tables(). ggplot2 added Suggests (Imports); core pipeline runs without . export_agent_workspace() v0.2 hardening (docs/milestones/milestone_agent_workspace.md Part 4): serialized ModuleSet now split lite/full pair – artifacts/moduleset_lite.qs2 (default load; new internal .make_moduleset_lite() reduction backing expression/counts matrices dropped, built components_ModuleSet()) artifacts/moduleset_full.qs2 (original object, rare expression()/counts() query). Workspace artifacts (moduleset lite/full, dataset_context, packets, interpretations) now serialize via qs2 (qs2::qs_save()/qs2::qs_read()) instead saveRDS()/readRDS(); qs2 added Imports. export_agent_workspace() gained interps = NULL argument – supplied, writes artifacts/interpretations.qs2 plus per-module JSON mirrors records manifest; omitted, manifest explicitly states interpretations shipped guest agent mock-synthesize one. Every cheat-sheet row, tool-registry row, recipe rung tagged (full object ) needs capability lite object dropped. Fixed two bugs found reviewing real exported workspace: “Aggregate--summarize” recipe cluster_dme example invocation used hardcode 'cell_state' grouping column regardless ModuleSet actually declared (now reads real declared column via new internal .ms_group_col()/.ms_sample_col(), omitting rung none declared); “delegate registered tool” recipe used grab packet$fragments[[1]] positionally (now filters fragment_id). Front matter now emits aggregated: false (lowercase) quotes generated_at unambiguously. components_ModuleSet() gained optional pkg_versions override argument now accepts expression = NULL (dropping backing matrix entirely) support lite object. synthetic_ModuleSet() (shared llegir_example_moduleset() fixture) now delegates group_col/sample_col wrapped base. Added export_agent_workspace(): serializes completed run’s ModuleSet, dataset context, evidence packets out_dir/artifacts/ (.rds authoritative, .json portable mirror) renders .llegir_agent_manifest.md – static launchpad external terminal coding agent (Claude Code, Aider, …) points run open-ended, read-queries analysis. manifest’s ModuleSet API Tool Registry cheat-sheets generated live registry ModuleSet’s capabilities() export time, custom register_tool() call propagates next export manual edits. Pure exporter – writes files returns path, never calls ellmer spends budget. Added read_agent_manifest(), inverse parses manifest’s YAML front matter back R list. New packaged templates inst/templates/agent_manifest.md (rendered via whisker, now Imports dependency) inst/templates/query_example.R (vanilla bootstrap script, copied every exported workspace). See docs/agent_workspace.md tests/testthat/test-agent_workspace.R. Added pseudobulk_ModuleSet(): builds ModuleSet user-supplied pseudo-bulk counts matrix + metadata, SummarizedExperiment (SummarizedExperiment Suggests dependency), re-scoring module definitions directly pseudo-bulk matrix via decoupleR::run_ulm() (kME-style gene weights map mor present, else uniform mor = 1). Realized data_level = 'pseudobulk', aggregated = TRUE components_ModuleSet; validate_moduleset() passes. Added attachment API – with_pseudobulk(), pseudobulk(), pseudobulk_view() – pseudo-bulk view can ride alongside cell-level ModuleSet (run_orchestrator()) run standalone. Removed module_by_metadata_tool() (registry entry) along aggregate_by_sample(), is_sample_constant(), continuous_correlation_test() stats_utils.R. Sample-level inference module activity now belongs pseudo-bulk ModuleSet layer rather averaging correlated per-cell scores; categorical-association role replaced differential_module_activity_tool() (), run pseudo-bulk view. signature_correlation_tool() longer aggregates per-cell scores sample level . now resolves pseudo-bulk view via pseudobulk_view(ms): one attached (ms pseudobulk_ModuleSet), signature library re-scored view’s expression correlated re-scored module activity, real p-value independent pseudo-bulk units. pseudo-bulk view available, reports descriptive cell-level Pearson r , without p-value. Sample-level signature_correlation numbers differ prior runs design. Added differential_module_activity_tool(), module-level DME successor: tests whether module’s re-scored pseudo-bulk activity differs across declared contrast_col, independent pseudo-bulk samples via pseudobulk_view(). Emits cross_condition_delta fragment two-level contrast, categorical_association multi-level factor. method = 'limma' (default) fits limma::lmFit()/eBayes() full module-score matrix – variance moderation borrows strength across every module – caching fit across per-module orchestrator loop; method = 'nonparametric' reuses categorical_group_test() per module. Skips gracefully (logged reason) pseudo-bulk view resolves contrast_col isn’t usable. Registered tool registry. Added pseudobulk_de_limma_tool(), gene-level complement: runs limma-voom module’s genes within pseudo-bulk raw counts (counts(pseudobulk_view(ms))), two-level contrast_col plus optional covariates low-count gene filtering. Emits cross_condition_delta fragment (one row per gene). Skips gracefully pseudo-bulk view resolves, view lacks counts capability, gene survives filter. Registered tool registry. Packaged deterministic evidence core synthesis layer installable, documented R package. behavior change pre-package sourced-functions codebase (Milestones 1-2): inputs produce evidence packets, interpretations, rendered paragraphs. Experimental: public API yet stable. ModuleSet adapter contract custom-tool registry expected evolve 1.0 release.",
     "code": ""
   }
 ]

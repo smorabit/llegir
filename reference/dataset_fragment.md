@@ -20,7 +20,8 @@ dataset_fragment(
   top_findings,
   caveats = list(),
   provenance = list(),
-  plots = NULL
+  plots = NULL,
+  render_max_findings = NULL
 )
 ```
 
@@ -68,6 +69,17 @@ dataset_fragment(
   Optional named list of plot specs to attach; see
   [`attach_plots()`](https://smorabit.github.io/llegir/reference/attach_plots.md).
   Default `NULL`.
+
+- render_max_findings:
+
+  Optional override for how many `top_findings` entries
+  `.render_dataset_fragment_compact()` renders for this fragment, for a
+  fragment whose findings are a census (one entry per group) rather than
+  a top-N ranking, e.g. a cluster reference card with one row per
+  cluster. `NULL` (default) means "use the caller's cap"; see
+  [`build_user_prompt()`](https://smorabit.github.io/llegir/reference/build_user_prompt.md).
+  Never added to `required`, so a fragment that omits it validates,
+  serializes, and hashes exactly as one built before this field existed.
 
 ## Value
 

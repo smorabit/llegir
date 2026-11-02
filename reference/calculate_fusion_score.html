@@ -4,20 +4,14 @@
 reliability factor), pools them with a weighted power mean
 (.pool_evidence()) using tool-tier + user_weights importance
 (.tool_weight()), and applies a mass-weighted directional-conflict
-penalty (.directional_coherence()). Computed straight from the packet
-before synthesis, so the result is reproducible from the packet hash
-alone; it's injected into the synthesis prompt as ground truth
-(.render_confidence_matrix()) and re-used by fuse_confidence() as the
-evidence term, so the printed fusion string can never drift from the math."><meta property="og:description" content="Normalizes every fragment onto a unified [0, 1] scale
+penalty (.directional_coherence()). Computed straight from the packet,
+so the result is reproducible from the packet hash alone."><meta property="og:description" content="Normalizes every fragment onto a unified [0, 1] scale
 (.fragment_score(): a type-aware magnitude link times a significance-
 reliability factor), pools them with a weighted power mean
 (.pool_evidence()) using tool-tier + user_weights importance
 (.tool_weight()), and applies a mass-weighted directional-conflict
-penalty (.directional_coherence()). Computed straight from the packet
-before synthesis, so the result is reproducible from the packet hash
-alone; it's injected into the synthesis prompt as ground truth
-(.render_confidence_matrix()) and re-used by fuse_confidence() as the
-evidence term, so the printed fusion string can never drift from the math."></head><body>
+penalty (.directional_coherence()). Computed straight from the packet,
+so the result is reproducible from the packet hash alone."></head><body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
 
 
@@ -61,11 +55,8 @@ evidence term, so the printed fusion string can never drift from the math."></he
 reliability factor), pools them with a weighted power mean
 (<code>.pool_evidence()</code>) using tool-tier + <code>user_weights</code> importance
 (<code>.tool_weight()</code>), and applies a mass-weighted directional-conflict
-penalty (<code>.directional_coherence()</code>). Computed straight from the packet
-<em>before</em> synthesis, so the result is reproducible from the packet hash
-alone; it's injected into the synthesis prompt as ground truth
-(<code>.render_confidence_matrix()</code>) and re-used by <code><a href="fuse_confidence.html">fuse_confidence()</a></code> as the
-evidence term, so the printed fusion string can never drift from the math.</p>
+penalty (<code>.directional_coherence()</code>). Computed straight from the packet,
+so the result is reproducible from the packet hash alone.</p>
     </div>
 
     <div class="section level2">
@@ -116,6 +107,14 @@ returned list. Default <code>0.35</code>.</p></dd>
 (the directional penalty factor), <code>c_dir</code> (directional coherence),
 <code>lambda</code>, <code>params</code> (<code>beta</code>, <code>kappa</code>), and <code>matrix</code> (a per-fragment
 <code>data.frame</code> for prompt rendering and audit).</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>Shelved as of Part 4.5
+(<code>docs/prompts/handoff_prompt_serpentine_tcell.md</code>): no longer injected
+into the synthesis prompt and no longer consumed by <code><a href="fuse_confidence.html">fuse_confidence()</a></code>.
+Kept intact, with <code><a href="compute_evidence_signals.html">compute_evidence_signals()</a></code>, for a future redesign of
+the evidence score.</p>
     </div>
 
     <div class="section level2">

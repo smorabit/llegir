@@ -67,13 +67,9 @@ synthesize_module(
 
 - user_weights:
 
-  Named list of per-`tool_id` weight multipliers for
-  [`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md).
-  Computed once here and shared between the prompt's EVIDENCE CONFIDENCE
-  MATRIX and
-  [`fuse_confidence()`](https://smorabit.github.io/llegir/reference/fuse_confidence.md),
-  so the printed fusion string can never drift from what the model was
-  shown. Default [`list()`](https://rdrr.io/r/base/list.html).
+  Ignored; retained for call-site compatibility since the fused evidence
+  score is shelved (Part 4.5). Default
+  [`list()`](https://rdrr.io/r/base/list.html).
 
 - dataset_context:
 
@@ -84,8 +80,6 @@ synthesize_module(
   threaded into
   [`build_user_prompt()`](https://smorabit.github.io/llegir/reference/build_user_prompt.md)
   as global framing. Never enters
-  [`calculate_fusion_score()`](https://smorabit.github.io/llegir/reference/calculate_fusion_score.md)
-  or
   [`enforce_faithfulness()`](https://smorabit.github.io/llegir/reference/enforce_faithfulness.md).
   `NULL` (default) omits the DATASET CONTEXT block.
 
@@ -106,11 +100,11 @@ synthesize_module(packet, desc, mock_backend())
 #> $proposed_label
 #> [1] "Myeloid activation program (mock)"
 #> 
-#> $one_line_summary
-#> [1] "Mock synthesis output for offline testing; not derived from the evidence packet."
-#> 
 #> $dominant_biology
 #> [1] "Not evaluated by the mock backend."
+#> 
+#> $interpretation
+#> [1] "Mock synthesis output for offline testing; not derived from the evidence packet."
 #> 
 #> $supporting_claims
 #> $supporting_claims[[1]]
@@ -129,7 +123,7 @@ synthesize_module(packet, desc, mock_backend())
 #> 
 #> $supporting_claims[[2]]
 #> $supporting_claims[[2]]$claim
-#> [1] "The module has enriched gene-set terms."
+#> [1] "Gene-set overlap was tested for the hub genes."
 #> 
 #> $supporting_claims[[2]]$fragment_ids
 #> [1] "geneset_enrichment"
@@ -142,27 +136,18 @@ synthesize_module(packet, desc, mock_backend())
 #> 
 #> 
 #> 
-#> $cell_state
-#> [1] NA
-#> 
-#> $condition_dynamics
-#> [1] NA
-#> 
-#> $metadata_associations
-#> list()
-#> 
 #> $literature
 #> list()
 #> 
 #> $confidence
 #> $confidence$score
-#> [1] 0.7531057
+#> [1] 0.5
 #> 
 #> $confidence$model_score
 #> [1] 0.5
 #> 
 #> $confidence$rationale
-#> [1] "Mock backend: fixed neutral confidence, not evidence-derived. [fusion: model=0.50, evidence=0.94 (E_pool=0.94, P_agree=1.00, C_dir=1.00), lambda=0.35, fused=0.75]"
+#> [1] "Mock backend: fixed neutral confidence, not evidence-derived."
 #> 
 #> 
 #> $flags
@@ -178,7 +163,7 @@ synthesize_module(packet, desc, mock_backend())
 #> [1] "mock-0.1"
 #> 
 #> $provenance$prompt_template_version
-#> [1] "0.4"
+#> [1] "1.3"
 #> 
 #> $provenance$temperature
 #> [1] 0
@@ -195,11 +180,11 @@ synthesize_module(packet, desc, mock_backend())
 #> 
 #> 
 #> $provenance$timestamp
-#> [1] "2026-08-04T18:49:45+0200"
+#> [1] "2026-11-02T18:55:12+0100"
 #> 
 #> 
 #> $schema_version
-#> [1] "0.1"
+#> [1] "0.2"
 #> 
 #> attr(,"class")
 #> [1] "interpretation"
