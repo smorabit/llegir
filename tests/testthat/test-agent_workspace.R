@@ -955,3 +955,15 @@ test_that('validate_labels.R runs inside a label workspace and writes its report
     expect_setequal(report$status, c('ok', 'missing'))
     expect_true(any(grepl('1 of 2 modules ok', out, fixed = TRUE)))
 })
+
+test_that('export_agent_workspace() leaves out modules whose packet is NULL, with a warning', {
+    run <- make_label_workspace_run(2)
+    packets <- run$packets
+    packets[run$mods[2]] <- list(NULL)
+    out_dir <- tempfile()
+    expect_warning(
+        suppressMessages(export_agent_workspace(run$ms, run$dctx, packets, run$desc, out_dir = out_dir, mode = 'label')),
+        'no evidence packet'
+    )
+    expect_equal(check_agent_labels(out_dir)$module_id, run$mods[1])
+})

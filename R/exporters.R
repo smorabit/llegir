@@ -695,6 +695,14 @@ export_agent_workspace <- function(ms, dataset_context, packets, desc, interps =
     mode <- match.arg(mode)
     validate_moduleset(ms)
     validate_dataset_description(desc)
+    # run_orchestrator() returns NULL for a module whose tools errored; that
+    # module has no evidence to export, so leave it out rather than fail
+    failed <- names(packets)[vapply(packets, is.null, logical(1))]
+    if (length(failed) > 0) {
+        warning('no evidence packet for module(s) ', paste(failed, collapse = ', '), '; left out of the workspace', call. = FALSE)
+        packets <- Filter(Negate(is.null), packets)
+    }
+    if (length(packets) == 0) stop('export_agent_workspace() needs at least one evidence packet')
 
     #---------------------------------------------------------
     # materialize the workspace tree and serialize artifacts
