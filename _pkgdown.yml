@@ -129,6 +129,7 @@ reference:
 - title: Orchestration
   desc: Run tools/synthesis over a module set and write results to disk.
   contents:
+  - run_evidence
   - run_module
   - run_orchestrator
   - run_dataset_context

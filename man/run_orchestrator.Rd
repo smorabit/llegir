@@ -7,7 +7,7 @@
 run_orchestrator(
   ms,
   tool_config,
-  output_dir,
+  output_dir = NULL,
   tables_dir = NULL,
   modules_use = NULL,
   input_hash = NA_character_,
@@ -20,7 +20,8 @@ run_orchestrator(
 
 \item{tool_config}{A list of \code{list(fn, params)} specs; see \code{\link[=run_module]{run_module()}}.}
 
-\item{output_dir}{Directory to write one evidence packet JSON file per module.}
+\item{output_dir}{Optional directory to write one evidence packet JSON file
+per module. \code{NULL} (default) keeps the packets in memory only.}
 
 \item{tables_dir}{Optional directory to also persist every fragment's
 result table.}

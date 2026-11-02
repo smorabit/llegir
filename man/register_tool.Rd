@@ -11,7 +11,8 @@ register_tool(
   description,
   requires = character(0),
   tier = "medium",
-  scope = "module"
+  scope = "module",
+  params = NULL
 )
 }
 \arguments{
@@ -44,6 +45,11 @@ dataset: one of \code{'module'}, \code{'dataset'}. A \code{'module'} tool's \cod
 checked against the \code{\link[=evidence_fragment]{evidence_fragment()}} vocabulary; a \code{'dataset'}
 tool's \code{type} against the \code{\link[=dataset_fragment]{dataset_fragment()}} vocabulary. Default
 \code{'module'}.}
+
+\item{params}{Optional character vector naming the parameters the tool
+accepts. When given, \code{\link[=tool]{tool()}} warns about any other parameter (usually a
+typo) and \code{\link[=run_evidence]{run_evidence()}} hands the tool only the run-level parameters
+it accepts. \code{NULL} (default) skips both checks.}
 }
 \value{
 \code{id}, invisibly.
@@ -61,6 +67,6 @@ they're unmet, rather than the tool having to self-skip. See
 my_tool <- function(ctx) top_genes_tool(ctx)
 register_tool(
     'my_tool', my_tool, type = 'ranked_genes',
-    description = 'demo', requires = character(0)
+    description = 'demo', requires = character(0), params = 'n_hubs'
 )
 }

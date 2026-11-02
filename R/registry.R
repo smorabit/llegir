@@ -49,15 +49,20 @@
 #'   checked against the [evidence_fragment()] vocabulary; a `'dataset'`
 #'   tool's `type` against the [dataset_fragment()] vocabulary. Default
 #'   `'module'`.
+#' @param params Optional character vector naming the parameters the tool
+#'   accepts. When given, [tool()] warns about any other parameter (usually a
+#'   typo) and [run_evidence()] hands the tool only the run-level parameters
+#'   it accepts. `NULL` (default) skips both checks.
 #' @return `id`, invisibly.
 #' @examples
 #' my_tool <- function(ctx) top_genes_tool(ctx)
 #' register_tool(
 #'     'my_tool', my_tool, type = 'ranked_genes',
-#'     description = 'demo', requires = character(0)
+#'     description = 'demo', requires = character(0), params = 'n_hubs'
 #' )
 #' @export
-register_tool <- function(id, fn, type, description, requires = character(0), tier = 'medium', scope = 'module'){
+register_tool <- function(id, fn, type, description, requires = character(0), tier = 'medium', scope = 'module',
+                          params = NULL){
     if (!is.character(id) || length(id) != 1) stop('id must be a single string')
     if (!is.function(fn)) stop('fn must be a function')
     if (!(scope %in% c('module', 'dataset'))) stop("scope must be one of 'module', 'dataset'")
@@ -65,12 +70,16 @@ register_tool <- function(id, fn, type, description, requires = character(0), ti
     if (!all(type %in% valid_types)) stop('invalid type: ', paste(setdiff(type, valid_types), collapse = ', '))
     if (!is.function(requires) && !is.character(requires)) stop('requires must be a character vector or a function(params)')
     if (!(tier %in% c('high', 'medium', 'low'))) stop("tier must be one of 'high', 'medium', 'low'")
+    if (!is.null(params) && !is.character(params)) stop('params must be a character vector of parameter names')
 
     # registration order breaks ties when one function is registered under
     # several ids (.find_registered() keeps the earliest, i.e. the core id)
     order <- if (exists(id, envir = .tool_registry, inherits = FALSE)) get_tool(id)$order else length(ls(envir = .tool_registry)) + 1
     spec <- structure(
-        list(id = id, fn = fn, type = type, description = description, requires = requires, tier = tier, scope = scope, order = order),
+        list(
+            id = id, fn = fn, type = type, description = description, requires = requires,
+            tier = tier, scope = scope, params = params, order = order
+        ),
         class = 'tool_spec'
     )
     assign(id, spec, envir = .tool_registry)
@@ -140,10 +149,18 @@ list_tools <- function(scope = NULL){
                 fn = spec$fn %||% entry$fn,
                 params = spec$params %||% list(),
                 requires = entry$requires %||% character(0),
-                scope = entry$scope
+                scope = entry$scope,
+                accepts = entry$params
             ),
             class = 'llegir_tool_spec'
         )
+        unknown_params <- setdiff(names(spec$params), spec$accepts)
+        if (!is.null(spec$accepts) && length(unknown_params) > 0) {
+            warning(
+                'tool ', spec$id, ' does not take parameter(s): ', paste(unknown_params, collapse = ', '),
+                ' (it takes: ', paste(spec$accepts, collapse = ', '), ')', call. = FALSE
+            )
+        }
     }
     if (!is.null(scope) && !is.null(spec$scope) && spec$scope != scope) {
         runner <- if (scope == 'module') 'the module tool list' else 'the dataset tool list'
@@ -198,53 +215,63 @@ print.llegir_tool_spec <- function(x, ...){
     register_tool(
         'top_genes', top_genes_tool, type = 'ranked_genes',
         description = 'Top module genes ranked by membership (kME)',
-        requires = character(0), tier = 'medium'
+        requires = character(0), tier = 'medium',
+        params = 'n_hubs'
     )
     register_tool(
         'cluster_dme', cluster_dme_tool, type = 'state_expression',
         description = 'Which cell states express this module',
-        requires = c('grouping', 'module_scores'), tier = 'high'
+        requires = c('grouping', 'module_scores'), tier = 'high',
+        params = 'group_col'
     )
     register_tool(
         'cluster_expression_profile', cluster_expression_profile_tool, type = 'state_expression',
         description = "Per-state profile of a module's global score deciles, so medium expressers stay visible",
-        requires = c('grouping', 'module_scores'), tier = 'high'
+        requires = c('grouping', 'module_scores'), tier = 'high',
+        params = c('group_col', 'n_deciles')
     )
     register_tool(
         'geneset_enrichment', geneset_enrichment_tool, type = 'geneset_enrichment',
         description = "Gene-set overlap enrichment among a module's hub genes",
-        requires = 'expression', tier = 'low'
+        requires = 'expression', tier = 'low',
+        params = c('db_files', 'n_hubs', 'alpha')
     )
     register_tool(
         'signature_correlation', signature_correlation_tool, type = 'signature_correlation',
         description = "Correlate a module's activity with a signature library",
-        requires = c('module_scores', 'expression'), tier = 'medium'
+        requires = c('module_scores', 'expression'), tier = 'medium',
+        params = c('library_files', 'method')
     )
     register_tool(
         'differential_module_activity', differential_module_activity_tool,
         type = c('cross_condition_delta', 'categorical_association'),
         description = "Module-level differential activity across a condition, on pseudo-bulk samples",
-        requires = 'pseudobulk', tier = 'high'
+        requires = 'pseudobulk', tier = 'high',
+        params = c('condition_col', 'covariates', 'method')
     )
     register_tool(
         'pseudobulk_de_limma', pseudobulk_de_limma_tool,
         type = 'cross_condition_delta',
         description = "Gene-level differential expression (limma-voom) within a module, on pseudo-bulk counts",
-        requires = 'pseudobulk', tier = 'high'
+        requires = 'pseudobulk', tier = 'high',
+        params = c('condition_col', 'covariates', 'min_count', 'min_count_samples')
     )
     register_tool(
         'dataset_composition', dataset_composition_tool, type = 'composition_summary',
         description = 'Cell-state census and condition covariate balance across the whole dataset',
-        requires = 'grouping', scope = 'dataset'
+        requires = 'grouping', scope = 'dataset',
+        params = c('group_col', 'condition_col', 'sample_col', 'residual_threshold', 'min_samples', 'min_cells')
     )
     register_tool(
         'dataset_variance_structure', dataset_variance_structure_tool, type = 'variance_structure',
         description = 'Principal-component regression against metadata covariates, on the pseudo-bulk view',
-        requires = 'pseudobulk', scope = 'dataset'
+        requires = 'pseudobulk', scope = 'dataset',
+        params = c('covariates', 'condition_col', 'technical_covariates', 'n_components')
     )
     register_tool(
         'dataset_baseline_expression', dataset_baseline_expression_tool, type = 'baseline_expression',
         description = 'Dataset-wide baseline expression, ribosomal/mitochondrial mass, and depth distribution',
-        requires = 'expression', scope = 'dataset'
+        requires = 'expression', scope = 'dataset',
+        params = 'top_n'
     )
 }

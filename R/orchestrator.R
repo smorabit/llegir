@@ -82,7 +82,8 @@ run_module <- function(ms, module_id, tool_config, input_hash = NA_character_, m
 #'
 #' @param ms A `ModuleSet`.
 #' @param tool_config A list of `list(fn, params)` specs; see [run_module()].
-#' @param output_dir Directory to write one evidence packet JSON file per module.
+#' @param output_dir Optional directory to write one evidence packet JSON file
+#'   per module. `NULL` (default) keeps the packets in memory only.
 #' @param tables_dir Optional directory to also persist every fragment's
 #'   result table.
 #' @param modules_use Optional subset of module ids to run; defaults to all
@@ -100,14 +101,14 @@ run_module <- function(ms, module_id, tool_config, input_hash = NA_character_, m
 #' ms <- llegir_example_moduleset()
 #' run_orchestrator(ms, list(list(fn = top_genes_tool, params = list())), output_dir = tempfile())
 #' @export
-run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, modules_use = NULL,
+run_orchestrator <- function(ms, tool_config, output_dir = NULL, tables_dir = NULL, modules_use = NULL,
                               input_hash = NA_character_, module_method = NA_character_, validate = TRUE){
     if (validate) validate_moduleset(ms)
     # resolve once up front: a malformed spec is a config error that should
     # stop the run, not surface as one warning per module
     tool_config <- lapply(tool_config, .resolve_spec, scope = 'module')
     if (is.null(modules_use)) modules_use <- modules(ms)
-    dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+    if (!is.null(output_dir)) dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     if (!is.null(tables_dir)) dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
 
     packets <- lapply(modules_use, function(mod){
@@ -118,10 +119,10 @@ run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, mod
                 NULL
             }
         )
-        if (!is.null(packet)) {
+        if (!is.null(packet) && !is.null(output_dir)) {
             write_evidence_packet(packet, file.path(output_dir, paste0(mod, '.json')))
-            if (!is.null(tables_dir)) write_fragment_tables(packet, tables_dir)
         }
+        if (!is.null(packet) && !is.null(tables_dir)) write_fragment_tables(packet, tables_dir)
         packet
     })
     names(packets) <- modules_use
@@ -160,6 +161,77 @@ run_dataset_context <- function(ms, dataset_tool_config, input_hash = NA_charact
     specs <- lapply(dataset_tool_config, .resolve_spec, scope = 'dataset')
     run <- .run_specs(ms, specs, list(ms = ms, module_method = module_method), scope = 'dataset')
     build_dataset_context(run$fragments, input_hash = input_hash, skipped = run$skipped)
+}
+
+#' Gather all evidence for a run in one call
+#'
+#' The single entry point for the evidence stage: takes one list of tools,
+#' runs the dataset-scoped ones once (as [run_dataset_context()]) and the
+#' module-scoped ones per module (as [run_orchestrator()]), and returns both
+#' results ready for [export_agent_workspace()] or
+#' [run_synthesis_orchestrator()]. Each tool's scope comes from the registry,
+#' so the list can mix both kinds in any order.
+#'
+#' Parameters shared by several tools (`n_hubs`, `condition_col`, ...) go in
+#' `params` once. Each tool receives the run-level parameters it accepts (see
+#' `register_tool(params = )`; an unregistered tool receives all of them),
+#' overridden by its own parameters from [tool()]. Metadata columns declared
+#' on the `ModuleSet` (`group_col`, `sample_col`) need not be repeated at all.
+#'
+#' @param ms A `ModuleSet`.
+#' @param tools A list of tool specs, ideally built with [tool()] or
+#'   [import_tool()]; `list(id = , params = )` / `list(fn = , params = )`
+#'   also work.
+#' @param params A named list of run-level parameters shared across tools.
+#' @param modules_use Optional subset of modules to gather evidence for.
+#'   Default: every module in `ms`.
+#' @param output_dir Optional directory: writes `dataset_context.json` and one
+#'   evidence packet JSON per module (under `packets/`).
+#' @param tables_dir Optional directory to write each fragment's result table
+#'   to (see [write_fragment_tables()]).
+#' @param input_hash,module_method Recorded on the packets and context; see
+#'   [run_module()].
+#' @return A list with `dataset_context` (see [build_dataset_context()]) and
+#'   `packets` (a named list of evidence packets, one per module).
+#' @examples
+#' ms <- llegir_example_moduleset()
+#' ev <- run_evidence(
+#'     ms,
+#'     tools = list(tool('dataset_composition'), tool('top_genes'), tool('cluster_dme')),
+#'     params = list(n_hubs = 10)
+#' )
+#' names(ev$packets)
+#' @export
+run_evidence <- function(ms, tools, params = list(), modules_use = NULL, output_dir = NULL,
+                         tables_dir = NULL, input_hash = NA_character_, module_method = NA_character_){
+    validate_moduleset(ms)
+    specs <- lapply(tools, .resolve_spec)
+    # an unregistered function has no declared scope; a tool's fragment type
+    # is what decides, so run it with the module tools (the common case)
+    scopes <- vapply(specs, function(spec) spec$scope %||% 'module', character(1))
+
+    unused <- setdiff(names(params), unlist(lapply(specs, function(spec) spec$accepts %||% names(params))))
+    if (length(unused) > 0) {
+        warning('run-level parameter(s) taken by none of the tools: ', paste(unused, collapse = ', '), call. = FALSE)
+    }
+    specs <- lapply(specs, function(spec){
+        shared <- if (is.null(spec$accepts)) params else params[intersect(names(params), spec$accepts)]
+        spec$params <- utils::modifyList(shared, spec$params)
+        spec
+    })
+
+    dataset_context <- run_dataset_context(
+        ms, specs[scopes == 'dataset'], input_hash = input_hash,
+        module_method = module_method, validate = FALSE
+    )
+    packets <- run_orchestrator(
+        ms, specs[scopes == 'module'],
+        output_dir = if (!is.null(output_dir)) file.path(output_dir, 'packets'),
+        tables_dir = tables_dir, modules_use = modules_use,
+        input_hash = input_hash, module_method = module_method, validate = FALSE
+    )
+    if (!is.null(output_dir)) write_dataset_context(dataset_context, file.path(output_dir, 'dataset_context.json'))
+    list(dataset_context = dataset_context, packets = packets)
 }
 
 ## synthesis-stage orchestration (docs/milestone_2.md tasks 5-7): mirrors
