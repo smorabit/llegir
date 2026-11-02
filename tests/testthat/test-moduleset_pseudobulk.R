@@ -11,9 +11,9 @@ test_that('pseudobulk_ModuleSet() realizes data_level/aggregated/counts correctl
     expect_true(caps[['module_scores']])
     expect_true(caps[['grouping']])
     expect_true(caps[['sample_ids']])
-    # the pseudobulk_ModuleSet is already pseudo-bulk; it doesn't need an
-    # attached view, so its own pseudobulk capability stays FALSE
-    expect_false(caps[['pseudobulk']])
+    # a pseudobulk_ModuleSet is its own pseudo-bulk view
+    expect_true(caps[['pseudobulk']])
+    expect_identical(pseudobulk_view(pb_ms), pb_ms)
     expect_identical(dim(counts(pb_ms)), dim(expression(pb_ms)))
 })
 

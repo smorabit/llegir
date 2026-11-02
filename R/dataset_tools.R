@@ -94,11 +94,6 @@ dataset_composition_tool <- function(ctx){
     min_samples <- ctx$params$min_samples %||% 3
     min_cells <- ctx$params$min_cells %||% 20
 
-    if (!has_capability(ctx$ms, 'grouping')) {
-        message('dataset_composition: skipped, module set lacks the grouping capability')
-        return(NULL)
-    }
-
     meta <- metadata(ctx$ms)
     groups <- meta[[group_col]]
     if (is.null(groups)) stop('metadata column not found: ', group_col)
@@ -359,11 +354,6 @@ dataset_variance_structure_tool <- function(ctx){
 #' @export
 dataset_baseline_expression_tool <- function(ctx){
     top_n <- ctx$params$top_n %||% 15
-
-    if (!has_capability(ctx$ms, 'expression')) {
-        message('dataset_baseline_expression: skipped, module set lacks the expression capability')
-        return(NULL)
-    }
 
     expr <- as.matrix(expression(ctx$ms))
     gene_names <- rownames(expr)

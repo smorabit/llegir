@@ -78,11 +78,9 @@ pkg_versions <- function(ms, ...) UseMethod('pkg_versions')
 #' `counts` (a raw counts matrix is available, see [counts()]), `grouping` (a
 #' cell/sample-state grouping column was declared to the adapter),
 #' `sample_ids` (a sample-id column was declared), and `pseudobulk` (a
-#' pseudo-bulk view is resolvable via [pseudobulk_view()] -- `TRUE` for a
-#' [pseudobulk_ModuleSet()]'s own attached-view wrapper produced by
-#' [with_pseudobulk()], `FALSE` otherwise, including for a standalone
-#' `pseudobulk_ModuleSet` itself, which resolves via `data_level`/`aggregated`
-#' rather than an attachment). Capabilities are declared by the adapter, not inferred from
+#' pseudo-bulk view is resolvable via [pseudobulk_view()]: `TRUE` for a
+#' [pseudobulk_ModuleSet()] itself and for a ModuleSet with one attached by
+#' [with_pseudobulk()], `FALSE` otherwise). Capabilities are declared by the adapter, not inferred from
 #' probing `metadata()` -- declaring `grouping`/`sample_ids` is how a source
 #' advertises that it supports that concept at all, independent of which
 #' particular metadata column a tool is asked to use. Core tools consult this

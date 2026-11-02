@@ -68,11 +68,6 @@ signature_correlation_tool <- function(ctx){
     if (is.null(library_files)) stop('signature_correlation requires params$library_files')
     method <- ctx$params$method %||% 'UCell'
 
-    if (!has_capability(ctx$ms, 'module_scores') || !has_capability(ctx$ms, 'expression')) {
-        message('signature_correlation: skipped, module set lacks the module_scores/expression capability')
-        return(NULL)
-    }
-
     provenance <- make_provenance(
         tool_version = '0.2',
         params = list(library_files = unname(library_files), method = method),

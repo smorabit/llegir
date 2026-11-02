@@ -129,6 +129,16 @@ pseudobulk_ModuleSet <- function(counts, gene_table, metadata = NULL, assay = 'c
 }
 
 #' @rdname pseudobulk_ModuleSet
+#' @export
+capabilities.pseudobulk_ModuleSet <- function(ms, ...){
+    # a pseudo-bulk ModuleSet is its own pseudo-bulk view (pseudobulk_view()
+    # returns it), so tools that need one can declare requires = 'pseudobulk'
+    caps <- NextMethod()
+    caps['pseudobulk'] <- TRUE
+    caps
+}
+
+#' @rdname pseudobulk_ModuleSet
 #' @param ms A `ModuleSet` object; the dispatch target for [pkg_versions()].
 #' @param ... Passed to methods.
 #' @export

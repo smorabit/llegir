@@ -2,6 +2,7 @@
 % Please edit documentation in R/moduleset_pseudobulk.R
 \name{pseudobulk_ModuleSet}
 \alias{pseudobulk_ModuleSet}
+\alias{capabilities.pseudobulk_ModuleSet}
 \alias{pkg_versions.pseudobulk_ModuleSet}
 \title{Build a ModuleSet from pseudo-bulk counts, re-scoring modules with decoupleR}
 \usage{
@@ -14,6 +15,8 @@ pseudobulk_ModuleSet(
   sample_col = NULL,
   data_level = "pseudobulk"
 )
+
+\method{capabilities}{pseudobulk_ModuleSet}(ms, ...)
 
 \method{pkg_versions}{pseudobulk_ModuleSet}(ms, ...)
 }

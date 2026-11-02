@@ -38,12 +38,14 @@ test_that('the evidence pipeline runs end to end on a gene_list_ModuleSet and pr
     }
 })
 
-test_that('cluster_dme_tool() skips gracefully (returns NULL, not an error) without a grouping capability', {
+test_that('a list(fn = ) spec for a registered tool is capability-checked and its skip recorded', {
     skip_if_not(go_data_available, 'GO Biological Process data not available')
     expect_false(has_capability(go_gene_list_ms_nocap, 'grouping'))
-    ctx <- list(ms = go_gene_list_ms_nocap, module_id = 'module_a', params = list(group_by = 'cell_type'))
-    expect_message(result <- cluster_dme_tool(ctx), 'skipped')
-    expect_null(result)
+    spec <- list(fn = cluster_dme_tool, params = list(group_col = 'cell_type'))
+    expect_message(packet <- run_module(go_gene_list_ms_nocap, 'module_a', list(spec)), 'skipped')
+    expect_length(packet$fragments, 0)
+    expect_equal(packet$provenance$skipped[[1]]$tool_id, 'cluster_dme')
+    expect_match(packet$provenance$skipped[[1]]$reason, 'grouping')
 })
 
 test_that('run_module() omits skipped tools from the packet instead of failing the module', {

@@ -1,13 +1,10 @@
 ## orchestrator: runs a configured set of tools over every module in a
 ## ModuleSet and writes validated, hashed evidence packets to disk.
 ##
-## `tool_config` is a list of `list(fn, params)` specs, e.g.:
-##   list(
-##       list(fn = top_genes_tool, params = list(n_hubs = 25)),
-##       list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot'))
-##   )
-## `fn` is any function(ctx) -> evidence_fragment; core tools today, custom
-## tools later (M2) just append to this list.
+## A tool spec is either tool('top_genes', n_hubs = 25), list(id = , params = )
+## or list(fn = , params = ); all three are resolved by .resolve_spec()
+## (R/registry.R) and run by .run_specs() below, so registered tools are
+## capability-checked and every skip is recorded whichever form is used.
 
 #' Run one module's evidence tools and build its evidence packet
 #'
@@ -19,19 +16,13 @@
 #'
 #' @param ms A `ModuleSet`.
 #' @param module_id A single module id (as returned by [modules()]).
-#' @param tool_config A list of tool specs, each one of:
-#'   * `list(fn, params)` -- a direct call to any `function(ctx) ->
-#'     evidence_fragment` (or `NULL`, to skip); the tool is responsible for
-#'     its own graceful capability-based skip, e.g. [cluster_dme_tool()].
-#'   * `list(id, params)` -- `id` is looked up in the tool registry (see
-#'     [register_tool()]), and `run_module()` itself checks the tool's
-#'     declared required [capabilities()] before calling it. If unmet, the
-#'     tool is skipped and the reason is recorded on the packet's
-#'     `provenance$skipped` instead of the tool having to self-skip --
-#'     core and custom tools registered via [register_tool()] are run
-#'     identically this way.
-#'
-#'   Either form's `params` is passed through as `ctx$params`.
+#' @param tool_config A list of tool specs, each one of [tool()] (preferred),
+#'   `list(id = , params = )` (a registry id) or `list(fn = , params = )` (any
+#'   `function(ctx)`). Registered tools have their declared required
+#'   [capabilities()] checked before they run, whichever form names them; an
+#'   unmet requirement, or a tool returning `NULL`, is recorded on the packet's
+#'   `provenance$skipped` instead of failing the module. `params` is passed
+#'   through as `ctx$params`.
 #' @param input_hash Optional hash of the input `ModuleSet`, recorded on the
 #'   packet for provenance.
 #' @param module_method Optional free-form description of how the modules
@@ -46,26 +37,37 @@
 #' run_module(ms, modules(ms)[1], list(list(id = 'top_genes', params = list())))
 #' @export
 run_module <- function(ms, module_id, tool_config, input_hash = NA_character_, module_method = NA_character_){
-    results <- lapply(tool_config, function(spec){
-        if (!is.null(spec$id)) {
-            tool <- get_tool(spec$id)
-            required <- .tool_spec_requires(tool, spec$params)
-            missing_caps <- required[!vapply(required, function(cap) has_capability(ms, cap), logical(1))]
-            if (length(missing_caps) > 0) {
-                reason <- paste0('missing capabilities: ', paste(missing_caps, collapse = ', '))
-                message(spec$id, ': skipped, ', reason)
-                return(list(fragment = NULL, skip = list(tool_id = spec$id, reason = reason)))
-            }
-            fn <- tool$fn
-        } else {
-            fn <- spec$fn
+    ctx_base <- list(ms = ms, module_id = module_id, module_method = module_method)
+    run <- .run_specs(ms, tool_config, ctx_base, scope = 'module')
+    build_evidence_packet(module_id, run$fragments, input_hash = input_hash, skipped = run$skipped)
+}
+
+# runs resolved tool specs against one ctx: a registered tool whose required
+# capabilities are unmet is skipped before it runs, and a tool that returns
+# NULL (nothing to report, or not applicable) is skipped after; both leave a
+# record so the packet says what didn't run and why
+.run_specs <- function(ms, specs, ctx_base, scope){
+    results <- lapply(specs, function(spec){
+        spec <- .resolve_spec(spec, scope)
+        label <- spec$id %||% 'unregistered tool'
+        required <- .tool_spec_requires(spec, spec$params)
+        missing_caps <- required[!vapply(required, function(cap) has_capability(ms, cap), logical(1))]
+        if (length(missing_caps) > 0) {
+            reason <- paste0('missing capabilities: ', paste(missing_caps, collapse = ', '))
+            message(label, ': skipped, ', reason)
+            return(list(fragment = NULL, skip = list(tool_id = label, reason = reason)))
         }
-        ctx <- list(ms = ms, module_id = module_id, params = spec$params, module_method = module_method)
-        list(fragment = fn(ctx), skip = NULL)
+        fragment <- spec$fn(c(ctx_base, list(params = spec$params)))
+        if (is.null(fragment)) {
+            reason <- 'tool returned NULL (nothing to report, or not applicable to this ModuleSet)'
+            return(list(fragment = NULL, skip = list(tool_id = label, reason = reason)))
+        }
+        list(fragment = fragment, skip = NULL)
     })
-    fragments <- Filter(Negate(is.null), lapply(results, `[[`, 'fragment'))
-    skipped <- Filter(Negate(is.null), lapply(results, `[[`, 'skip'))
-    build_evidence_packet(module_id, fragments, input_hash = input_hash, skipped = skipped)
+    list(
+        fragments = Filter(Negate(is.null), lapply(results, `[[`, 'fragment')),
+        skipped = Filter(Negate(is.null), lapply(results, `[[`, 'skip'))
+    )
 }
 
 #' Run a configured set of evidence tools over every module in a ModuleSet
@@ -101,6 +103,9 @@ run_module <- function(ms, module_id, tool_config, input_hash = NA_character_, m
 run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, modules_use = NULL,
                               input_hash = NA_character_, module_method = NA_character_, validate = TRUE){
     if (validate) validate_moduleset(ms)
+    # resolve once up front: a malformed spec is a config error that should
+    # stop the run, not surface as one warning per module
+    tool_config <- lapply(tool_config, .resolve_spec, scope = 'module')
     if (is.null(modules_use)) modules_use <- modules(ms)
     dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
     if (!is.null(tables_dir)) dir.create(tables_dir, recursive = TRUE, showWarnings = FALSE)
@@ -128,23 +133,15 @@ run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, mod
 #' The dataset-level analog of [run_orchestrator()]: runs every tool in
 #' `dataset_tool_config` once against the whole `ModuleSet` (never per
 #' module) and bundles the resulting `dataset_fragment`s into a validated,
-#' hashed dataset context via [build_dataset_context()]. Mirrors
+#' hashed dataset context via [build_dataset_context()]. Shares
 #' [run_module()]'s spec handling exactly, except `ctx` has no `module_id`
 #' -- a dataset tool reads `expression(ms)`/`metadata(ms)`/`module_scores(ms)`
 #' in full, not for one module.
 #'
 #' @param ms A `ModuleSet`.
-#' @param dataset_tool_config A list of tool specs, each one of:
-#'   * `list(fn, params)` -- a direct call to any `function(ctx) ->
-#'     dataset_fragment` (or `NULL`, to skip); the tool is responsible for
-#'     its own graceful capability-based skip.
-#'   * `list(id, params)` -- `id` is looked up in the tool registry (see
-#'     [register_tool()]), and `run_dataset_context()` checks the tool's
-#'     declared required [capabilities()] before calling it. If unmet, the
-#'     tool is skipped and the reason is recorded on the context's
-#'     `provenance$skipped`.
-#'
-#'   Either form's `params` is passed through as `ctx$params`.
+#' @param dataset_tool_config A list of dataset-scoped tool specs, in any of
+#'   the forms [run_module()] accepts. Capability skips and `NULL` returns are
+#'   recorded on the context's `provenance$skipped`.
 #' @param input_hash Optional hash of the input `ModuleSet`, recorded on the
 #'   context for provenance.
 #' @param module_method Optional free-form description of how the modules
@@ -160,26 +157,9 @@ run_orchestrator <- function(ms, tool_config, output_dir, tables_dir = NULL, mod
 run_dataset_context <- function(ms, dataset_tool_config, input_hash = NA_character_,
                                  module_method = NA_character_, validate = TRUE){
     if (validate) validate_moduleset(ms)
-    results <- lapply(dataset_tool_config, function(spec){
-        if (!is.null(spec$id)) {
-            tool <- get_tool(spec$id)
-            required <- .tool_spec_requires(tool, spec$params)
-            missing_caps <- required[!vapply(required, function(cap) has_capability(ms, cap), logical(1))]
-            if (length(missing_caps) > 0) {
-                reason <- paste0('missing capabilities: ', paste(missing_caps, collapse = ', '))
-                message(spec$id, ': skipped, ', reason)
-                return(list(fragment = NULL, skip = list(tool_id = spec$id, reason = reason)))
-            }
-            fn <- tool$fn
-        } else {
-            fn <- spec$fn
-        }
-        ctx <- list(ms = ms, params = spec$params, module_method = module_method)
-        list(fragment = fn(ctx), skip = NULL)
-    })
-    fragments <- Filter(Negate(is.null), lapply(results, `[[`, 'fragment'))
-    skipped <- Filter(Negate(is.null), lapply(results, `[[`, 'skip'))
-    build_dataset_context(fragments, input_hash = input_hash, skipped = skipped)
+    specs <- lapply(dataset_tool_config, .resolve_spec, scope = 'dataset')
+    run <- .run_specs(ms, specs, list(ms = ms, module_method = module_method), scope = 'dataset')
+    build_dataset_context(run$fragments, input_hash = input_hash, skipped = run$skipped)
 }
 
 ## synthesis-stage orchestration (docs/milestone_2.md tasks 5-7): mirrors

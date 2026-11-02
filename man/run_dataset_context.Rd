@@ -15,18 +15,9 @@ run_dataset_context(
 \arguments{
 \item{ms}{A \code{ModuleSet}.}
 
-\item{dataset_tool_config}{A list of tool specs, each one of:
-\itemize{
-\item \code{list(fn, params)} -- a direct call to any \verb{function(ctx) -> dataset_fragment} (or \code{NULL}, to skip); the tool is responsible for
-its own graceful capability-based skip.
-\item \code{list(id, params)} -- \code{id} is looked up in the tool registry (see
-\code{\link[=register_tool]{register_tool()}}), and \code{run_dataset_context()} checks the tool's
-declared required \code{\link[=capabilities]{capabilities()}} before calling it. If unmet, the
-tool is skipped and the reason is recorded on the context's
-\code{provenance$skipped}.
-}
-
-Either form's \code{params} is passed through as \code{ctx$params}.}
+\item{dataset_tool_config}{A list of dataset-scoped tool specs, in any of
+the forms \code{\link[=run_module]{run_module()}} accepts. Capability skips and \code{NULL} returns are
+recorded on the context's \code{provenance$skipped}.}
 
 \item{input_hash}{Optional hash of the input \code{ModuleSet}, recorded on the
 context for provenance.}
@@ -45,7 +36,7 @@ A dataset context; see \code{\link[=build_dataset_context]{build_dataset_context
 The dataset-level analog of \code{\link[=run_orchestrator]{run_orchestrator()}}: runs every tool in
 \code{dataset_tool_config} once against the whole \code{ModuleSet} (never per
 module) and bundles the resulting \code{dataset_fragment}s into a validated,
-hashed dataset context via \code{\link[=build_dataset_context]{build_dataset_context()}}. Mirrors
+hashed dataset context via \code{\link[=build_dataset_context]{build_dataset_context()}}. Shares
 \code{\link[=run_module]{run_module()}}'s spec handling exactly, except \code{ctx} has no \code{module_id}
 -- a dataset tool reads \code{expression(ms)}/\code{metadata(ms)}/\code{module_scores(ms)}
 in full, not for one module.

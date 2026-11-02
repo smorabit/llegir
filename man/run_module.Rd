@@ -17,20 +17,13 @@ run_module(
 
 \item{module_id}{A single module id (as returned by \code{\link[=modules]{modules()}}).}
 
-\item{tool_config}{A list of tool specs, each one of:
-\itemize{
-\item \code{list(fn, params)} -- a direct call to any \verb{function(ctx) -> evidence_fragment} (or \code{NULL}, to skip); the tool is responsible for
-its own graceful capability-based skip, e.g. \code{\link[=cluster_dme_tool]{cluster_dme_tool()}}.
-\item \code{list(id, params)} -- \code{id} is looked up in the tool registry (see
-\code{\link[=register_tool]{register_tool()}}), and \code{run_module()} itself checks the tool's
-declared required \code{\link[=capabilities]{capabilities()}} before calling it. If unmet, the
-tool is skipped and the reason is recorded on the packet's
-\code{provenance$skipped} instead of the tool having to self-skip --
-core and custom tools registered via \code{\link[=register_tool]{register_tool()}} are run
-identically this way.
-}
-
-Either form's \code{params} is passed through as \code{ctx$params}.}
+\item{tool_config}{A list of tool specs, each one of \code{\link[ellmer:tool]{ellmer::tool()}} (preferred),
+\code{list(id = , params = )} (a registry id) or \code{list(fn = , params = )} (any
+\verb{function(ctx)}). Registered tools have their declared required
+\code{\link[=capabilities]{capabilities()}} checked before they run, whichever form names them; an
+unmet requirement, or a tool returning \code{NULL}, is recorded on the packet's
+\code{provenance$skipped} instead of failing the module. \code{params} is passed
+through as \code{ctx$params}.}
 
 \item{input_hash}{Optional hash of the input \code{ModuleSet}, recorded on the
 packet for provenance.}

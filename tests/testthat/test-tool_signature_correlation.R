@@ -6,14 +6,15 @@
 ## come back with the top |r| -- at both the cell level and, once a
 ## pseudo-bulk view is attached, the pseudo-bulk level.
 
-test_that('signature_correlation_tool() skips gracefully without module_scores/expression', {
+test_that('signature_correlation is skipped, with a record, without module_scores', {
     skip_if_not(go_data_available, 'GO Biological Process data not available')
 
     bare_ms <- components_ModuleSet(go_components_gene_table, go_fixture$expr, go_fixture$meta)
     expect_false(has_capability(bare_ms, 'module_scores'))
-    ctx <- list(ms = bare_ms, module_id = 'module_a', params = list(library_files = go_test_signature_files))
-    expect_message(result <- signature_correlation_tool(ctx), 'skipped')
-    expect_null(result)
+    spec <- tool('signature_correlation', library_files = go_test_signature_files)
+    expect_message(packet <- run_module(bare_ms, 'module_a', list(spec)), 'skipped')
+    expect_length(packet$fragments, 0)
+    expect_match(packet$provenance$skipped[[1]]$reason, 'module_scores')
 })
 
 test_that('signature_correlation_tool() requires params$library_files', {

@@ -110,11 +110,6 @@ geneset_enrichment_tool <- function(ctx){
     alpha <- ctx$params$alpha %||% 0.05
     db_files <- ctx$params$db_files %||% c(GO_BP = 'data/GO_Biological_Process_2026.txt')
 
-    if (!has_capability(ctx$ms, 'expression')) {
-        message('geneset_enrichment: skipped, module set lacks the expression capability')
-        return(NULL)
-    }
-
     gm <- gene_membership(ctx$ms, ctx$module_id)
     hub_genes <- utils::head(gm$gene_name, n_hubs)
     genome_size <- nrow(expression(ctx$ms))

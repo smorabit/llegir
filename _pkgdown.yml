@@ -85,6 +85,7 @@ reference:
     register_tool() makes tool registration a uniform, documented public API
     for core and custom tools alike; see docs/custom_tools.md.
   contents:
+  - tool
   - register_tool
   - get_tool
   - list_tools

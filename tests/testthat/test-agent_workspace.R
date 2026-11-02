@@ -290,8 +290,8 @@ test_that('.build_tool_cheatsheet() tags an expression-dependent row "(full obje
 
 test_that('.example_invocation() emits the dataset-tool form for scope == "dataset"', {
     ms <- llegir_example_moduleset()
-    spec <- get_tool('composition')
-    expect_equal(.example_invocation(spec, ms), "run_dataset_context(ms, list(list(id = 'composition')))")
+    spec <- get_tool('dataset_composition')
+    expect_equal(.example_invocation(spec, ms), "run_dataset_context(ms, list(list(id = 'dataset_composition')))")
 })
 
 test_that('.example_invocation() fills cluster_dme params$group_by with the real declared column', {

@@ -22,11 +22,9 @@ available), \code{expression} (the backing expression matrix is available),
 \code{counts} (a raw counts matrix is available, see \code{\link[=counts]{counts()}}), \code{grouping} (a
 cell/sample-state grouping column was declared to the adapter),
 \code{sample_ids} (a sample-id column was declared), and \code{pseudobulk} (a
-pseudo-bulk view is resolvable via \code{\link[=pseudobulk_view]{pseudobulk_view()}} -- \code{TRUE} for a
-\code{\link[=pseudobulk_ModuleSet]{pseudobulk_ModuleSet()}}'s own attached-view wrapper produced by
-\code{\link[=with_pseudobulk]{with_pseudobulk()}}, \code{FALSE} otherwise, including for a standalone
-\code{pseudobulk_ModuleSet} itself, which resolves via \code{data_level}/\code{aggregated}
-rather than an attachment). Capabilities are declared by the adapter, not inferred from
+pseudo-bulk view is resolvable via \code{\link[=pseudobulk_view]{pseudobulk_view()}}: \code{TRUE} for a
+\code{\link[=pseudobulk_ModuleSet]{pseudobulk_ModuleSet()}} itself and for a ModuleSet with one attached by
+\code{\link[=with_pseudobulk]{with_pseudobulk()}}, \code{FALSE} otherwise). Capabilities are declared by the adapter, not inferred from
 probing \code{metadata()} -- declaring \code{grouping}/\code{sample_ids} is how a source
 advertises that it supports that concept at all, independent of which
 particular metadata column a tool is asked to use. Core tools consult this

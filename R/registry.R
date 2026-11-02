@@ -2,9 +2,9 @@
 ## registration a uniform, documented public API for both core and custom
 ## tools (docs/milestone_extensibility.md Part 2b, docs/custom_tools.md). A
 ## tool_spec carries id, description, the fragment `type`(s) it may emit, and
-## the ModuleSet capabilities it requires -- consulted by run_module() to
-## skip gracefully and record why, instead of relying on every tool to
-## self-skip (Part 1's ad-hoc pattern, still supported for direct `fn=` use).
+## the ModuleSet capabilities it requires, which the runners check before a
+## tool runs (whether the spec names it by id or by function) so tools never
+## need to self-skip on a missing capability.
 ##
 ## Core tools are registered through the exact same register_tool() call,
 ## from .onLoad() below rather than at this file's top level: R sources R/
@@ -66,8 +66,11 @@ register_tool <- function(id, fn, type, description, requires = character(0), ti
     if (!is.function(requires) && !is.character(requires)) stop('requires must be a character vector or a function(params)')
     if (!(tier %in% c('high', 'medium', 'low'))) stop("tier must be one of 'high', 'medium', 'low'")
 
+    # registration order breaks ties when one function is registered under
+    # several ids (.find_registered() keeps the earliest, i.e. the core id)
+    order <- if (exists(id, envir = .tool_registry, inherits = FALSE)) get_tool(id)$order else length(ls(envir = .tool_registry)) + 1
     spec <- structure(
-        list(id = id, fn = fn, type = type, description = description, requires = requires, tier = tier, scope = scope),
+        list(id = id, fn = fn, type = type, description = description, requires = requires, tier = tier, scope = scope, order = order),
         class = 'tool_spec'
     )
     assign(id, spec, envir = .tool_registry)
@@ -101,6 +104,88 @@ list_tools <- function(scope = NULL){
     if (is.null(scope)) return(ids)
     if (!(scope %in% c('module', 'dataset'))) stop("scope must be one of 'module', 'dataset'")
     Filter(function(id) get_tool(id)$scope == scope, ids)
+}
+
+#---------------------------------------------------------
+# tool specs
+#---------------------------------------------------------
+
+.spec_fields <- c('id', 'fn', 'params')
+
+# the registry entry whose fn is this exact function, so a list(fn = ) spec
+# naming a registered tool gets its capability check and id; NULL for an
+# unregistered (ad hoc) function
+.find_registered <- function(fn){
+    matches <- Filter(function(entry) identical(entry$fn, fn), lapply(list_tools(), get_tool))
+    if (length(matches) == 0) return(NULL)
+    matches[[which.min(vapply(matches, function(entry) entry$order, numeric(1)))]]
+}
+
+# normalizes any spec form (tool(), list(id = ), list(fn = )) to one
+# llegir_tool_spec, failing loudly on the config mistakes that used to pass
+# silently: an unknown field (e.g. `param =`), neither fn nor id, or a tool of
+# the wrong scope for the runner it was handed to
+.resolve_spec <- function(spec, scope = NULL){
+    if (!inherits(spec, 'llegir_tool_spec')) {
+        if (!is.list(spec)) stop('a tool spec must be tool(...), list(id = , params = ) or list(fn = , params = )')
+        unknown <- setdiff(names(spec), .spec_fields)
+        if (length(unknown) > 0) {
+            stop('tool spec has unknown field(s): ', paste(unknown, collapse = ', '), ' (expected id or fn, plus params)')
+        }
+        if (is.null(spec$id) && is.null(spec$fn)) stop('tool spec needs an id or a fn')
+        entry <- if (!is.null(spec$id)) get_tool(spec$id) else .find_registered(spec$fn)
+        spec <- structure(
+            list(
+                id = entry$id,
+                fn = spec$fn %||% entry$fn,
+                params = spec$params %||% list(),
+                requires = entry$requires %||% character(0),
+                scope = entry$scope
+            ),
+            class = 'llegir_tool_spec'
+        )
+    }
+    if (!is.null(scope) && !is.null(spec$scope) && spec$scope != scope) {
+        runner <- if (scope == 'module') 'the module tool list' else 'the dataset tool list'
+        stop('tool ', spec$id, ' is ', spec$scope, '-scoped and cannot run in ', runner)
+    }
+    spec
+}
+
+#' Name one tool in a tool chain
+#'
+#' The preferred way to list tools for [run_evidence()], [run_orchestrator()]
+#' or [run_dataset_context()]: `tool('top_genes', n_hubs = 25)` instead of
+#' `list(id = 'top_genes', params = list(n_hubs = 25))`. A registered tool is
+#' capability-checked before it runs and every skip is recorded on the packet.
+#'
+#' @param x A registered tool id (see [list_tools()]) or a tool function
+#'   (`function(ctx)` returning an `evidence_fragment`, a `dataset_fragment`
+#'   or `NULL`).
+#' @param ... Tool parameters, passed to the tool as `ctx$params`.
+#' @return A `llegir_tool_spec`.
+#' @examples
+#' tool('top_genes', n_hubs = 25)
+#' tool(top_genes_tool, n_hubs = 25)
+#' @export
+tool <- function(x, ...){
+    params <- list(...)
+    spec <- if (is.character(x) && length(x) == 1) {
+        list(id = x, params = params)
+    } else if (is.function(x)) {
+        list(fn = x, params = params)
+    } else {
+        stop('tool() takes a registered tool id or a tool function')
+    }
+    .resolve_spec(spec)
+}
+
+#' @export
+print.llegir_tool_spec <- function(x, ...){
+    label <- x$id %||% 'unregistered tool'
+    params <- if (length(x$params)) paste(names(x$params), collapse = ', ') else 'none'
+    cat('<llegir tool> ', label, ' [', x$scope %||% 'unknown scope', '] params: ', params, '\n', sep = '')
+    invisible(x)
 }
 
 # the required capabilities for one call: requires may be a static vector or
@@ -139,26 +224,26 @@ list_tools <- function(scope = NULL){
         'differential_module_activity', differential_module_activity_tool,
         type = c('cross_condition_delta', 'categorical_association'),
         description = "Module-level differential activity across a condition, on pseudo-bulk samples",
-        requires = 'module_scores', tier = 'high'
+        requires = 'pseudobulk', tier = 'high'
     )
     register_tool(
         'pseudobulk_de_limma', pseudobulk_de_limma_tool,
         type = 'cross_condition_delta',
         description = "Gene-level differential expression (limma-voom) within a module, on pseudo-bulk counts",
-        requires = character(0), tier = 'high'
+        requires = 'pseudobulk', tier = 'high'
     )
     register_tool(
-        'composition', dataset_composition_tool, type = 'composition_summary',
+        'dataset_composition', dataset_composition_tool, type = 'composition_summary',
         description = 'Cell-state census and condition covariate balance across the whole dataset',
         requires = 'grouping', scope = 'dataset'
     )
     register_tool(
-        'variance_structure', dataset_variance_structure_tool, type = 'variance_structure',
+        'dataset_variance_structure', dataset_variance_structure_tool, type = 'variance_structure',
         description = 'Principal-component regression against metadata covariates, on the pseudo-bulk view',
-        requires = character(0), scope = 'dataset'
+        requires = 'pseudobulk', scope = 'dataset'
     )
     register_tool(
-        'baseline_expression', dataset_baseline_expression_tool, type = 'baseline_expression',
+        'dataset_baseline_expression', dataset_baseline_expression_tool, type = 'baseline_expression',
         description = 'Dataset-wide baseline expression, ribosomal/mitochondrial mass, and depth distribution',
         requires = 'expression', scope = 'dataset'
     )

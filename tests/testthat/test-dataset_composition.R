@@ -52,10 +52,12 @@ test_that('dataset_composition_tool() cross-tabs against a condition_col and rep
     expect_true('samples_per_condition' %in% metrics)
 })
 
-test_that('dataset_composition_tool() skips gracefully without the grouping capability', {
-    ctx <- list(ms = make_no_grouping_ms(), params = list(group_col = 'cell_type'))
-    expect_message(result <- dataset_composition_tool(ctx), 'skipped')
-    expect_null(result)
+test_that('run_dataset_context() skips dataset_composition without the grouping capability', {
+    spec <- list(fn = dataset_composition_tool, params = list(group_col = 'cell_type'))
+    expect_message(dc <- run_dataset_context(make_no_grouping_ms(), list(spec), validate = FALSE), 'skipped')
+    expect_length(dc$dataset_fragments, 0)
+    expect_equal(dc$provenance$skipped[[1]]$tool_id, 'dataset_composition')
+    expect_match(dc$provenance$skipped[[1]]$reason, 'grouping')
 })
 
 test_that('dataset_composition_tool() errors without group_col', {
@@ -88,7 +90,7 @@ test_that('dataset_composition_tool() flags underpowered_contrast when a conditi
 
 test_that('run_dataset_context() runs the registered composition tool end to end', {
     ms <- llegir_example_moduleset()
-    dc <- run_dataset_context(ms, list(list(id = 'composition', params = list(group_col = 'cell_type', condition_col = 'diagnosis'))))
+    dc <- run_dataset_context(ms, list(list(id = 'dataset_composition', params = list(group_col = 'cell_type', condition_col = 'diagnosis'))))
 
     expect_equal(length(dc$dataset_fragments), 1)
     expect_equal(dc$dataset_fragments[[1]]$type, 'composition_summary')

@@ -115,3 +115,32 @@ test_that('run_module() fails loudly on a malformed fragment from a registered t
         'evidence_fragment'
     )
 })
+
+test_that('tool spec mistakes fail loudly instead of running with defaults', {
+    ms <- llegir_example_moduleset()
+    mod <- modules(ms)[1]
+    expect_error(run_module(ms, mod, list(list(fn = top_genes_tool, param = list(n_hubs = 3)))), 'unknown field.*param')
+    expect_error(run_module(ms, mod, list(list(params = list()))), 'needs an id or a fn')
+    expect_error(run_module(ms, mod, list(tool('dataset_composition'))), 'dataset-scoped')
+    expect_error(run_dataset_context(ms, list(tool('top_genes'))), 'module-scoped')
+    expect_error(run_orchestrator(ms, list(tool('dataset_composition')), output_dir = tempfile()), 'dataset-scoped')
+})
+
+test_that('tool() resolves ids and functions to the same registered spec', {
+    by_id <- tool('top_genes', n_hubs = 5)
+    by_fn <- tool(top_genes_tool, n_hubs = 5)
+    expect_s3_class(by_id, 'llegir_tool_spec')
+    expect_equal(by_id$id, 'top_genes')
+    expect_equal(by_fn$id, 'top_genes')
+    expect_equal(by_id$params, list(n_hubs = 5))
+    expect_equal(by_id$scope, 'module')
+})
+
+test_that('a tool returning NULL leaves a skip record', {
+    ms <- llegir_example_moduleset()
+    mod <- modules(ms)[1]
+    packet <- run_module(ms, mod, list(tool(function(ctx) NULL), tool('top_genes')))
+    expect_length(packet$fragments, 1)
+    expect_equal(packet$provenance$skipped[[1]]$tool_id, 'unregistered tool')
+    expect_match(packet$provenance$skipped[[1]]$reason, 'returned NULL')
+})

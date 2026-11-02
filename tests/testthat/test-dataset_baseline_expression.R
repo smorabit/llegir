@@ -52,10 +52,14 @@ test_that('dataset_baseline_expression_tool() honors params$top_n', {
     expect_true(all(frag$result$mean_expr == sort(frag$result$mean_expr, decreasing = TRUE)))
 })
 
-test_that('dataset_baseline_expression_tool() skips gracefully without the expression capability', {
-    ctx <- list(ms = make_no_expression_ms(), params = list())
-    expect_message(result <- dataset_baseline_expression_tool(ctx), 'skipped')
-    expect_null(result)
+test_that('run_dataset_context() skips dataset_baseline_expression without the expression capability', {
+    expect_message(
+        dc <- run_dataset_context(make_no_expression_ms(), list(tool('dataset_baseline_expression')), validate = FALSE),
+        'skipped'
+    )
+    expect_length(dc$dataset_fragments, 0)
+    expect_equal(dc$provenance$skipped[[1]]$tool_id, 'dataset_baseline_expression')
+    expect_match(dc$provenance$skipped[[1]]$reason, 'expression')
 })
 
 test_that('dataset_baseline_expression_tool() computes ribosomal/mitochondrial mass correctly', {
@@ -72,7 +76,7 @@ test_that('dataset_baseline_expression_tool() computes ribosomal/mitochondrial m
 
 test_that('run_dataset_context() runs the registered baseline_expression tool end to end', {
     ms <- llegir_example_moduleset()
-    dc <- run_dataset_context(ms, list(list(id = 'baseline_expression', params = list())))
+    dc <- run_dataset_context(ms, list(list(id = 'dataset_baseline_expression', params = list())))
 
     expect_equal(length(dc$dataset_fragments), 1)
     expect_equal(dc$dataset_fragments[[1]]$type, 'baseline_expression')

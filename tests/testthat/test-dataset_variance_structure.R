@@ -67,7 +67,7 @@ test_that('dataset_variance_structure_tool() flags condition_confounded_with_bat
 test_that('run_dataset_context() runs the registered variance_structure tool end to end', {
     dc <- run_dataset_context(
         pb_ms,
-        list(list(id = 'variance_structure', params = list(covariates = c('condition', 'n_cells'), condition_col = 'condition')))
+        list(list(id = 'dataset_variance_structure', params = list(covariates = c('condition', 'n_cells'), condition_col = 'condition')))
     )
 
     expect_equal(length(dc$dataset_fragments), 1)

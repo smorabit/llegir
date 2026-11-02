@@ -22,11 +22,6 @@ cluster_dme_tool <- function(ctx){
     group_by <- ctx$params$group_by
     if (is.null(group_by)) stop('cluster_dme requires params$group_by')
 
-    if (!has_capability(ctx$ms, 'grouping') || !has_capability(ctx$ms, 'module_scores')) {
-        message('cluster_dme: skipped, module set lacks the grouping/module_scores capability')
-        return(NULL)
-    }
-
     scores <- module_scores(ctx$ms, module = ctx$module_id)
     groups <- metadata(ctx$ms)[[group_by]]
     if (is.null(groups)) stop('metadata column not found: ', group_by)
