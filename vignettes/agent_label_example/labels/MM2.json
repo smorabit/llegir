@@ -1,0 +1,43 @@
+{
+  "module_id": "MM2",
+  "proposed_label": "Ribosomal and MHC class I high-expresser housekeeping program (RPL8, HLA-C, HLA-B)",
+  "dominant_biology": "Generic high-abundance housekeeping transcription: cytoplasmic ribosomal proteins with MHC class I heavy chains and OXPHOS subunits",
+  "interpretation": "The top hubs mix cytoplasmic ribosomal proteins (RPL8, RPS15, RPLP1, RPLP2, RPS28) with MHC class I heavy chains (HLA-C, HLA-B, HLA-A) and OXPHOS subunits (UQCR11, COX8A, COX5B), a high-abundance housekeeping co-expression program rather than a specific cell-state program. Its hub genes are significantly enriched for cytoplasmic translation and MHC class Ib antigen presentation terms, and its score is only modestly higher in proliferative macrophages, pDC and CD1C DCs (rank-biserial at most 0.37).",
+  "supporting_claims": [
+    {"claim": "The top hubs RPL8, RPS15, RPLP1, RPLP2 and RPS28 are cytoplasmic ribosomal protein genes, and HLA-C, HLA-B and HLA-A are MHC class I heavy chains.", "fragment_ids": ["top_genes"], "direction": "na"},
+    {"claim": "OXPHOS subunits UQCR11, COX8A, COX5B, NDUFB11 and ATP5F1B also sit in the top 25 hubs, consistent with a generic high-abundance housekeeping axis.", "fragment_ids": ["top_genes"], "direction": "na"},
+    {"claim": "The hub genes are significantly enriched for Cytoplasmic Translation (6 genes, FDR 1.2e-07) and for MHC class Ib antigen presentation (3 genes, FDR 1.2e-06).", "fragment_ids": ["geneset_enrichment"], "direction": "up"},
+    {"claim": "The module score is only modestly elevated in its strongest states, Macrophages proliferative (rank-biserial 0.37), pDC and DC CD1C.", "fragment_ids": ["cluster_dme"], "direction": "up"}
+  ],
+  "literature": [],
+  "flags": ["label_low_specificity", "needs_human_review"],
+  "confidence": {
+    "score": 0.38,
+    "rationale": "The ribosomal and MHC class I hubs are clear, but obligate partners of both halves sit elsewhere: RPL10, RPS3, RPS27A and EEF1A1 lead MM8, and B2M and TAP1 are in MM4, so MM2 holds only a subset of each program. The hubs are generic high-expressers and state specificity is weak; depth correlation (rho 0.32) is below threshold and there are no co-occurring glycolytic hubs, so a pure depth axis is not supported either."
+  },
+  "review": {
+    "evidence_tier": "hub_genes",
+    "artifact_gate": {"status": "uncertain", "reasons": "No screen threshold is met (0 stress hubs, depth rho 0.32/0.32, top sample 39.1%), and glycolytic genes (GAPDH, ENO1, PKM, LDHA, TPI1) sit in other modules, so the glycolysis-plus-OXPHOS depth reading is not supported; but the hubs are generic high-abundance transcripts (ribosomal, MHC I, OXPHOS) with a 25% ribosomal share, so a library-size / housekeeping contribution cannot be excluded."},
+    "supporting_hubs": [
+      {"gene": "RPL8", "kme": 0.8032},
+      {"gene": "RPS15", "kme": 0.7997},
+      {"gene": "RPLP1", "kme": 0.7605},
+      {"gene": "HLA-C", "kme": 0.7171},
+      {"gene": "HLA-B", "kme": 0.6849},
+      {"gene": "HLA-A", "kme": 0.5989}
+    ],
+    "expected_markers": [
+      {"gene": "HLA-A", "status": "in_module"},
+      {"gene": "HLA-E", "status": "in_module"},
+      {"gene": "B2M", "status": "in_network"},
+      {"gene": "TAP1", "status": "in_network"},
+      {"gene": "RPL10", "status": "in_network"},
+      {"gene": "RPS3", "status": "in_network"},
+      {"gene": "EEF1A1", "status": "in_network"}
+    ],
+    "contradicting_evidence": "Obligate MHC class I partners B2M and TAP1 are in MM4, and the strongest ribosomal/translation genes (RPL10, RPS3, RPS27A, EEF1A1) lead MM8, so neither half of the label is captured in full. State specificity is weak (max rank-biserial 0.37). Ribosomal paralogs lighting up the translation GO branch count as one line of evidence.",
+    "alternative_label": {"label": "Sequencing-depth / global expression-output axis", "reason_rejected": "Depth correlation is 0.32 for both depth columns, below the 0.5 threshold, and glycolytic genes are not among the hubs (they sit in MM7 and MM10), so the glycolysis-plus-OXPHOS signature of a depth axis is absent."},
+    "confidence_level": "low",
+    "display_hubs": ["RPL8", "HLA-C", "EIF1"]
+  }
+}

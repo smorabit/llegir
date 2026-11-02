@@ -1,0 +1,49 @@
+{
+  "module_id": "MM1",
+  "proposed_label": "C1Q complement-high border-associated macrophage program (LYVE1, FOLR2, F13A1)",
+  "dominant_biology": "Border-associated / perivascular macrophage identity with classical complement (C1Q) and scavenger receptor expression",
+  "interpretation": "The top hubs combine the C1Q complement chain genes (C1QA, C1QB, C1QC) with TREM2, MSR1 and C5AR1, and the border-associated macrophage genes LYVE1, FOLR2 and F13A1, marking a complement-high border-associated macrophage program. Its module score is highest in Border TAMs and pvBAMs MRC1hi, and its hub genes are significantly enriched for synapse pruning and classical complement activation terms, although each term rests on only 3 to 4 overlapping genes.",
+  "supporting_claims": [
+    {"claim": "The top hubs C1QB, C1QC and C1QA (with TREM2, MSR1 and C5AR1) are classical complement and scavenger/phagocytic macrophage genes.", "fragment_ids": ["top_genes"], "direction": "na"},
+    {"claim": "Further top-25 hubs F13A1, FOLR2, LYVE1 and SELENOP are border-associated / perivascular macrophage genes.", "fragment_ids": ["top_genes"], "direction": "na"},
+    {"claim": "The module score is highest in Border TAMs (rank-biserial 0.87) and pvBAMs MRC1hi (0.83).", "fragment_ids": ["cluster_dme"], "direction": "up"},
+    {"claim": "Consistent with this, the hub genes are significantly enriched for Synapse Pruning and Complement Activation, Classical Pathway (FDR < 0.05), each backed by only 3 to 4 overlapping genes.", "fragment_ids": ["geneset_enrichment"], "direction": "up"}
+  ],
+  "literature": [],
+  "flags": ["label_low_specificity"],
+  "confidence": {
+    "score": 0.62,
+    "rationale": "Several top-10 hubs (C1QA/B/C, TREM2, MSR1) and top-25 hubs (LYVE1, FOLR2, F13A1) cohere on a complement-high border-associated macrophage identity, and the state and enrichment fragments agree. Capped at moderate because 55.5% of top-decile cells come from one patient (P08), which limits generalizability, and because CD163, STAB1 and MS4A7 sit in MM10 and MRC1 is unassigned."
+  },
+  "review": {
+    "evidence_tier": "hub_genes",
+    "artifact_gate": {"status": "pass", "reasons": "0 of top 25 hubs are dissociation-stress genes; depth rho 0.15/0.20 is below 0.5; hubs are cell-type-specific macrophage genes, not generic high-expressers. Sample concentration (55.5% from P08) meets its threshold but is not a technical signature."},
+    "supporting_hubs": [
+      {"gene": "C1QB", "kme": 0.7245},
+      {"gene": "C1QC", "kme": 0.7212},
+      {"gene": "C1QA", "kme": 0.7155},
+      {"gene": "TREM2", "kme": 0.686},
+      {"gene": "MSR1", "kme": 0.6847},
+      {"gene": "C5AR1", "kme": 0.67},
+      {"gene": "F13A1", "kme": 0.6179},
+      {"gene": "FOLR2", "kme": 0.5899},
+      {"gene": "LYVE1", "kme": 0.5896}
+    ],
+    "expected_markers": [
+      {"gene": "C1QA", "status": "in_module"},
+      {"gene": "C1QB", "status": "in_module"},
+      {"gene": "C1QC", "status": "in_module"},
+      {"gene": "LYVE1", "status": "in_module"},
+      {"gene": "FOLR2", "status": "in_module"},
+      {"gene": "F13A1", "status": "in_module"},
+      {"gene": "CD163", "status": "in_network"},
+      {"gene": "MRC1", "status": "unassigned"},
+      {"gene": "STAB1", "status": "in_network"},
+      {"gene": "MS4A7", "status": "in_network"}
+    ],
+    "contradicting_evidence": "Canonical BAM markers CD163, STAB1 and MS4A7 are assigned to MM10 and MRC1 is unassigned, so MM1 captures the complement/LYVE1/FOLR2 arm rather than the full BAM signature. The program is concentrated in one patient (P08, 55.5% of top-decile cells). Enrichment terms rest on 3 to 4 overlapping C1Q genes, one line of evidence.",
+    "alternative_label": {"label": "Microglia-like TAM (TREM2, C1Q, GPR34)", "reason_rejected": "Homeostatic microglia markers P2RY12 and TMEM119 are unassigned and CX3CR1 sits in MM13, while the border-associated genes LYVE1, FOLR2 and F13A1 are top-25 hubs and the score peaks in Border TAMs and pvBAMs rather than Microglia TAM."},
+    "confidence_level": "moderate",
+    "display_hubs": ["C1QB", "TREM2", "MSR1"]
+  }
+}

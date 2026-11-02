@@ -1,0 +1,52 @@
+      gene module       kme rank     status
+1      B2M    MM4 0.2799444  400 in_network
+2     TAP1    MM4 0.3261771  294 in_network
+3    HLA-E    MM2 0.2909311  126  in_module
+4    HLA-A    MM2 0.5989274   21  in_module
+5     RPS3    MM8 0.8491902   15 in_network
+6    RPL10    MM8 0.8735591    1 in_network
+7   RPS27A    MM8 0.8298836   19 in_network
+8   EEF1A1    MM8 0.8253129   21 in_network
+9     TPT1   <NA>        NA   NA unassigned
+10  COX4I1    MM8 0.5728440   66 in_network
+11   GAPDH   MM10 0.3797558   40 in_network
+12    ENO1    MM7 0.2912268  100 in_network
+13     PKM   MM10 0.3010705   70 in_network
+14    LDHA    MM7 0.2500575  131 in_network
+15    TPI1   MM10 0.3569213   52 in_network
+16 HLA-DRA   MM13 0.7561464    5 in_network
+17    CD74   MM13 0.6622577    8 in_network
+18   MKI67   <NA>        NA   NA not_tested
+19   TOP2A   <NA>        NA   NA not_tested
+R version 4.5.3 (2026-03-11)
+Platform: x86_64-conda-linux-gnu
+Running under: AlmaLinux 9.8 (Olive Jaguar)
+
+Matrix products: default
+BLAS/LAPACK: <conda-env>/lib/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Europe/Madrid
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] dplyr_1.2.1       llegir_0.0.0.9000
+
+loaded via a namespace (and not attached):
+ [1] R6_2.6.1              tidyselect_1.2.1      magrittr_2.0.5       
+ [4] glue_1.8.1            tibble_3.3.1          pkgconfig_2.0.3      
+ [7] RcppParallel_5.1.11-2 generics_0.1.4        lifecycle_1.0.5      
+[10] cli_3.6.6             qs2_0.2.1             vctrs_0.7.3          
+[13] compiler_4.5.3        stringfish_0.19.0     tools_4.5.3          
+[16] pillar_1.11.1         Rcpp_1.1.1-1.1        yaml_2.3.12          
+[19] rlang_1.3.0          

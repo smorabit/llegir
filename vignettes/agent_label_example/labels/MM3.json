@@ -1,0 +1,37 @@
+{
+  "module_id": "MM3",
+  "proposed_label": "Low-coherence generic high-expresser residual (PFN1, VIM, ARPC2)",
+  "dominant_biology": "No coherent program: a weakly connected mix of cytoskeletal, ribosomal, OXPHOS and ER housekeeping genes",
+  "interpretation": "The top hubs span actin cytoskeleton genes (ACTB, PFN1, ARPC2, VIM), ribosomal and translation genes (RPL13, RPS2, EIF3F), OXPHOS subunits (COX5A, NDUFAB1) and ER chaperones (CALR, PDIA3), with low hub connectivity (top kME 0.54), so they do not mark one specific program. The score is only modestly higher in classical monocytes and proliferative macrophages (rank-biserial at most 0.33), and the significant enrichment terms each rest on only 2 overlapping genes.",
+  "supporting_claims": [
+    {"claim": "The top hubs ACTB, PFN1, VIM and ARPC2 are ubiquitous cytoskeletal genes, mixed with ribosomal (RPL13, RPS2), OXPHOS (COX5A) and ER chaperone (CALR, PDIA3) genes, at low kME (top hub 0.54).", "fragment_ids": ["top_genes"], "direction": "na"},
+    {"claim": "The module score is only modestly elevated in classical monocytes (rank-biserial 0.33) and proliferative macrophages (0.32).", "fragment_ids": ["cluster_dme"], "direction": "up"}
+  ],
+  "literature": [],
+  "flags": ["insufficient_evidence", "possible_artifact", "label_low_specificity"],
+  "confidence": {
+    "score": 0.15,
+    "rationale": "Hubs are generic high-abundance housekeeping genes with low connectivity (top kME 0.54, median 0.14 across 934 genes); the core actin-machinery partners CFL1, ARPC3 and MYL6 lead MM6 instead, and depth correlation with nFeature_RNA (0.49) sits just under the 0.5 threshold. Enrichment terms rest on 2 genes each. A specific biological label is not supported."
+  },
+  "review": {
+    "evidence_tier": "insufficient",
+    "artifact_gate": {"status": "uncertain", "reasons": "No threshold is formally met, but depth rho with nFeature_RNA is 0.49 (threshold 0.5), the module is large (934 genes) and weakly connected, and its hubs are generic high-expressers including a housekeeping normalizer (ACTB, rank 1); 4 dissociation-stress genes (JUNB, IER2, FOS, FOSB) sit in the module bulk though none in the top 25."},
+    "supporting_hubs": [
+      {"gene": "ACTB", "kme": 0.5401},
+      {"gene": "PFN1", "kme": 0.5182},
+      {"gene": "VIM", "kme": 0.4718},
+      {"gene": "ARPC2", "kme": 0.4255}
+    ],
+    "expected_markers": [
+      {"gene": "CFL1", "status": "in_network"},
+      {"gene": "ARPC3", "status": "in_network"},
+      {"gene": "MYL6", "status": "in_network"},
+      {"gene": "ACTG1", "status": "unassigned"},
+      {"gene": "TMSB4X", "status": "in_network"}
+    ],
+    "contradicting_evidence": "For any actin-cytoskeleton reading, obligate partners CFL1, ARPC3 and MYL6 are the top three hubs of MM6 and ACTG1 is unassigned. For a classical-monocyte reading, S100A8, S100A9, LYZ and FCN1 lead MM9 and CD14 leads MM10.",
+    "alternative_label": {"label": "Actin cytoskeleton / motility program", "reason_rejected": "Core actin-machinery partners CFL1, ARPC3 and MYL6 lead MM6 and ACTG1 is unassigned, while MM3's top hubs also include unrelated ribosomal, OXPHOS and ER genes at low kME."},
+    "confidence_level": "very_low",
+    "display_hubs": ["PFN1", "VIM", "ARPC2"]
+  }
+}

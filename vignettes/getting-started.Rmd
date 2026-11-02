@@ -21,7 +21,8 @@ knitr::opts_knit$set(root.dir = normalizePath('..'))
 # fixture (see .Rbuildignore) -- it exists on a dev machine but never inside
 # the tarball R CMD check builds and runs against, so every chunk below is
 # skipped there instead of erroring on a missing file
-data_available <- file.exists('data/CSF_Myeloid_hdWGCNA.rds')
+# root.dir only takes effect from the next chunk, so resolve the path here
+data_available <- file.exists(file.path(normalizePath('..'), 'data', 'CSF_Myeloid_hdWGCNA.rds'))
 knitr::opts_chunk$set(eval = data_available)
 ```
 
@@ -37,7 +38,9 @@ if (!data_available) {
 }
 ```
 
-**llegir** is an R package to automate the interpretation of gene modules in a specific context. From an input gene expression dataset (single-cell, spatial transcriptomics, or bulk RNA-seq) and a set of gene modules, **llegir** gathers a standardized bundle of evidence per module using a pre-built toolbox of analysis functions, and drafts an evidence-backed interpretation via a LLM-enabled synthesis layer.
+**llegir** is an R package to automate the interpretation of gene modules in a specific context. From an input gene expression dataset (single-cell, spatial transcriptomics, or bulk RNA-seq) and a set of gene modules, **llegir** gathers a standardized bundle of evidence per module using a pre-built toolbox of analysis functions, and turns that evidence into an evidence-backed interpretation.
+
+This vignette walks through the shared core of every **llegir** run in detail: the `ModuleSet`, the dataset tools, the evidence tools and their evidence packets, and the dataset description. It finishes with one way to interpret the packets, sending them to an LLM directly from R. In practice, most users hand the packets to a terminal coding agent instead, which needs no API key; that workflow is covered in the [Labeling modules with a coding agent](agent-labels.html) vignette.
 
 *NOTE* this package is at an experimental development stage, and much of the interface is subject to change.
 
@@ -70,7 +73,7 @@ head(gene_membership(ms, 'MM1'))
 ```
 
 ```{r, purl = FALSE}
-head(metadata(ms))
+head(llegir::metadata(ms))
 ```
 
 ## Global experiment grounding
@@ -91,7 +94,7 @@ dataset_ctx <- run_dataset_context(ms, dataset_tool_config)
 dataset_ctx$dataset_fragments[[1]]$compact_summary
 ```
 
-`dataset_variance_structure_tool()` needs a pseudo-bulk view of the data (see `pseudobulk_ModuleSet()` / `with_pseudobulk()`) to regress against, so it skips gracefully -- rather than erroring -- when `ms` doesn't carry one, as here. The resulting `dataset_ctx` is passed into `run_synthesis_orchestrator()` (or `synthesize_module()`) alongside `desc`, via `dataset_context = dataset_ctx`, injecting a DATASET CONTEXT block into every module's synthesis prompt (see the `## Interpreting evidence` section below).
+`dataset_variance_structure_tool()` needs a pseudo-bulk view of the data (see `pseudobulk_ModuleSet()` / `with_pseudobulk()`) to regress against, so it skips gracefully -- rather than erroring -- when `ms` doesn't carry one, as here. The resulting `dataset_ctx` is passed into `run_synthesis_orchestrator()` (or `synthesize_module()`) alongside `desc`, via `dataset_context = dataset_ctx`, injecting a DATASET CONTEXT block into every module's synthesis prompt (see the `## Interpreting evidence in R with an LLM backend` section below).
 
 ## Orchestrating a chain of analysis tools
 
@@ -170,7 +173,9 @@ desc <- dataset_description(
 cat(render_dataset_description(desc))
 ```
 
-## Interpreting evidence
+## Interpreting evidence in R with an LLM backend
+
+*The recommended route from here is to export the packets to a coding agent with `export_agent_workspace(mode = 'label')`, as shown in the [Labeling modules with a coding agent](agent-labels.html) vignette. The in-R synthesis below needs an API key for a hosted model, or a [local model](local-llm-backend.html) served on your own hardware. The chunks in this section are shown but not run when this site is built, so no API calls are made.*
 
 `run_synthesis_orchestrator()` turns the evidence packets into written interpretations. Each module's evidence packet is sent to a user-specified LLM, checks that every claim is actually backed by the evidence (`enforce_faithfulness()`), and combines the model's confidence with the evidence-based confidence (`fuse_confidence()`). It saves an interpretation and a readable Markdown paragraph per module, plus a `review_queue.tsv` and `manifest.json` for the whole run.
 
@@ -182,7 +187,7 @@ environment (e.g. `GITHUB_PAT` or `GEMINI_API_KEY`). Wrapping it in
 `cached_backend()` saves each result to disk, so re-running synthesis on
 unchanged packets doesn't spend another API call.
 
-```{r, purl = FALSE}
+```{r, purl = FALSE, eval = FALSE}
 backend <- cached_backend(
     resolve_backend('github'),
     provider = 'github',
@@ -198,7 +203,7 @@ interps <- run_synthesis_orchestrator(
 Inspect one interpretation: its proposed label, model confidence, and the
 rendered paragraph.
 
-```{r, purl = FALSE}
+```{r, purl = FALSE, eval = FALSE}
 interp <- interps[['MM1']]
 interp$proposed_label
 interp$confidence$score
@@ -209,6 +214,6 @@ The review queue (`build_review_queue()`) collects only the interpretations
 flagged for a closer look (`needs_review()`), sorted lowest-confidence first,
 so you know which modules to check by hand:
 
-```{r, purl = FALSE}
+```{r, purl = FALSE, eval = FALSE}
 build_review_queue(interps)
 ```

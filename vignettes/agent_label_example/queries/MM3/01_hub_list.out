@@ -1,0 +1,76 @@
+module size: 934 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+0.02925 0.10189 0.13693 0.15529 0.19261 0.54013 
+   gene_name module       kme
+1       ACTB    MM3 0.5401293
+2       PFN1    MM3 0.5182458
+3        VIM    MM3 0.4717868
+4      RPL13    MM3 0.4656786
+5       CST3    MM3 0.4602054
+6      ARPC2    MM3 0.4254629
+7    S100A10    MM3 0.4161647
+8       NME2    MM3 0.4057390
+9     PYCARD    MM3 0.4053543
+10   ATP6V0C    MM3 0.3984876
+11      RPS2    MM3 0.3953227
+12     COX5A    MM3 0.3904878
+13     SERP1    MM3 0.3710858
+14      CALR    MM3 0.3652205
+15      PGLS    MM3 0.3595676
+16     EIF3F    MM3 0.3580192
+17   PRELID1    MM3 0.3547320
+18     PPDPF    MM3 0.3512468
+19       MIF    MM3 0.3502185
+20    FKBP1A    MM3 0.3372159
+21     CALM1    MM3 0.3331548
+22       DDT    MM3 0.3330738
+23     AP1S2    MM3 0.3298622
+24   NDUFAB1    MM3 0.3283939
+25     PDIA3    MM3 0.3281418
+26      TSPO    MM3 0.3276473
+27     YWHAB    MM3 0.3275692
+28    SYNGR2    MM3 0.3262191
+29      GPX4    MM3 0.3238283
+30     ALDH2    MM3 0.3221441
+31      ARF5    MM3 0.3219392
+32      GNG5    MM3 0.3207585
+33   ARL6IP4    MM3 0.3206845
+34   TRAPPC5    MM3 0.3174521
+35     PGAM1    MM3 0.3156867
+36     RGS19    MM3 0.3153395
+37      PAXX    MM3 0.3128253
+38   CDK2AP2    MM3 0.3115741
+39      GUK1    MM3 0.3115257
+40   RNASET2    MM3 0.3095717
+R version 4.5.3 (2026-03-11)
+Platform: x86_64-conda-linux-gnu
+Running under: AlmaLinux 9.8 (Olive Jaguar)
+
+Matrix products: default
+BLAS/LAPACK: <conda-env>/lib/libopenblasp-r0.3.32.so;  LAPACK version 3.12.0
+
+locale:
+ [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+ [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+ [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+ [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+ [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+time zone: Europe/Madrid
+tzcode source: system (glibc)
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] llegir_0.0.0.9000
+
+loaded via a namespace (and not attached):
+ [1] R6_2.6.1              tidyselect_1.2.1      magrittr_2.0.5       
+ [4] glue_1.8.1            tibble_3.3.1          pkgconfig_2.0.3      
+ [7] RcppParallel_5.1.11-2 dplyr_1.2.1           generics_0.1.4       
+[10] lifecycle_1.0.5       cli_3.6.6             qs2_0.2.1            
+[13] vctrs_0.7.3           compiler_4.5.3        stringfish_0.19.0    
+[16] tools_4.5.3           pillar_1.11.1         Rcpp_1.1.1-1.1       
+[19] yaml_2.3.12           rlang_1.3.0          

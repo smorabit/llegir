@@ -1,0 +1,266 @@
+---
+title: "Labeling modules with a coding agent"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Labeling modules with a coding agent}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = FALSE,
+  comment = NA
+)
+
+# data/, output/ and vignettes/agent_label_example/ paths are relative to the
+# package root, so evaluate chunks there rather than in vignettes/
+knitr::opts_knit$set(root.dir = normalizePath('..'))
+
+# data/CSF_Myeloid_hdWGCNA.rds is a large, gitignored/buildignored dev-only
+# fixture, so every chunk below is skipped under R CMD check instead of
+# erroring on a missing file
+# root.dir only takes effect from the next chunk, so resolve the path here
+data_available <- file.exists(file.path(normalizePath('..'), 'data', 'CSF_Myeloid_hdWGCNA.rds'))
+knitr::opts_chunk$set(eval = data_available)
+```
+
+```{r, echo = FALSE, eval = TRUE, results = 'asis'}
+if (!data_available) {
+    cat(
+        "*This vignette's code chunks require a local ",
+        "`data/CSF_Myeloid_hdWGCNA.rds` dev fixture (gitignored and build-ignored, ",
+        "not shipped with the package) and are skipped here. ",
+        "The prose below still walks through the full workflow.*\n",
+        sep = ''
+    )
+}
+```
+
+The main way to use **llegir** is to gather evidence for each module in R, then hand that evidence to a terminal coding agent (for example [Claude Code](https://claude.com/claude-code)) that writes the module labels. **llegir** then checks every label against the data and collects the labels into the same validated interpretation objects and HTML report as the in-R synthesis route.
+
+Compared with sending each module to an LLM API from R, this route:
+
+- needs no API key or per-call budget, since the agent runs on whatever coding-agent subscription you already use;
+- lets the agent test its own hypotheses, by running read-only queries against the data through **llegir** getters, with every query kept as a script in the workspace;
+- uses the same labeling rules as in-R synthesis (the system prompt is copied into the workspace verbatim, with its `PROMPT_TEMPLATE_VERSION`), plus a stricter review protocol that **llegir** enforces afterwards.
+
+In this vignette we label three hdWGCNA co-expression modules from a scRNA-seq dataset of cerebrospinal fluid (CSF) myeloid cells. The labels shown below were written by a real Claude Code run and are cached in `vignettes/agent_label_example/`, so knitting this vignette never runs the agent itself. `scripts/build_agent_label_example.R` reproduces the workspace from scratch.
+
+## Gather the evidence
+
+The first steps are the same as in every **llegir** run: build a `ModuleSet`, gather dataset-level context, run a chain of evidence tools to get one evidence packet per module, and describe the dataset. The [Getting Started](getting-started.html) vignette covers each of these in detail; here we run them in one go.
+
+```{r, message = FALSE, warning = FALSE}
+library(Seurat)
+library(hdWGCNA)
+library(tidyverse)
+library(llegir)
+
+# load the CSF dataset, which has already been processed with hdWGCNA
+seurat_obj <- readRDS('data/CSF_Myeloid_hdWGCNA.rds')
+ms <- hdWGCNA_ModuleSet(seurat_obj)
+modules_use <- c('MM1', 'MM2', 'MM3')
+
+# dataset-level context, gathered once for the whole experiment
+dataset_ctx <- run_dataset_context(ms, list(
+    list(fn = dataset_composition_tool, params = list(group_col = 'lv2_annot', condition_col = 'diagnosis'))
+))
+
+# per-module evidence: top hub genes, cell-state specificity, and enrichment
+tool_config <- list(
+    list(fn = top_genes_tool, params = list(n_hubs = 25)),
+    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+    list(fn = geneset_enrichment_tool, params = list(
+        n_hubs = 25,
+        db_files = c(
+            GO_BP = 'data/GO_Biological_Process_2026.txt',
+            Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt'
+        )
+    ))
+)
+packets <- run_orchestrator(
+    ms, tool_config,
+    output_dir = 'output/agent_label_example/evidence_packets',
+    modules_use = modules_use
+)
+
+desc <- dataset_description(
+    species = 'human',
+    tissue = 'cerebrospinal fluid (CSF)',
+    cell_compartment = 'myeloid cells',
+    assay = 'single-cell RNA-seq (10x)',
+    conditions = c(
+        'Glioblastoma', 'Brain Metastasis', 'Primary CNS lymphoma',
+        'Secondary CNS lymphoma', 'Inflammatory / other neuroinflammatory'
+    ),
+    notes = 'Modules are CSF-myeloid co-expression programs; interpret in a CNS-myeloid, neuro-oncology / neuroinflammation context.'
+)
+```
+
+## Export a label workspace
+
+`export_agent_workspace()` with `mode = 'label'` writes everything the agent needs into one folder. It only writes files: it never calls a model.
+
+Three optional arguments sharpen the checks the agent has to pass:
+
+- `sample_col`: the metadata column naming the biological sample (here, the patient), used to flag modules whose activity comes mostly from one sample;
+- `depth_cols`: per-cell sequencing-depth columns, used to flag modules whose score tracks library size;
+- `feature_genes`: every gene that was eligible for module assignment (for hdWGCNA, `GetWGCNAGenes()`), so that a canonical marker missing from every module can be told apart as *unassigned* (it was tested and did not co-express) rather than *not tested* (it was never in the network).
+
+```{r, message = FALSE}
+ws_dir <- 'output/agent_label_example/label_ws'
+
+export_agent_workspace(
+    ms, dataset_ctx, packets, desc,
+    out_dir = ws_dir,
+    mode = 'label',
+    sample_col = 'patient',
+    depth_cols = c('nCount_RNA', 'nFeature_RNA'),
+    feature_genes = GetWGCNAGenes(seurat_obj)
+)
+```
+
+The workspace looks like this:
+
+```
+label_ws/
+├── .llegir_agent_manifest.md     # what the agent reads first: rules, protocol, API cheat-sheets
+├── query_example.R               # how to load the data in a vanilla Rscript process
+├── validate_labels.R             # the agent's self-check, runs check_agent_labels()
+├── artifacts/                    # read-only inputs
+│   ├── moduleset_lite.qs2        # the ModuleSet without its expression matrices
+│   ├── moduleset_full.qs2        # loaded only for queries that need expression
+│   ├── evidence_packets.qs2
+│   ├── label_evidence/<module>.md   # each packet, as the synthesis model would see it
+│   ├── feature_genes.txt
+│   └── interpretation_model_output.schema.json
+├── labels/                       # the agent writes <module>.json and notes/<module>.md here
+├── queries/                      # every script the agent runs, with its captured output
+└── scratch/
+```
+
+Each `label_evidence` file ends with an artifact screen: a few numbers **llegir** computes so the agent can rule out technical explanations before it reaches for biology. Each line states its threshold and whether the module meets it.
+
+```{r}
+evidence <- readLines(file.path(ws_dir, 'artifacts', 'label_evidence', 'MM1.md'))
+cat(evidence[which(startsWith(evidence, '[artifact_screen]')):length(evidence)], sep = '\n')
+```
+
+When a module meets the dissociation-stress or sequencing-depth threshold, its artifact gate cannot simply pass. When most of its top-scoring cells come from one sample, it keeps its biological label, but its confidence is capped at moderate and it is flagged `label_low_specificity`.
+
+## Run the agent
+
+Start the coding agent inside the workspace and point it at the manifest:
+
+```{bash, eval = FALSE}
+cd output/agent_label_example/label_ws
+claude "Read .llegir_agent_manifest.md, then complete its Labeling Task, following its Mission & Guardrails and Execution Protocol."
+```
+
+The manifest gives the agent the synthesis rules and a protocol to run for every module, in order:
+
+1. **Artifact gate** before any biology: dissociation stress, generic high-expresser hubs, sequencing depth, single-sample activity. A module that fails gets a technical label.
+2. **Evidence hierarchy**: hub genes ranked by kME carry the call; gene-set enrichment is secondary.
+3. **Supporting hubs** come from the top 25 only, with at least one from the top 10, and paralogs counted once.
+4. **Falsification**: list at least three canonical markers the label implies and check where each one actually sits (`in_module`, `in_network`, `unassigned` or `not_tested`).
+5. **Alternative label** and the evidence against the chosen one.
+6. **Anchored confidence**: high 0.75-0.95, moderate 0.5-0.75, low 0.25-0.5, very low 0-0.25.
+7. **Three display hubs** for figures: from the top 10, no housekeeping normalizers, no two from the same gene family.
+8. **Unique labels** within the workspace.
+
+The agent records each step in a `review` block inside `labels/<module>.json`, keeps working notes in `labels/notes/<module>.md`, and saves every query it runs as a numbered script with its output under `queries/<module>/`, cited in the notes. Those scripts are the methods record for each label. The agent is restricted to read-only queries through **llegir** getters, may not print full expression matrices, and may not write anywhere outside `labels/`, `queries/` and `scratch/`.
+
+Before finishing, the agent runs `validate_labels.R` and revises until every module passes.
+
+For this vignette we copy the labels from the cached Claude Code run into the fresh workspace:
+
+```{r}
+cached_dir <- 'vignettes/agent_label_example'
+file.copy(file.path(cached_dir, c('labels', 'queries')), ws_dir, recursive = TRUE, overwrite = TRUE)
+list.files(file.path(ws_dir, 'labels'), recursive = TRUE)
+```
+
+## Check the labels
+
+`check_agent_labels()` is what `validate_labels.R` runs. Rather than trusting the agent's `review` block, it re-derives each claim from the `ModuleSet`: the supporting hubs and their kME values, where each expected marker actually sits, the display-hub rule, whether the confidence score falls inside its band, whether the artifact gate respects the screen's thresholds, and that the notes cite every query. It also runs the faithfulness checks every interpretation goes through, including the rule that a gene set may not be called significant or enriched unless its FDR is below 0.05.
+
+```{r}
+check_agent_labels(ws_dir)
+```
+
+Each module comes back as `ok`, `missing`, `invalid` (does not fit the schema), `unfaithful` (a claim the evidence does not back) or `needs_revision` (the review block disagrees with the data), with the reason in `detail`.
+
+## Collect the labels
+
+`collect_agent_labels()` runs each label through the same path as in-R synthesis: schema validation, faithfulness enforcement and confidence fusion. It writes the same per-module JSON, `review_queue.tsv` and `manifest.json` as `run_synthesis_orchestrator()`, with the provenance recording `model = 'agent:claude-code'`.
+
+```{r}
+interps <- collect_agent_labels(
+    ws_dir,
+    output_dir = 'output/agent_label_example/interpretations',
+    agent = 'claude-code'
+)
+```
+
+Each result is an ordinary `interpretation` object, so everything downstream works unchanged:
+
+```{r}
+interp <- interps[['MM1']]
+interp$proposed_label
+interp$confidence$score
+cat(render_paragraph(interp))
+```
+
+The `review` block records how the agent reached the label. Here are the artifact gate, the supporting hubs it cited, and the falsification step: the canonical markers the label implies and where each one actually sits in the network.
+
+```{r}
+interp$review$artifact_gate$status
+bind_rows(interp$review$supporting_hubs)
+bind_rows(interp$review$expected_markers)
+```
+
+The agent also records the alternative label it considered and why it rejected it, the evidence that cuts against its call, and the three hubs to use when annotating figures:
+
+```{r}
+interp$review$alternative_label
+interp$review$display_hubs
+```
+
+`build_review_queue()` lists the modules flagged for a closer look, and `write_interpretation_report()` compiles the HTML report:
+
+```{r}
+build_review_queue(interps)
+
+write_interpretation_report(
+    interps, packets, desc,
+    dataset_context = dataset_ctx,
+    output_file = 'output/agent_label_example/report.html'
+)
+```
+
+## Refining existing labels
+
+If you already have interpretations for these modules, for example from an earlier in-R synthesis run or an earlier agent pass, pass them as `interps`. The agent's task then becomes refining those drafts, treating each one as a hypothesis to test rather than starting from scratch:
+
+```{r, eval = FALSE}
+export_agent_workspace(
+    ms, dataset_ctx, packets, desc,
+    interps = interps,
+    out_dir = 'output/agent_label_example/refine_ws',
+    mode = 'label',
+    sample_col = 'patient',
+    depth_cols = c('nCount_RNA', 'nFeature_RNA'),
+    feature_genes = GetWGCNAGenes(seurat_obj)
+)
+```
+
+A label workspace always covers a single network. To label several networks, export one workspace per network and run one agent in each.
+
+## Explore mode
+
+With the default `mode = 'explore'`, `export_agent_workspace()` writes the same data and API cheat-sheets but no labeling task. Use it to ask a coding agent open-ended, read-only questions about a finished run, for example which modules are most specific to one diagnosis, or how two modules' hub genes overlap. In explore mode the agent is told not to write labels.
+
+```{r, eval = FALSE}
+export_agent_workspace(ms, dataset_ctx, packets, desc, interps = interps, out_dir = 'output/agent_workspace')
+```

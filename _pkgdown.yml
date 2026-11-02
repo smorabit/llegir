@@ -23,6 +23,7 @@ articles:
 - title: Vignettes
   navbar: ~
   contents:
+  - agent-labels
   - getting-started
   - local-llm-backend
 
