@@ -54,8 +54,9 @@ aggregated across cells (e.g. pseudobulk) rather than per-cell. Default \code{FA
 state / cluster grouping and the biological sample (e.g. patient).
 Declared once here, they are the default for every tool's \code{group_col} /
 \code{sample_col} parameter and for \code{\link[=export_agent_workspace]{export_agent_workspace()}}'s artifact
-screen. The \code{grouping} / \code{sample_ids} capabilities hold only when the
-matching column is declared.}
+screen. A Seurat object always carries full metadata, so the
+\code{grouping} / \code{sample_ids} capabilities hold either way; a tool given no
+column (here or in its own parameters) says so when it runs.}
 
 \item{ms}{A \code{ModuleSet} object; the dispatch target for the generic
 methods below (\code{\link[=modules]{modules()}}, \code{\link[=gene_membership]{gene_membership()}}, \code{\link[=module_scores]{module_scores()}},

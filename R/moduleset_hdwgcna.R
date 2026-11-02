@@ -25,8 +25,9 @@
 #'   state / cluster grouping and the biological sample (e.g. patient).
 #'   Declared once here, they are the default for every tool's `group_col` /
 #'   `sample_col` parameter and for [export_agent_workspace()]'s artifact
-#'   screen. The `grouping` / `sample_ids` capabilities hold only when the
-#'   matching column is declared.
+#'   screen. A Seurat object always carries full metadata, so the
+#'   `grouping` / `sample_ids` capabilities hold either way; a tool given no
+#'   column (here or in its own parameters) says so when it runs.
 #' @param ms A `ModuleSet` object; the dispatch target for the generic
 #'   methods below ([modules()], [gene_membership()], [module_scores()],
 #'   [expression()], [counts()], [metadata()], [pkg_versions()], [capabilities()]).
@@ -138,13 +139,13 @@ pkg_versions.hdWGCNA_ModuleSet <- function(ms, ...){
 }
 
 # a Seurat object with an hdWGCNA experiment always carries full metadata,
-# computed MEs, kME weights, and the assay matrix; grouping and sample ids
-# depend on which columns the caller declared
+# computed MEs, kME weights, and the assay matrix, so none of these are ever
+# optional here; declared columns only set the tools' defaults
 #' @rdname hdWGCNA_ModuleSet
 #' @export
 capabilities.hdWGCNA_ModuleSet <- function(ms, ...){
     c(
         gene_weights = TRUE, module_scores = TRUE, expression = TRUE, counts = TRUE,
-        grouping = !is.null(ms$group_col), sample_ids = !is.null(ms$sample_col), pseudobulk = FALSE
+        grouping = TRUE, sample_ids = TRUE, pseudobulk = FALSE
     )
 }

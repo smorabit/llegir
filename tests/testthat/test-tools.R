@@ -29,12 +29,13 @@ test_that('cluster_dme_tool() errors without a group_col from params or the Modu
     expect_error(cluster_dme_tool(ctx), 'group_col')
 })
 
-test_that('hdWGCNA_ModuleSet() reports grouping/sample_ids only for declared columns', {
+test_that('hdWGCNA_ModuleSet() stores declared columns as tool defaults and validates them', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
-    expect_true(has_capability(ms_test, 'grouping'))
+    expect_equal(ms_test$group_col, 'lv2_annot')
+    expect_equal(ms_test$sample_col, 'patient')
     bare_ms <- hdWGCNA_ModuleSet(so_test)
-    expect_false(has_capability(bare_ms, 'grouping'))
-    expect_false(has_capability(bare_ms, 'sample_ids'))
+    expect_true(has_capability(bare_ms, 'grouping'))
+    expect_null(bare_ms$group_col)
     expect_error(hdWGCNA_ModuleSet(so_test, group_col = 'no_such_column'), 'not found')
 })
 

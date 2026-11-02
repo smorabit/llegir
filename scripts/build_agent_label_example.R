@@ -6,7 +6,7 @@
 # run, point a coding agent at the workspace:
 #
 #   cd output/agent_label_example/label_ws
-#   claude "Read .llegir_agent_manifest.md, then follow its Mission & Guardrails and Execution Protocol before answering anything."
+#   claude "Read .llegir_agent_manifest.md, then complete its Labeling Task, following its Mission & Guardrails and Execution Protocol."
 #
 # When check_agent_labels() reports every module as ok, copy the agent's
 # labels/ and queries/ folders into vignettes/agent_label_example/ so the
@@ -20,41 +20,45 @@ suppressPackageStartupMessages({
 devtools::load_all(quiet = TRUE)
 
 #---------------------------------------------------------
-# moduleset and dataset context
+# moduleset
 #---------------------------------------------------------
 
-# loading the CSF object takes a minute; it already holds the hdWGCNA network
+# loading the CSF object takes a minute; it already holds the hdWGCNA network.
+# declaring the grouping and sample columns here means no tool needs them
+# repeated, and the label workspace's sample-concentration screen picks up
+# the patient column automatically
 seurat_obj <- readRDS('data/CSF_Myeloid_hdWGCNA.rds')
-ms <- hdWGCNA_ModuleSet(seurat_obj)
+ms <- hdWGCNA_ModuleSet(seurat_obj, group_col = 'lv2_annot', sample_col = 'patient')
 
 # check modules(ms) in the console: the example labels MM1-MM3 only
 modules_use <- c('MM1', 'MM2', 'MM3')
 
-dataset_tool_config <- list(
-    list(fn = dataset_composition_tool, params = list(group_col = 'lv2_annot', condition_col = 'diagnosis'))
-)
-dataset_ctx <- run_dataset_context(ms, dataset_tool_config)
-
 #---------------------------------------------------------
-# evidence packets
+# evidence
 #---------------------------------------------------------
 
-tool_config <- list(
-    list(fn = top_genes_tool, params = list(n_hubs = 25)),
-    list(fn = cluster_dme_tool, params = list(group_col = 'lv2_annot')),
-    list(fn = geneset_enrichment_tool, params = list(
-        n_hubs = 25,
-        db_files = c(
-            GO_BP = 'data/GO_Biological_Process_2026.txt',
-            Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt'
-        )
-    ))
+gene_sets <- c(
+    GO_BP = 'data/GO_Biological_Process_2026.txt',
+    Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt'
 )
-packets <- run_orchestrator(
-    ms, tool_config,
-    output_dir = 'output/agent_label_example/evidence_packets',
-    modules_use = modules_use
+
+# one tool list for the whole run: dataset_composition runs once, the rest
+# once per module. n_hubs and condition_col are shared run-level params
+ev <- run_evidence(
+    ms,
+    tools = list(
+        tool('dataset_composition'),
+        tool('top_genes'),
+        tool('cluster_dme'),
+        tool('geneset_enrichment', db_files = gene_sets)
+    ),
+    params = list(n_hubs = 25, condition_col = 'diagnosis'),
+    modules_use = modules_use,
+    output_dir = 'output/agent_label_example/evidence'
 )
+
+# inspect ev$packets$MM1$provenance$skipped in the console: any tool that did
+# not run for a module is listed there with the reason
 
 desc <- dataset_description(
     species = 'human',
@@ -75,10 +79,9 @@ desc <- dataset_description(
 # feature_genes is every gene hdWGCNA could assign (grey included), so a
 # missing marker can be classed unassigned rather than not_tested
 manifest_path <- export_agent_workspace(
-    ms, dataset_ctx, packets, desc,
+    ms, ev$dataset_context, ev$packets, desc,
     out_dir = 'output/agent_label_example/label_ws',
     mode = 'label',
-    sample_col = 'patient',
     depth_cols = c('nCount_RNA', 'nFeature_RNA'),
     feature_genes = GetWGCNAGenes(seurat_obj)
 )

@@ -434,7 +434,7 @@ read_agent_manifest <- function(path){
             # packet$fragments[[1]], which silently grabs the wrong fragment
             # once a tool_config runs more than one tool
             code = paste(
-                sprintf("packet <- run_module(ms, module_ids[1], tool_config = list(list(id = '%s')))", tool_id),
+                sprintf("packet <- run_module(ms, module_ids[1], list(tool('%s')))", tool_id),
                 sprintf("frag <- Filter(function(f) f$fragment_id == '%s', packet$fragments)[[1]]", tool_id),
                 'frag$compact_summary',
                 'frag$top_findings',
