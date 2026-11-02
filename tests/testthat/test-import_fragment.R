@@ -3,6 +3,11 @@
 ## 'user_supplied'. No ModuleSet dependency here -- these operate on tables
 ## directly.
 
+# runs an import_tool() spec for one module the way run_evidence() would
+imported_fragment <- function(spec, module_id = 'MM1', ms = NULL){
+    spec$fn(list(ms = ms, module_id = module_id, params = list(), module_method = NA_character_))
+}
+
 test_that('import_fragment() normalizes a geneset_enrichment table and tags it user_supplied', {
     user_table <- data.frame(
         term = c('Interferon Response', 'Dendritic Cell Activation', 'Cell Cycle'),
@@ -81,14 +86,14 @@ test_that('import_fragment() carries overlap size and Jaccard into geneset_enric
     expect_false(grepl('Jaccard', frag$compact_summary, fixed = TRUE))
 })
 
-test_that('import_enrichr() reduces an Overlap k/n string to the overlap count', {
+test_that('import_tool(format = "enrichr") reduces an Overlap k/n string to the overlap count', {
     user_table <- data.frame(
         Term = c('Hypoxia', 'Glycolysis'),
         Overlap = c('7/200', '3/150'),
         Odds.Ratio = c(6.2, 2.1),
         Adjusted.P.value = c(0.004, 0.3)
     )
-    frag <- import_enrichr(module_id = 'MM1', result = user_table)
+    frag <- imported_fragment(import_tool(user_table, format = 'enrichr'))
     expect_equal(frag$top_findings[[1]]$n_overlap, 7)
     expect_null(frag$top_findings[[1]]$jaccard)
     expect_match(frag$compact_summary, 'Hypoxia (7 genes overlap, OR 6.2, FDR 0.004)', fixed = TRUE)
@@ -205,28 +210,6 @@ test_that('import_fragment() errors on a missing required column', {
     )
 })
 
-test_that('import_fragment_tool() flows through the orchestrator unchanged', {
-    skip_if_not(csf_data_available, 'CSF dev object not available')
-    user_table <- data.frame(
-        term = c('Interferon Response', 'Cell Cycle'),
-        odds_ratio = c(9, 1),
-        fdr = c(0.01, 0.8)
-    )
-    tool_config <- list(
-        list(fn = top_genes_tool, params = list(n_hubs = 5)),
-        list(fn = import_fragment_tool, params = list(type = 'geneset_enrichment', result = user_table))
-    )
-    packet <- run_module(ms_test, mod_test, tool_config)
-    expect_equal(length(packet$fragments), 2)
-    imported <- packet$fragments[[2]]
-    expect_true(validate_evidence_fragment(imported))
-    expect_equal(imported$provenance$source, 'user_supplied')
-})
-
-## milestone_extensibility Part 3: format-specific importers with sensible
-## per-format defaults (Seurat/DESeq2/edgeR DE tables, hdWGCNA DME, EnrichR/
-## GeneOverlap enrichment), all funneling through import_fragment().
-
 test_that('import_fragment() normalizes a cross_condition_delta table (gene-level DE contrast)', {
     user_table <- data.frame(
         gene = c('IFIT3', 'ISG15', 'ACTB'),
@@ -263,107 +246,98 @@ test_that('import_fragment() normalizes a state_expression table (e.g. an extern
     expect_equal(frag$effect_strength, 1.4)
 })
 
-test_that('import_seurat_markers() defaults to Seurat FindMarkers column names and yields cross_condition_delta with no group_col', {
-    user_table <- data.frame(
-        gene = c('IFIT3', 'ACTB'),
-        avg_log2FC = c(2.0, 0.02),
-        p_val_adj = c(0.001, 0.95)
+## import_tool(): format presets, format = 'auto', per-module splitting,
+## genome-wide gene-level filtering, file reading and provenance.
+
+test_that('import_tool() splits a table by module_col and skips modules with no rows', {
+    ms <- llegir_example_moduleset()
+    mods <- modules(ms)
+    dme <- data.frame(
+        module = mods[1], group = c('t1', 't2'),
+        avg_log2FC = c(1.4, -0.3), p_val_adj = c(0.001, 0.4)
     )
-    frag <- import_seurat_markers(module_id = 'MM1', result = user_table)
-    expect_true(validate_evidence_fragment(frag))
-    expect_equal(frag$type, 'cross_condition_delta')
-    expect_equal(frag$provenance$source, 'user_supplied')
-    expect_equal(frag$provenance$params$effect_col, 'avg_log2FC')
+    spec <- import_tool(dme, format = 'auto', module_col = 'module')
+    expect_equal(spec$id, 'hdwgcna_dme')
+    ev <- run_evidence(ms, list(spec), modules_use = mods[1:2])
+    frag <- ev$packets[[mods[1]]]$fragments[[1]]
+    expect_equal(frag$type, 'state_expression')
+    expect_equal(frag$fragment_id, 'hdwgcna_dme')
+    expect_equal(frag$top_findings[[1]]$group, 't1')
+    expect_equal(nrow(frag$result), 2)
+    expect_length(ev$packets[[mods[2]]]$fragments, 0)
+    expect_equal(ev$packets[[mods[2]]]$provenance$skipped[[1]]$tool_id, 'hdwgcna_dme')
 })
 
-test_that('import_seurat_markers() yields categorical_association when a group_col is present (e.g. FindAllMarkers)', {
-    user_table <- data.frame(
-        gene = c('IFIT3', 'RPL13', 'CX3CR1'),
-        cluster = c('pDC', 'Monocyte', 'Macrophage'),
-        avg_log2FC = c(2.0, 1.5, -0.8),
-        p_val_adj = c(0.001, 0.02, 0.3)
+test_that('import_tool() filters a genome-wide marker table to each module\'s genes', {
+    ms <- llegir_example_moduleset()
+    mod <- modules(ms)[1]
+    own <- gene_membership(ms, mod)$gene_name[1:2]
+    markers <- data.frame(
+        gene = c(own, 'NOT_A_MODULE_GENE'), avg_log2FC = c(2.0, -0.5, 5.0), p_val_adj = c(0.001, 0.2, 1e-10)
     )
-    frag <- import_seurat_markers(module_id = 'MM1', result = user_table)
-    expect_equal(frag$type, 'categorical_association')
-    expect_equal(frag$provenance$params$group_col, 'cluster')
-})
-
-test_that('import_seurat_markers() reuses the same importer for a DESeq2 table via column_map', {
-    user_table <- data.frame(
-        gene = c('IFIT3', 'ACTB'),
-        log2FoldChange = c(1.9, -0.1),
-        padj = c(0.003, 0.8)
-    )
-    frag <- import_seurat_markers(
-        module_id = 'MM1', result = user_table,
-        column_map = list(effect_col = 'log2FoldChange', significance_col = 'padj')
-    )
-    expect_true(validate_evidence_fragment(frag))
+    frag <- imported_fragment(import_tool(markers, format = 'seurat_markers'), module_id = mod, ms = ms)
     expect_equal(frag$type, 'cross_condition_delta')
+    expect_setequal(frag$result$gene, own)
     expect_equal(frag$direction, 'up')
+
+    no_overlap <- markers[3, ]
+    expect_null(imported_fragment(import_tool(no_overlap, format = 'seurat_markers'), module_id = mod, ms = ms))
 })
 
-test_that('import_seurat_markers() reuses the same importer for an edgeR table via column_map', {
-    user_table <- data.frame(
-        gene = c('IFIT3', 'ACTB'),
-        logFC = c(-1.6, 0.05),
-        FDR = c(0.004, 0.9)
+test_that('import_tool() summarises FindAllMarkers output per cluster over the module\'s genes', {
+    ms <- llegir_example_moduleset()
+    mod <- modules(ms)[1]
+    own <- gene_membership(ms, mod)$gene_name[1:3]
+    markers <- data.frame(
+        gene = c(own, own[1]), cluster = c('c1', 'c1', 'c1', 'c2'),
+        avg_log2FC = c(1.5, 1.2, 0.9, 0.4), p_val_adj = c(0.001, 0.01, 0.02, 0.5)
     )
-    frag <- import_seurat_markers(
-        module_id = 'MM1', result = user_table,
-        column_map = list(effect_col = 'logFC', significance_col = 'FDR')
-    )
-    expect_equal(frag$direction, 'down')
-})
-
-test_that('import_hdwgcna_dme() defaults to hdWGCNA FindAllDMEs column names', {
-    user_table <- data.frame(
-        group = c('pDC', 'Monocyte'),
-        avg_log2FC = c(1.4, -0.3),
-        p_val_adj = c(0.001, 0.4)
-    )
-    frag <- import_hdwgcna_dme(module_id = 'MM1', result = user_table)
-    expect_true(validate_evidence_fragment(frag))
+    frag <- imported_fragment(import_tool(markers, format = 'seurat_markers'), module_id = mod, ms = ms)
     expect_equal(frag$type, 'state_expression')
-    expect_equal(frag$provenance$source, 'user_supplied')
-    expect_equal(frag$top_findings[[1]]$group, 'pDC')
+    expect_equal(frag$top_findings[[1]]$group, 'c1')
+    expect_equal(frag$top_findings[[1]]$effect, 3)
+    expect_true(all(c('n_module_genes_up', 'mean_log2FC', 'min_padj') %in% colnames(frag$result)))
 })
 
-test_that('import_hdwgcna_dme() respects column_map overrides', {
-    user_table <- data.frame(cell_state = c('pDC', 'Monocyte'), fc = c(2.0, -0.1), fdr = c(0.001, 0.6))
-    frag <- import_hdwgcna_dme(
-        module_id = 'MM1', result = user_table,
-        column_map = list(group_col = 'cell_state', effect_col = 'fc', significance_col = 'fdr')
-    )
-    expect_equal(frag$type, 'state_expression')
-    expect_equal(frag$effect_strength, 2.0)
+test_that('import_tool() maps arbitrary column names through columns =', {
+    deseq <- data.frame(gene = c('IFIT3', 'ACTB'), log2FoldChange = c(1.9, -0.1), padj = c(0.003, 0.8))
+    spec <- import_tool(deseq, type = 'geneset_enrichment', columns = list(term = 'gene', effect = 'log2FoldChange', significance = 'padj'))
+    frag <- imported_fragment(spec)
+    expect_equal(frag$top_findings[[1]]$term, 'IFIT3')
+    expect_equal(frag$provenance$params$term_col, 'gene')
+
+    overlap <- data.frame(category = c('HALLMARK_IFNG', 'HALLMARK_E2F'), odds.ratio = c(8.2, 0.9), pval = c(0.002, 0.6))
+    frag <- imported_fragment(import_tool(
+        overlap, format = 'enrichr', columns = list(term = 'category', effect = 'odds.ratio', significance = 'pval')
+    ))
+    expect_equal(frag$top_findings[[1]]$term, 'HALLMARK_IFNG')
 })
 
-test_that('import_enrichr() defaults to EnrichR column names', {
-    user_table <- data.frame(
-        Term = c('Interferon Response', 'Cell Cycle'),
-        Odds.Ratio = c(12.5, 1.1),
-        Adjusted.P.value = c(0.001, 0.7)
-    )
-    frag <- import_enrichr(module_id = 'MM1', result = user_table)
-    expect_true(validate_evidence_fragment(frag))
-    expect_equal(frag$type, 'geneset_enrichment')
-    expect_equal(frag$provenance$source, 'user_supplied')
-    expect_equal(frag$top_findings[[1]]$term, 'Interferon Response')
+test_that('import_tool() reads CSV and TSV files and records the file hash, never the table', {
+    tbl <- data.frame(Term = paste0('T', 1:500), Odds.Ratio = runif(500, 1, 5), Adjusted.P.value = runif(500))
+    csv <- tempfile(fileext = '.csv')
+    tsv <- tempfile(fileext = '.tsv')
+    utils::write.csv(tbl, csv, row.names = FALSE)
+    utils::write.table(tbl, tsv, sep = '\t', row.names = FALSE, quote = FALSE)
+    for (path in c(csv, tsv)) {
+        frag <- imported_fragment(import_tool(path, format = 'auto'))
+        expect_equal(frag$type, 'geneset_enrichment')
+        expect_equal(frag$provenance$params$source_file, path)
+        expect_true(nzchar(frag$provenance$input_hashes$source_file))
+        expect_null(frag$provenance$params$result)
+    }
+    expect_lt(as.numeric(utils::object.size(frag$provenance)), 5000)
+
+    frag <- imported_fragment(import_tool(tbl, format = 'enrichr'))
+    expect_true(nzchar(frag$provenance$input_hashes$table))
 })
 
-test_that('import_enrichr() reuses the same importer for a GeneOverlap table via column_map', {
-    user_table <- data.frame(
-        category = c('HALLMARK_INTERFERON_GAMMA_RESPONSE', 'HALLMARK_E2F_TARGETS'),
-        odds.ratio = c(8.2, 0.9),
-        pval = c(0.002, 0.6)
-    )
-    frag <- import_enrichr(
-        module_id = 'MM1', result = user_table,
-        column_map = list(term_col = 'category', effect_col = 'odds.ratio', significance_col = 'pval')
-    )
-    expect_true(validate_evidence_fragment(frag))
-    expect_equal(frag$top_findings[[1]]$term, 'HALLMARK_INTERFERON_GAMMA_RESPONSE')
+test_that('import_tool() reports what it cannot recognize or find', {
+    expect_error(import_tool(data.frame(x = 1), format = 'auto'), 'could not recognize')
+    expect_error(import_tool(data.frame(x = 1), format = 'nope'), 'unknown import format')
+    expect_error(import_tool(data.frame(x = 1)), 'needs a format or a type')
+    expect_error(import_tool(data.frame(x = 1), type = 'geneset_enrichment', module_col = 'module'), 'module_col not found')
+    expect_error(import_tool(tempfile(fileext = '.csv'), format = 'auto'), 'not found')
 })
 
 test_that('import_fragment() records source_file path and content hash in provenance', {

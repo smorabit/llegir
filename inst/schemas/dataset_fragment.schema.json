@@ -57,7 +57,7 @@
         "timestamp": { "type": "string" },
         "source": {
           "enum": ["computed", "user_supplied"],
-          "description": "'computed' for tool-produced fragments (default), 'user_supplied' for import_dataset_fragment()/import_milo_da()"
+          "description": "'computed' for tool-produced fragments (default), 'user_supplied' for import_dataset_fragment() / import_tool()"
         }
       }
     },

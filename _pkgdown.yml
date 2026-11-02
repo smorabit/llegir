@@ -64,11 +64,8 @@ reference:
   - signature_correlation_tool
   - differential_module_activity_tool
   - pseudobulk_de_limma_tool
+  - import_tool
   - import_fragment
-  - import_fragment_tool
-  - import_seurat_markers
-  - import_hdwgcna_dme
-  - import_enrichr
 
 - title: Dataset tools
   desc: >
@@ -122,8 +119,6 @@ reference:
   - read_dataset_context
   - render_dataset_context_compact
   - import_dataset_fragment
-  - import_dataset_fragment_tool
-  - import_milo_da
   - write_dataset_figures
 
 - title: Orchestration

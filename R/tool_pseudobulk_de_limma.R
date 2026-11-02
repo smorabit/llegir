@@ -4,7 +4,7 @@
 ## differential_module_activity_tool (module-level activity) by reporting
 ## which of the module's genes drive a condition shift. limma only -- no
 ## DESeq2/edgeR; a user who wants those imports a precomputed table via
-## import_fragment()/import_seurat_markers() instead.
+## import_tool(format = 'seurat_markers') instead.
 
 # genes with too little signal add noise to voom's mean-variance trend
 # without adding power; kept in base R (no edgeR::filterByExpr) since this

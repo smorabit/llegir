@@ -223,65 +223,76 @@
     )
 }
 
+#---------------------------------------------------------
+# shared import internals
+#---------------------------------------------------------
+
+# runs the per-type normalizer, treating an empty table as a legitimate
+# no-finding import (e.g. no significant rows for this module)
+.normalize_import <- function(normalizers, type, result, params, caller){
+    if (!is.data.frame(result)) stop(caller, ' requires result to be a data.frame')
+    normalizer <- normalizers[[type]]
+    if (is.null(normalizer)) {
+        stop(caller, ' has no normalizer for type: ', type, ' (supported: ', paste(names(normalizers), collapse = ', '), ')')
+    }
+    if (nrow(result) == 0) .empty_import(type) else normalizer(result, params)
+}
+
+# provenance for an imported table: the normalizer options (never the table
+# itself), the source file's content hash when there is one, and otherwise a
+# hash of the table so the import stays traceable
+.import_provenance <- function(params, result, source_file, module_method){
+    input_hashes <- list()
+    if (!is.null(source_file)) {
+        params$source_file <- source_file
+        if (file.exists(source_file)) input_hashes$source_file <- digest::digest(file = source_file, algo = 'sha256')
+    }
+    if (length(input_hashes) == 0) input_hashes$table <- digest::digest(result, algo = 'sha256')
+    make_provenance(
+        tool_version = NA_character_, params = params, input_hashes = input_hashes,
+        pkg_versions = list(), source = 'user_supplied', module_method = module_method
+    )
+}
+
 #' Import a user-supplied result table as an evidence fragment
 #'
-#' Lets a user inject an already-computed result table (DMEs, GO enrichment,
-#' etc.) as a validated [evidence_fragment()] instead of recomputing it via a
-#' core tool. `provenance$source` is set to `'user_supplied'` so
-#' faithfulness/reproducibility checks can distinguish these from
-#' tool-computed fragments; the synthesis layer treats both identically.
+#' The low-level constructor behind [import_tool()]: turns one module's
+#' already-computed result table into a validated [evidence_fragment()].
+#' Most users want [import_tool()], which reads files, splits a table by
+#' module and slots the import into [run_evidence()]. `provenance$source` is
+#' `'user_supplied'`, so imported fragments stay distinguishable from
+#' computed ones; the synthesis layer treats both identically.
 #'
 #' @param module_id The module this fragment describes.
 #' @param type One of the supported fragment types: `'geneset_enrichment'`,
 #'   `'categorical_association'`, `'state_expression'`, `'cross_condition_delta'`,
 #'   `'signature_correlation'`, `'continuous_correlation'`.
-#' @param result A tidy data.frame with the user's result table.
+#' @param result A tidy data.frame with the user's result table. A 0-row
+#'   table gives a valid fragment with no findings.
 #' @param fragment_id Unique id within the packet. Defaults to
 #'   `paste0('imported::', type)`.
-#' @param tool_id Tool id recorded in provenance. Default `'import_fragment'`.
-#' @param params Named list of column-name overrides (e.g. `term_col`,
-#'   `significance_col`, `effect_col`) and other normalizer options (e.g.
-#'   `n_top`), since a user-supplied table won't share this package's exact
-#'   column names. For `'geneset_enrichment'`: `alpha` (default 0.05) is the
-#'   significance threshold stated in `compact_summary` (and `direction` is
-#'   `'na'` when no term passes it); `overlap_col` and `jaccard_col` name the
-#'   overlap-size and Jaccard columns, auto-detected from common names
-#'   (`size_intersection`, `ngenes`, `n_overlap`, `overlap_size`, `Overlap`,
-#'   `overlap`; `jaccard`, `Jaccard`) when not given. `'k/n'` or `'k|n'`
-#'   overlap strings are reduced to the count `k`.
-#' @param source_file Optional path to the file `result` was originally read
-#'   from (e.g. a `FindMarkers()` CSV export). Recorded in
-#'   `provenance$params$source_file`, and content-hashed into
-#'   `provenance$input_hashes$source_file` if the file still exists, so the
-#'   import is traceable back to its origin.
+#' @param tool_id Tool id recorded on the fragment. Default `'import_fragment'`.
+#' @param params Named list of column-name overrides (`term_col`,
+#'   `effect_col`, `significance_col`, `group_col`, `feature_col`,
+#'   `signature_col`, `variable_col`, `n_col`, `overlap_col`, `jaccard_col`)
+#'   and normalizer options (`alpha`, `n_top`, `variable_name`). For
+#'   `'geneset_enrichment'`, `alpha` (default 0.05) is the significance
+#'   threshold stated in `compact_summary`, and overlap / Jaccard columns are
+#'   auto-detected from common names when not given; `'k/n'` overlap strings
+#'   are reduced to `k`.
+#' @param source_file Optional path to the file `result` was read from;
+#'   recorded and content-hashed in provenance. Without one, a hash of
+#'   `result` is recorded instead.
+#' @param module_method Optional description of how the modules were built;
+#'   see [run_module()].
 #' @return An `evidence_fragment` object.
 #' @export
 import_fragment <- function(module_id, type, result, fragment_id = NULL,
                              tool_id = 'import_fragment', params = list(),
-                             source_file = NULL){
-    if (!is.data.frame(result)) stop('import_fragment requires result to be a data.frame')
-    normalizer <- .import_normalizers[[type]]
-    if (is.null(normalizer)) {
-        stop(
-            'import_fragment has no normalizer for type: ', type,
-            ' (supported: ', paste(names(.import_normalizers), collapse = ', '), ')'
-        )
-    }
-    # an empty table is a legitimate import (e.g. no significant rows for this
-    # module); the per-type normalizers all assume at least one row
-    norm <- if (nrow(result) == 0) .empty_import(type) else normalizer(result, params)
-    if (is.null(fragment_id)) fragment_id <- paste0('imported::', type)
-
-    input_hashes <- list()
-    if (!is.null(source_file)) {
-        params$source_file <- source_file
-        if (file.exists(source_file)) {
-            input_hashes$source_file <- digest::digest(file = source_file, algo = 'sha256')
-        }
-    }
-
+                             source_file = NULL, module_method = NA_character_){
+    norm <- .normalize_import(.import_normalizers, type, result, params, 'import_fragment')
     evidence_fragment(
-        fragment_id = fragment_id,
+        fragment_id = fragment_id %||% paste0('imported::', type),
         tool_id = tool_id,
         module_id = module_id,
         type = type,
@@ -291,109 +302,7 @@ import_fragment <- function(module_id, type, result, fragment_id = NULL,
         effect_strength = norm$effect_strength,
         significance = norm$significance,
         direction = norm$direction,
-        provenance = make_provenance(
-            tool_version = NA_character_,
-            params = params,
-            input_hashes = input_hashes,
-            pkg_versions = list(),
-            source = 'user_supplied'
-        )
-    )
-}
-
-#' Import a Seurat / DESeq2 / edgeR differential-expression table
-#'
-#' Sensible defaults for `Seurat::FindMarkers()` output (`avg_log2FC`,
-#' `p_val_adj`, feature names as rownames). Point `column_map` at a DESeq2
-#' (`log2FoldChange`/`padj`) or edgeR (`logFC`/`FDR`) table instead to reuse
-#' the same importer. If `result` has a `group_col` (e.g. `cluster`, as in
-#' `Seurat::FindAllMarkers()`), the fragment is a per-group
-#' `'categorical_association'`; otherwise it's a single-contrast
-#' `'cross_condition_delta'` (one row per gene/feature).
-#'
-#' @param module_id The module this fragment describes.
-#' @param result A tidy DE result data.frame.
-#' @param group_col Column naming a group/cluster contrast, if any (default
-#'   `'cluster'`). Only used if present in `result`.
-#' @param column_map Named list of column overrides: `feature_col` (default
-#'   `'gene'`, falls back to rownames if absent), `effect_col` (default
-#'   `'avg_log2FC'`), `significance_col` (default `'p_val_adj'`).
-#' @param source_file Optional path `result` was read from; see
-#'   [import_fragment()].
-#' @param ... Passed to [import_fragment()] (e.g. `fragment_id`, `tool_id`).
-#' @return An `evidence_fragment` object.
-#' @export
-import_seurat_markers <- function(module_id, result, group_col = 'cluster',
-                                   column_map = list(), source_file = NULL, ...){
-    defaults <- list(feature_col = 'gene', effect_col = 'avg_log2FC', significance_col = 'p_val_adj')
-    params <- utils::modifyList(defaults, column_map)
-
-    has_group <- !is.null(group_col) && group_col %in% colnames(result)
-    if (has_group) {
-        type <- 'categorical_association'
-        params$group_col <- group_col
-    } else {
-        type <- 'cross_condition_delta'
-    }
-
-    import_fragment(
-        module_id = module_id, type = type, result = result,
-        params = params, source_file = source_file, ...
-    )
-}
-
-#' Import an hdWGCNA differential module eigengene (DME) table
-#'
-#' Sensible defaults for `hdWGCNA::FindAllDMEs()` output (`group`,
-#' `avg_log2FC`, `p_val_adj`). Produces a `'state_expression'` fragment — the
-#' same type [cluster_dme_tool()] produces — so an externally computed DME
-#' table (run outside this package, or against a different grouping) feeds
-#' the synthesis layer identically to the built-in tool.
-#'
-#' @param module_id The module this fragment describes.
-#' @param result A tidy DME result data.frame (one row per group).
-#' @param column_map Named list of column overrides: `group_col` (default
-#'   `'group'`), `effect_col` (default `'avg_log2FC'`), `significance_col`
-#'   (default `'p_val_adj'`).
-#' @param source_file Optional path `result` was read from; see
-#'   [import_fragment()].
-#' @param ... Passed to [import_fragment()] (e.g. `fragment_id`, `tool_id`).
-#' @return An `evidence_fragment` object.
-#' @export
-import_hdwgcna_dme <- function(module_id, result, column_map = list(), source_file = NULL, ...){
-    defaults <- list(group_col = 'group', effect_col = 'avg_log2FC', significance_col = 'p_val_adj')
-    params <- utils::modifyList(defaults, column_map)
-    import_fragment(
-        module_id = module_id, type = 'state_expression', result = result,
-        params = params, source_file = source_file, ...
-    )
-}
-
-#' Import an EnrichR / GeneOverlap enrichment table
-#'
-#' Sensible defaults for EnrichR output (`Term`, `Odds.Ratio`,
-#' `Adjusted.P.value`). Point `column_map` at a `GeneOverlap`-style table
-#' instead (e.g. `list(term_col = 'category', effect_col = 'odds.ratio',
-#' significance_col = 'pval')`) to reuse the same importer.
-#'
-#' @param module_id The module this fragment describes.
-#' @param result A tidy enrichment result data.frame.
-#' @param column_map Named list of column overrides: `term_col` (default
-#'   `'Term'`), `effect_col` (default `'Odds.Ratio'`), `significance_col`
-#'   (default `'Adjusted.P.value'`), plus optional `overlap_col` / `jaccard_col`
-#'   / `alpha` (see [import_fragment()]); EnrichR's `Overlap` (`'k/n'`) column
-#'   is picked up automatically.
-#' @param source_file Optional path `result` was read from; see
-#'   [import_fragment()].
-#' @param ... Passed to [import_fragment()] (e.g. `fragment_id`, `tool_id`).
-#' @return An `evidence_fragment` object.
-#' @export
-import_enrichr <- function(module_id, result, column_map = list(), source_file = NULL, ...){
-    defaults <- list(term_col = 'Term', effect_col = 'Odds.Ratio', significance_col = 'Adjusted.P.value')
-    params <- utils::modifyList(defaults, column_map)
-    import_fragment(
-        module_id = module_id, type = 'geneset_enrichment', result = result,
-        params = params, source_file = source_file, ...
+        provenance = .import_provenance(params, result, source_file, module_method)
     )
 }
 
@@ -470,162 +379,218 @@ import_enrichr <- function(module_id, result, column_map = list(), source_file =
 
 #' Import a user-supplied result table as a dataset fragment
 #'
-#' Dataset-scope analog of [import_fragment()]: lets a user inject an
-#' already-computed compositional / differential-abundance result as a
-#' validated [dataset_fragment()] instead of computing it via a core dataset
-#' tool (e.g. [dataset_composition_tool()]). `provenance$source` is set to
-#' `'user_supplied'`, same distinction `import_fragment()` makes for
-#' evidence fragments.
+#' Dataset-scope analog of [import_fragment()], and the low-level constructor
+#' behind a dataset-scoped [import_tool()] (e.g. `format = 'milo_da'`): turns
+#' an already-computed compositional / differential-abundance result into a
+#' validated [dataset_fragment()].
 #'
 #' @param type One of the supported `dataset_fragment` types: currently
 #'   `'composition_summary'`.
 #' @param result A tidy data.frame with the user's result table.
 #' @param fragment_id Unique id within the `dataset_context`. Defaults to
 #'   `paste0('imported::', type)`.
-#' @param tool_id Tool id recorded in provenance. Default
+#' @param tool_id Tool id recorded on the fragment. Default
 #'   `'import_dataset_fragment'`.
-#' @param params Named list of column-name overrides (e.g. `group_col`,
-#'   `effect_col`, `significance_col`, `alpha`), since a user-supplied table
-#'   won't share this repo's exact column names.
-#' @param source_file Optional path to the file `result` was originally read
-#'   from. Recorded in `provenance$params$source_file`, and content-hashed
-#'   into `provenance$input_hashes$source_file` if the file still exists.
+#' @param params Named list of column-name overrides (`group_col`,
+#'   `effect_col`, `significance_col`) and options (`alpha`).
+#' @param source_file Optional path to the file `result` was read from;
+#'   recorded and content-hashed in provenance.
+#' @param module_method Optional description of how the modules were built.
 #' @return A `dataset_fragment` object.
 #' @export
 import_dataset_fragment <- function(type, result, fragment_id = NULL,
                                      tool_id = 'import_dataset_fragment', params = list(),
-                                     source_file = NULL){
-    if (!is.data.frame(result)) stop('import_dataset_fragment requires result to be a data.frame')
-    normalizer <- .import_dataset_normalizers[[type]]
-    if (is.null(normalizer)) {
-        stop(
-            'import_dataset_fragment has no normalizer for type: ', type,
-            ' (supported: ', paste(names(.import_dataset_normalizers), collapse = ', '), ')'
-        )
-    }
-    # an empty table is a legitimate import (e.g. no significant rows for this
-    # module); the per-type normalizers all assume at least one row
-    norm <- if (nrow(result) == 0) .empty_import(type) else normalizer(result, params)
-    if (is.null(fragment_id)) fragment_id <- paste0('imported::', type)
-
-    input_hashes <- list()
-    if (!is.null(source_file)) {
-        params$source_file <- source_file
-        if (file.exists(source_file)) {
-            input_hashes$source_file <- digest::digest(file = source_file, algo = 'sha256')
-        }
-    }
-
+                                     source_file = NULL, module_method = NA_character_){
+    norm <- .normalize_import(.import_dataset_normalizers, type, result, params, 'import_dataset_fragment')
     dataset_fragment(
-        fragment_id = fragment_id,
+        fragment_id = fragment_id %||% paste0('imported::', type),
         tool_id = tool_id,
         type = type,
         result = norm$result,
         compact_summary = norm$compact_summary,
         top_findings = norm$top_findings,
-        caveats = norm$caveats,
-        provenance = make_provenance(
-            tool_version = NA_character_,
-            params = params,
-            input_hashes = input_hashes,
-            pkg_versions = list(),
-            source = 'user_supplied'
+        caveats = norm$caveats %||% list(),
+        provenance = .import_provenance(params, result, source_file, module_method)
+    )
+}
+
+#---------------------------------------------------------
+# import_tool(): format presets, file reading, per-module splitting
+#---------------------------------------------------------
+
+# known export formats: the fragment type and scope each maps to, its column
+# names, and the columns that identify it for format = 'auto' (checked in
+# order, most specific first, since hdWGCNA DME tables are Seurat-shaped)
+.import_formats <- list(
+    hdwgcna_dme = list(
+        type = 'state_expression', scope = 'module',
+        columns = list(group = 'group', effect = 'avg_log2FC', significance = 'p_val_adj'),
+        detect = c('module', 'group', 'avg_log2FC', 'p_val_adj')
+    ),
+    seurat_markers = list(
+        type = 'cross_condition_delta', scope = 'module',
+        columns = list(feature = 'gene', effect = 'avg_log2FC', significance = 'p_val_adj'),
+        detect = c('avg_log2FC', 'p_val_adj')
+    ),
+    enrichr = list(
+        type = 'geneset_enrichment', scope = 'module',
+        columns = list(term = 'Term', effect = 'Odds.Ratio', significance = 'Adjusted.P.value'),
+        detect = c('Term', 'Adjusted.P.value')
+    ),
+    milo_da = list(
+        type = 'composition_summary', scope = 'dataset',
+        columns = list(group = 'celltype', effect = 'logFC', significance = 'SpatialFDR'),
+        detect = 'SpatialFDR'
+    )
+)
+
+.detect_import_format <- function(table){
+    for (format in names(.import_formats)) {
+        if (all(.import_formats[[format]]$detect %in% colnames(table))) return(format)
+    }
+    stop(
+        "import_tool(format = 'auto') could not recognize the table's columns; ",
+        'pass format = (one of ', paste(names(.import_formats), collapse = ', '), ') or type = with columns ='
+    )
+}
+
+.read_import_table <- function(path){
+    if (!file.exists(path)) stop('import file not found: ', path)
+    if (grepl('\\.csv(\\.gz)?$', path, ignore.case = TRUE)) {
+        utils::read.csv(path, stringsAsFactors = FALSE, check.names = FALSE)
+    } else {
+        utils::read.delim(path, stringsAsFactors = FALSE, check.names = FALSE)
+    }
+}
+
+# columns = list(term = 'Term') is the user-facing spelling of the
+# normalizers' term_col = 'Term'
+.columns_to_params <- function(columns){
+    if (length(columns) == 0) return(list())
+    stats::setNames(columns, paste0(names(columns), '_col'))
+}
+
+# a genome-wide gene-level table (FindMarkers, DESeq2, edgeR) says something
+# about a module only through the module's own genes
+.module_gene_rows <- function(table, params, ctx){
+    feature_col <- params$feature_col %||% 'gene'
+    genes <- if (feature_col %in% colnames(table)) table[[feature_col]] else rownames(table)
+    table[genes %in% gene_membership(ctx$ms, ctx$module_id)$gene_name, , drop = FALSE]
+}
+
+# FindAllMarkers output restricted to one module's genes, summarised per
+# cluster: how much of the module each cluster's markers cover
+.markers_by_cluster <- function(rows, params, alpha){
+    effect_col <- params$effect_col %||% 'avg_log2FC'
+    p_col <- params$significance_col %||% 'p_val_adj'
+    summary_df <- do.call(rbind, lapply(split(rows, rows$cluster), function(cl){
+        up <- cl[[effect_col]] > 0 & cl[[p_col]] < alpha
+        data.frame(
+            group = as.character(cl$cluster[1]),
+            n_module_genes_up = sum(up, na.rm = TRUE),
+            mean_log2FC = mean(cl[[effect_col]], na.rm = TRUE),
+            min_padj = min(cl[[p_col]], na.rm = TRUE)
         )
-    )
+    }))
+    summary_df[order(-summary_df$n_module_genes_up, summary_df$min_padj), , drop = FALSE]
 }
 
-#' Import a miloR differential-abundance neighborhood table
+#' Bring an existing result table into the tool chain
 #'
-#' Sensible defaults for `miloR::testNhoods()` output merged with
-#' `miloR::annotateNhoods()` (`logFC`, `SpatialFDR`, and a majority-vote
-#' cell-type annotation column defaulting to `celltype`). Neighborhoods are
-#' aggregated per annotation group into a `'composition_summary'`
-#' [dataset_fragment()]: how many neighborhoods per cell state shift
-#' significantly and in which direction -- never the raw per-neighborhood
-#' table.
+#' Wraps a table computed elsewhere (Seurat markers, hdWGCNA DMEs, Enrichr,
+#' miloR, or any per-module table) as a tool for [run_evidence()], so it
+#' needs no hand-written wrapper. A file is read and hashed once, when the
+#' tool is built.
 #'
-#' @param result A tidy miloR DA neighborhood result data.frame (one row per
-#'   neighborhood).
-#' @param column_map Named list of column overrides: `group_col` (default
-#'   `'celltype'`), `effect_col` (default `'logFC'`), `significance_col`
-#'   (default `'SpatialFDR'`).
-#' @param alpha Significance threshold for a neighborhood to count as
-#'   shifted. Default `0.05`.
-#' @param source_file Optional path `result` was read from; see
-#'   [import_dataset_fragment()].
-#' @param ... Passed to [import_dataset_fragment()] (e.g. `fragment_id`, `tool_id`).
-#' @return A `dataset_fragment` object.
+#' How the table reaches each module:
+#' * with `module_col`, the table is split by that column and each module
+#'   gets its own rows; a module with no rows is skipped (and recorded);
+#' * a gene-level table (`format = 'seurat_markers'`, or
+#'   `type = 'cross_condition_delta'`) without `module_col` is treated as
+#'   genome-wide and filtered to each module's genes. `FindAllMarkers` output
+#'   (with a `cluster` column) is summarised per cluster: how many of the
+#'   module's genes are significant markers of each cluster;
+#' * a dataset-scoped import (`format = 'milo_da'`) runs once for the whole
+#'   dataset.
+#'
+#' @param x A data.frame, or the path to a `.csv` / tab-delimited file.
+#' @param format A known export format: `'seurat_markers'`, `'hdwgcna_dme'`,
+#'   `'enrichr'`, `'milo_da'`, or `'auto'` to detect it from the column
+#'   names. Sets the fragment type and the default `columns`.
+#' @param type The fragment type, for a table that matches no `format`: one
+#'   of the [import_fragment()] types, or `'composition_summary'` (dataset
+#'   scope).
+#' @param module_col Column holding the module id, to split the table by
+#'   module.
+#' @param columns Named list mapping the importer's column roles to your
+#'   column names: `term`, `effect`, `significance`, `group`, `feature`,
+#'   `signature`, `variable`, `n`, `overlap`, `jaccard`. Overrides the
+#'   format's defaults.
+#' @param id The fragment id and tool id. Defaults to `format`, else `type`;
+#'   give two imports of the same type different ids.
+#' @param scope `'module'` or `'dataset'`. Defaults to the format's scope, or
+#'   `'dataset'` for a dataset fragment type.
+#' @param ... Normalizer options, e.g. `alpha` (significance threshold,
+#'   default 0.05) or `n_top`.
+#' @return A `llegir_tool_spec`, for the `tools` list of [run_evidence()].
+#' @examples
+#' dme <- data.frame(
+#'     module = c('module_a', 'module_a', 'module_b'), group = c('t1', 't2', 't1'),
+#'     avg_log2FC = c(1.2, -0.3, 0.8), p_val_adj = c(0.001, 0.4, 0.02)
+#' )
+#' ms <- llegir_example_moduleset()
+#' import_tool(dme, format = 'auto', module_col = 'module')
 #' @export
-import_milo_da <- function(result, column_map = list(), alpha = 0.05, source_file = NULL, ...){
-    defaults <- list(group_col = 'celltype', effect_col = 'logFC', significance_col = 'SpatialFDR')
-    params <- utils::modifyList(defaults, column_map)
-    params$alpha <- alpha
-    import_dataset_fragment(
-        type = 'composition_summary', result = result,
-        params = params, source_file = source_file, ...
-    )
-}
-
-#' `ctx`-compatible tool wrapper around [import_dataset_fragment()]
-#'
-#' Slots [import_dataset_fragment()] into a `dataset_tool_config` list
-#' exactly like any other dataset tool (see [run_dataset_context()]). Reads
-#' `ctx$params$result` (a data.frame) or `ctx$params$result_path` (a
-#' delimited file) plus `ctx$params$type`.
-#'
-#' @param ctx A dataset tool context list: `list(ms, params, module_method)`,
-#'   as built by [run_dataset_context()].
-#' @return A `dataset_fragment` object.
-#' @export
-import_dataset_fragment_tool <- function(ctx){
-    type <- ctx$params$type
-    if (is.null(type)) stop('import_dataset_fragment_tool requires params$type')
-
-    result <- ctx$params$result
-    if (is.null(result)) {
-        result_path <- ctx$params$result_path
-        if (is.null(result_path)) stop('import_dataset_fragment_tool requires params$result or params$result_path')
-        result <- utils::read.delim(result_path, stringsAsFactors = FALSE)
+import_tool <- function(x, format = NULL, type = NULL, module_col = NULL, columns = list(),
+                        id = NULL, scope = NULL, ...){
+    source_file <- if (is.character(x) && length(x) == 1) x else NULL
+    table <- if (!is.null(source_file)) .read_import_table(source_file) else x
+    if (!is.data.frame(table)) stop('import_tool() takes a data.frame or a file path')
+    if (identical(format, 'auto')) format <- .detect_import_format(table)
+    preset <- list()
+    if (!is.null(format)) {
+        preset <- .import_formats[[format]]
+        if (is.null(preset)) stop('unknown import format: ', format, ' (known: ', paste(names(.import_formats), collapse = ', '), ')')
     }
+    type <- type %||% preset$type
+    if (is.null(type)) stop('import_tool() needs a format or a type')
+    scope <- scope %||% preset$scope %||% if (type %in% names(.import_dataset_normalizers)) 'dataset' else 'module'
+    if (!is.null(module_col) && !(module_col %in% colnames(table))) stop('module_col not found in the table: ', module_col)
+    params <- c(.columns_to_params(utils::modifyList(preset$columns %||% list(), columns)), list(...))
+    id <- id %||% format %||% type
 
-    import_dataset_fragment(
-        type = type,
-        result = result,
-        fragment_id = ctx$params$fragment_id,
-        tool_id = ctx$params$tool_id %||% 'import_dataset_fragment',
-        params = ctx$params,
-        source_file = ctx$params$result_path %||% ctx$params$source_file
-    )
-}
-
-#' `ctx`-compatible tool wrapper around [import_fragment()]
-#'
-#' Slots [import_fragment()] into an orchestrator's `tool_config` list exactly
-#' like any other tool. Reads `ctx$params$result` (a data.frame) or
-#' `ctx$params$result_path` (a delimited file) plus `ctx$params$type`.
-#'
-#' @param ctx A tool context list: `list(ms, module_id, params)`, as built by
-#'   [run_module()].
-#' @return An `evidence_fragment` object.
-#' @export
-import_fragment_tool <- function(ctx){
-    type <- ctx$params$type
-    if (is.null(type)) stop('import_fragment_tool requires params$type')
-
-    result <- ctx$params$result
-    if (is.null(result)) {
-        result_path <- ctx$params$result_path
-        if (is.null(result_path)) stop('import_fragment_tool requires params$result or params$result_path')
-        result <- utils::read.delim(result_path, stringsAsFactors = FALSE)
+    fn <- if (scope == 'dataset') {
+        function(ctx){
+            import_dataset_fragment(
+                type, table, fragment_id = id, tool_id = id, params = params,
+                source_file = source_file, module_method = ctx$module_method %||% NA_character_
+            )
+        }
+    } else {
+        function(ctx){
+            rows <- table
+            frag_type <- type
+            frag_params <- params
+            if (!is.null(module_col)) {
+                rows <- rows[as.character(rows[[module_col]]) == ctx$module_id, , drop = FALSE]
+            } else if (frag_type == 'cross_condition_delta') {
+                rows <- .module_gene_rows(rows, params, ctx)
+            }
+            if (nrow(rows) == 0) return(NULL)
+            if (frag_type == 'cross_condition_delta' && 'cluster' %in% colnames(rows)) {
+                rows <- .markers_by_cluster(rows, params, alpha = params$alpha %||% 0.05)
+                if (max(rows$n_module_genes_up) == 0) return(NULL)
+                frag_type <- 'state_expression'
+                frag_params <- list(group_col = 'group', effect_col = 'n_module_genes_up', significance_col = 'min_padj')
+            }
+            import_fragment(
+                ctx$module_id, frag_type, rows, fragment_id = id, tool_id = id, params = frag_params,
+                source_file = source_file, module_method = ctx$module_method %||% NA_character_
+            )
+        }
     }
-
-    import_fragment(
-        module_id = ctx$module_id,
-        type = type,
-        result = result,
-        fragment_id = ctx$params$fragment_id,
-        tool_id = ctx$params$tool_id %||% 'import_fragment',
-        params = ctx$params,
-        source_file = ctx$params$result_path %||% ctx$params$source_file
+    structure(
+        list(id = id, fn = fn, params = list(), requires = character(0), scope = scope, accepts = character(0)),
+        class = 'llegir_tool_spec'
     )
 }

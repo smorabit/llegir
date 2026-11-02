@@ -11,7 +11,8 @@ import_fragment(
   fragment_id = NULL,
   tool_id = "import_fragment",
   params = list(),
-  source_file = NULL
+  source_file = NULL,
+  module_method = NA_character_
 )
 }
 \arguments{
@@ -21,37 +22,38 @@ import_fragment(
 \code{'categorical_association'}, \code{'state_expression'}, \code{'cross_condition_delta'},
 \code{'signature_correlation'}, \code{'continuous_correlation'}.}
 
-\item{result}{A tidy data.frame with the user's result table.}
+\item{result}{A tidy data.frame with the user's result table. A 0-row
+table gives a valid fragment with no findings.}
 
 \item{fragment_id}{Unique id within the packet. Defaults to
 \code{paste0('imported::', type)}.}
 
-\item{tool_id}{Tool id recorded in provenance. Default \code{'import_fragment'}.}
+\item{tool_id}{Tool id recorded on the fragment. Default \code{'import_fragment'}.}
 
-\item{params}{Named list of column-name overrides (e.g. \code{term_col},
-\code{significance_col}, \code{effect_col}) and other normalizer options (e.g.
-\code{n_top}), since a user-supplied table won't share this package's exact
-column names. For \code{'geneset_enrichment'}: \code{alpha} (default 0.05) is the
-significance threshold stated in \code{compact_summary} (and \code{direction} is
-\code{'na'} when no term passes it); \code{overlap_col} and \code{jaccard_col} name the
-overlap-size and Jaccard columns, auto-detected from common names
-(\code{size_intersection}, \code{ngenes}, \code{n_overlap}, \code{overlap_size}, \code{Overlap},
-\code{overlap}; \code{jaccard}, \code{Jaccard}) when not given. \code{'k/n'} or \code{'k|n'}
-overlap strings are reduced to the count \code{k}.}
+\item{params}{Named list of column-name overrides (\code{term_col},
+\code{effect_col}, \code{significance_col}, \code{group_col}, \code{feature_col},
+\code{signature_col}, \code{variable_col}, \code{n_col}, \code{overlap_col}, \code{jaccard_col})
+and normalizer options (\code{alpha}, \code{n_top}, \code{variable_name}). For
+\code{'geneset_enrichment'}, \code{alpha} (default 0.05) is the significance
+threshold stated in \code{compact_summary}, and overlap / Jaccard columns are
+auto-detected from common names when not given; \code{'k/n'} overlap strings
+are reduced to \code{k}.}
 
-\item{source_file}{Optional path to the file \code{result} was originally read
-from (e.g. a \code{FindMarkers()} CSV export). Recorded in
-\code{provenance$params$source_file}, and content-hashed into
-\code{provenance$input_hashes$source_file} if the file still exists, so the
-import is traceable back to its origin.}
+\item{source_file}{Optional path to the file \code{result} was read from;
+recorded and content-hashed in provenance. Without one, a hash of
+\code{result} is recorded instead.}
+
+\item{module_method}{Optional description of how the modules were built;
+see \code{\link[=run_module]{run_module()}}.}
 }
 \value{
 An \code{evidence_fragment} object.
 }
 \description{
-Lets a user inject an already-computed result table (DMEs, GO enrichment,
-etc.) as a validated \code{\link[=evidence_fragment]{evidence_fragment()}} instead of recomputing it via a
-core tool. \code{provenance$source} is set to \code{'user_supplied'} so
-faithfulness/reproducibility checks can distinguish these from
-tool-computed fragments; the synthesis layer treats both identically.
+The low-level constructor behind \code{\link[=import_tool]{import_tool()}}: turns one module's
+already-computed result table into a validated \code{\link[=evidence_fragment]{evidence_fragment()}}.
+Most users want \code{\link[=import_tool]{import_tool()}}, which reads files, splits a table by
+module and slots the import into \code{\link[=run_evidence]{run_evidence()}}. \code{provenance$source} is
+\code{'user_supplied'}, so imported fragments stay distinguishable from
+computed ones; the synthesis layer treats both identically.
 }

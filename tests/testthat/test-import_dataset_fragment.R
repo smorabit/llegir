@@ -3,14 +3,21 @@
 ## valid dataset_fragments, tagged provenance.source = 'user_supplied'. No
 ## ModuleSet dependency here -- these operate on tables directly, offline.
 
-test_that('import_milo_da() normalizes a miloR-shaped neighborhood table into a composition_summary fragment', {
+# a miloR table through import_tool(format = 'milo_da'), run the way
+# run_evidence() would run it (once, dataset scope)
+milo_fragment <- function(milo_result, ...){
+    spec <- import_tool(milo_result, format = 'milo_da', ...)
+    spec$fn(list(ms = NULL, params = list(), module_method = NA_character_))
+}
+
+test_that('import_tool(format = "milo_da") normalizes a miloR-shaped neighborhood table into a composition_summary fragment', {
     milo_result <- data.frame(
         celltype = c(rep('pDC', 5), rep('Monocyte', 5), rep('Macrophage', 5)),
         logFC = c(rep(1.8, 4), 0.1, rep(-0.2, 5), rep(0.05, 5)),
         SpatialFDR = c(rep(0.001, 4), 0.9, rep(0.8, 5), rep(0.7, 5)),
         stringsAsFactors = FALSE
     )
-    frag <- import_milo_da(result = milo_result)
+    frag <- milo_fragment(milo_result)
 
     expect_true(validate_dataset_fragment(frag))
     expect_equal(frag$type, 'composition_summary')
@@ -23,17 +30,14 @@ test_that('import_milo_da() normalizes a miloR-shaped neighborhood table into a 
     expect_true('cell_state_imbalanced_across_condition' %in% unlist(frag$caveats))
 })
 
-test_that('import_milo_da() respects column_map overrides for non-default miloR column names', {
+test_that('import_tool(format = "milo_da") respects columns overrides for non-default miloR column names', {
     milo_result <- data.frame(
         annotation = c('pDC', 'pDC', 'Monocyte', 'Monocyte'),
         FC = c(2.0, 1.9, -0.1, -0.05),
         fdr = c(0.001, 0.002, 0.6, 0.7),
         stringsAsFactors = FALSE
     )
-    frag <- import_milo_da(
-        result = milo_result,
-        column_map = list(group_col = 'annotation', effect_col = 'FC', significance_col = 'fdr')
-    )
+    frag <- milo_fragment(milo_result, columns = list(group = 'annotation', effect = 'FC', significance = 'fdr'))
 
     expect_true(validate_dataset_fragment(frag))
     expect_equal(frag$provenance$params$group_col, 'annotation')
@@ -42,14 +46,14 @@ test_that('import_milo_da() respects column_map overrides for non-default miloR 
     expect_equal(pdc_row$direction, 'up')
 })
 
-test_that('import_milo_da() flags underpowered_contrast when no neighborhoods are significant', {
+test_that('import_tool(format = "milo_da") flags underpowered_contrast when no neighborhoods are significant', {
     milo_result <- data.frame(
         celltype = c(rep('pDC', 3), rep('Monocyte', 3)),
         logFC = c(0.2, -0.1, 0.05, 0.1, -0.2, 0.05),
         SpatialFDR = rep(0.8, 6),
         stringsAsFactors = FALSE
     )
-    frag <- import_milo_da(result = milo_result)
+    frag <- milo_fragment(milo_result)
 
     expect_true('underpowered_contrast' %in% unlist(frag$caveats))
     expect_false('cell_state_imbalanced_across_condition' %in% unlist(frag$caveats))
@@ -80,7 +84,7 @@ test_that('import_dataset_fragment() records source_file path and content hash i
     expect_false(is.null(frag$provenance$input_hashes$source_file))
 })
 
-test_that('import_dataset_fragment_tool() wires import_milo_da into run_dataset_context() via a direct fn spec', {
+test_that('run_evidence() runs a dataset-scoped import once, into the dataset context', {
     milo_result <- data.frame(
         celltype = c('pDC', 'pDC', 'Monocyte', 'Monocyte'),
         logFC = c(2.0, 1.8, -0.1, 0.05),
@@ -88,13 +92,12 @@ test_that('import_dataset_fragment_tool() wires import_milo_da into run_dataset_
         stringsAsFactors = FALSE
     )
     ms <- llegir_example_moduleset()
-    dc <- run_dataset_context(
-        ms,
-        list(list(fn = import_dataset_fragment_tool, params = list(type = 'composition_summary', result = milo_result)))
-    )
+    ev <- run_evidence(ms, list(import_tool(milo_result, format = 'auto'), tool('top_genes')), modules_use = modules(ms)[1])
 
-    expect_equal(length(dc$dataset_fragments), 1)
-    frag <- dc$dataset_fragments[[1]]
+    expect_equal(length(ev$dataset_context$dataset_fragments), 1)
+    frag <- ev$dataset_context$dataset_fragments[[1]]
     expect_equal(frag$type, 'composition_summary')
+    expect_equal(frag$fragment_id, 'milo_da')
     expect_equal(frag$provenance$source, 'user_supplied')
+    expect_length(ev$packets[[1]]$fragments, 1)
 })

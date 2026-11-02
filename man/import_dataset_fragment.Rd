@@ -10,7 +10,8 @@ import_dataset_fragment(
   fragment_id = NULL,
   tool_id = "import_dataset_fragment",
   params = list(),
-  source_file = NULL
+  source_file = NULL,
+  module_method = NA_character_
 )
 }
 \arguments{
@@ -22,25 +23,23 @@ import_dataset_fragment(
 \item{fragment_id}{Unique id within the \code{dataset_context}. Defaults to
 \code{paste0('imported::', type)}.}
 
-\item{tool_id}{Tool id recorded in provenance. Default
+\item{tool_id}{Tool id recorded on the fragment. Default
 \code{'import_dataset_fragment'}.}
 
-\item{params}{Named list of column-name overrides (e.g. \code{group_col},
-\code{effect_col}, \code{significance_col}, \code{alpha}), since a user-supplied table
-won't share this repo's exact column names.}
+\item{params}{Named list of column-name overrides (\code{group_col},
+\code{effect_col}, \code{significance_col}) and options (\code{alpha}).}
 
-\item{source_file}{Optional path to the file \code{result} was originally read
-from. Recorded in \code{provenance$params$source_file}, and content-hashed
-into \code{provenance$input_hashes$source_file} if the file still exists.}
+\item{source_file}{Optional path to the file \code{result} was read from;
+recorded and content-hashed in provenance.}
+
+\item{module_method}{Optional description of how the modules were built.}
 }
 \value{
 A \code{dataset_fragment} object.
 }
 \description{
-Dataset-scope analog of \code{\link[=import_fragment]{import_fragment()}}: lets a user inject an
-already-computed compositional / differential-abundance result as a
-validated \code{\link[=dataset_fragment]{dataset_fragment()}} instead of computing it via a core dataset
-tool (e.g. \code{\link[=dataset_composition_tool]{dataset_composition_tool()}}). \code{provenance$source} is set to
-\code{'user_supplied'}, same distinction \code{import_fragment()} makes for
-evidence fragments.
+Dataset-scope analog of \code{\link[=import_fragment]{import_fragment()}}, and the low-level constructor
+behind a dataset-scoped \code{\link[=import_tool]{import_tool()}} (e.g. \code{format = 'milo_da'}): turns
+an already-computed compositional / differential-abundance result into a
+validated \code{\link[=dataset_fragment]{dataset_fragment()}}.
 }

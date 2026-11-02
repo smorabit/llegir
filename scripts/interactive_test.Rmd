@@ -317,41 +317,23 @@ head(deg_df)
 # ingest the DEG table as an evidence fragment
 #---------------------------------------------------------
 
-# no group_col -> a single-contrast cross_condition_delta fragment;
+# import_tool() wraps the genome-wide DEG table as a tool: with no
+# module_col, a gene-level table is filtered to each module's own genes, and
 # provenance$source is stamped 'user_supplied' so downstream faithfulness
 # checks can tell it apart from a tool-computed fragment
-deg_fragment <- import_seurat_markers(
-    module_id = 'MM1',
-    result = deg_df,
-    group_col = NULL
-)
-
-# inspect the imported fragment -- compare compact_summary / top_findings here
-# against the raw deg_df rows above to confirm the column mapping landed
-deg_fragment
-deg_fragment$top_findings
+deg_tool <- import_tool(deg_df, format = 'seurat_markers', id = 'deg')
+deg_tool
 
 #---------------------------------------------------------
 # pass the ingested DEGs through the orchestrator
 #---------------------------------------------------------
 
-# thin wrapper so the pre-computed DEG table flows through the orchestrator as
-# just another tool: it re-tags the imported fragment with whichever module_id
-# the orchestrator is currently on, alongside the deterministic tools
-deg_import_tool <- function(ctx){
-    import_seurat_markers(
-        module_id = ctx$module_id,
-        result = ctx$params$deg_table,
-        group_col = NULL
-    )
-}
-
-# same tool list as before, now with the DEG import appended
-tool_config_deg <- c(tool_config, list(
-    list(fn = deg_import_tool, params = list(deg_table = deg_df))
-))
+# same tool list as before, now with the DEG import appended; inspect one
+# module's 'deg' fragment and compare its top_findings against deg_df
+tool_config_deg <- c(tool_config, list(deg_tool))
 
 packets_deg <- run_orchestrator(ms, tool_config_deg, output_dir = 'output/evidence_packets_deg', modules_use = modules_use)
+Find(function(f) f$fragment_id == 'deg', packets_deg[['MM1']]$fragments)$top_findings
 
 # inspect one packet -- the ingested DEG fragment should now sit in here next
 # to the tool-computed ones
