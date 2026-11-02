@@ -405,7 +405,10 @@ check_agent_labels <- function(workspace_dir, alpha = 0.05){
     ws <- .read_label_workspace(workspace_dir)
     backend <- agent_label_backend(ws$labels_dir, ws$packets)
 
-    rows <- lapply(ws$manifest$module_ids, function(mod){
+    # the labeling task covers the modules that were exported with a packet,
+    # which can be a subset of the network (run_orchestrator(modules_use =))
+    label_mods <- intersect(ws$manifest$module_ids, names(ws$packets))
+    rows <- lapply(label_mods, function(mod){
         packet <- ws$packets[[mod]]
         if (!file.exists(file.path(ws$labels_dir, paste0(mod, '.json')))) {
             return(data.frame(module_id = mod, status = 'missing', proposed_label = NA_character_, detail = 'no label file'))
@@ -452,7 +455,7 @@ check_agent_labels <- function(workspace_dir, alpha = 0.05){
     rows <- list(labelled)
 
     label_files <- sub('\\.json$', '', list.files(ws$labels_dir, pattern = '\\.json$'))
-    unexpected <- setdiff(label_files, ws$manifest$module_ids)
+    unexpected <- setdiff(label_files, label_mods)
     if (length(unexpected) > 0) {
         rows <- c(rows, list(data.frame(
             module_id = unexpected, status = 'unexpected', proposed_label = NA_character_,

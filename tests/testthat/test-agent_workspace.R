@@ -901,6 +901,17 @@ test_that('check_agent_labels() refuses an explore-mode workspace', {
     expect_error(check_agent_labels(out_dir), 'mode = "label"')
 })
 
+test_that('check_agent_labels() only expects labels for modules exported with a packet', {
+    run <- make_label_workspace_run(1)
+    expect_gt(length(modules(run$ms)), 1)
+    out_dir <- export_label_workspace(run)
+    write_agent_label(out_dir, run$mods[1])
+
+    report <- check_agent_labels(out_dir)
+    expect_equal(report$module_id, run$mods[1])
+    expect_equal(report$status, 'ok')
+})
+
 test_that('validate_labels.R runs inside a label workspace and writes its report', {
     skip_on_cran()
     run <- make_label_workspace_run(2)
