@@ -303,25 +303,13 @@ read_agent_manifest <- function(path){
 
 # one copy-pasteable call string per tool_spec: run_module() for a
 # module-scope tool, run_dataset_context() for a dataset-scope tool. String
-# only, never executed here -- the manifest template just interpolates it.
-# cluster_dme is the one core tool with a required params$group_by (see
-# cluster_dme_tool()); fill it in with this ms's actual declared grouping
-# column rather than a guessed name, and fall back to the bare invocation
-# (no params) when this ms never declared one.
+# only, never executed here; tools read the ModuleSet's declared group_col /
+# sample_col themselves, so no column needs filling in
 .example_invocation <- function(spec, ms){
     if (spec$scope == 'dataset') {
-        return(sprintf("run_dataset_context(ms, list(list(id = '%s')))", spec$id))
+        return(sprintf("run_dataset_context(ms, list(tool('%s')))", spec$id))
     }
-    if (identical(spec$id, 'cluster_dme')) {
-        group_col <- .ms_group_col(ms)
-        if (!is.null(group_col)) {
-            return(sprintf(
-                "run_module(ms, module_ids[1], tool_config = list(list(id = 'cluster_dme', params = list(group_by = '%s'))))",
-                group_col
-            ))
-        }
-    }
-    sprintf("run_module(ms, module_ids[1], tool_config = list(list(id = '%s')))", spec$id)
+    sprintf("run_module(ms, module_ids[1], list(tool('%s')))", spec$id)
 }
 
 # walks the live registry (list_tools() -> get_tool()) rather than any

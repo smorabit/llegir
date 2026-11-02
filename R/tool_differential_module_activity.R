@@ -1,5 +1,5 @@
 ## differential_module_activity: does a module's re-scored pseudo-bulk
-## activity differ across a declared condition (ctx$params$contrast_col)?
+## activity differ across a declared condition (ctx$params$condition_col)?
 ## The DME successor for independent sample-level units
 ## (docs/milestones/milestone_pseudobulk.md Part 3) -- runs on
 ## pseudobulk_view(ms), never on correlated per-cell scores. Two engines:
@@ -62,7 +62,7 @@
 #' Evidence tool: does a module's pseudo-bulk activity differ across a condition
 #'
 #' The module-level differential-activity test -- the DME successor: does
-#' this module's re-scored *activity* differ across `ctx$params$contrast_col`,
+#' this module's re-scored *activity* differ across `ctx$params$condition_col`,
 #' tested on independent pseudo-bulk samples via [pseudobulk_view()] rather
 #' than correlated per-cell scores. Emits a `'cross_condition_delta'`
 #' fragment for a two-level contrast, or a `'categorical_association'`
@@ -80,27 +80,27 @@
 #' module's own pseudo-bulk scores, per module, with no cross-module step.
 #'
 #' @param ctx A tool context list: `list(ms, module_id, params)`, as built by
-#'   [run_module()]. `ctx$params$contrast_col` (required) is the pseudo-bulk
+#'   [run_module()]. `ctx$params$condition_col` (required) is the pseudo-bulk
 #'   metadata column naming the condition to test. `ctx$params$covariates` is
 #'   an optional character vector of additional metadata columns to adjust
 #'   for (`'limma'` method only). `ctx$params$method` is `'limma'` (default)
 #'   or `'nonparametric'`.
 #' @return An `evidence_fragment` of type `'cross_condition_delta'` or
 #'   `'categorical_association'`, or `NULL` if [pseudobulk_view()] can't
-#'   resolve a pseudo-bulk view for `ctx$ms`, `contrast_col` isn't found in
+#'   resolve a pseudo-bulk view for `ctx$ms`, `condition_col` isn't found in
 #'   its metadata, or fewer than 2 contrast levels / 3 complete pseudo-bulk
 #'   units remain -- a graceful skip, not an error.
 #' @examples
 #' \dontrun{
 #' pb_ms <- pseudobulk_ModuleSet(pb_counts, list(module_a = c('GENE1', 'GENE2')), pb_meta)
 #' differential_module_activity_tool(list(
-#'     ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'condition')
+#'     ms = pb_ms, module_id = 'module_a', params = list(condition_col = 'condition')
 #' ))
 #' }
 #' @export
 differential_module_activity_tool <- function(ctx){
-    contrast_col <- ctx$params$contrast_col
-    if (is.null(contrast_col)) stop('differential_module_activity requires params$contrast_col')
+    condition_col <- .param_col(ctx, 'condition_col')
+    if (is.null(condition_col)) stop('differential_module_activity requires params$condition_col')
     covariates <- ctx$params$covariates %||% character(0)
     method <- match.arg(ctx$params$method %||% 'limma', c('limma', 'nonparametric'))
 
@@ -110,8 +110,8 @@ differential_module_activity_tool <- function(ctx){
         return(NULL)
     }
     meta <- metadata(pb_view)
-    if (!(contrast_col %in% colnames(meta))) {
-        message('differential_module_activity: skipped, contrast_col not found in pseudo-bulk metadata: ', contrast_col)
+    if (!(condition_col %in% colnames(meta))) {
+        message('differential_module_activity: skipped, condition_col not found in pseudo-bulk metadata: ', condition_col)
         return(NULL)
     }
     scores <- module_scores(pb_view)
@@ -120,9 +120,9 @@ differential_module_activity_tool <- function(ctx){
         return(NULL)
     }
 
-    keep <- !is.na(meta[[contrast_col]])
+    keep <- !is.na(meta[[condition_col]])
     for (cov in covariates) keep <- keep & !is.na(meta[[cov]])
-    groups <- droplevels(factor(meta[[contrast_col]][keep]))
+    groups <- droplevels(factor(meta[[condition_col]][keep]))
     if (nlevels(groups) < 2 || sum(keep) < 3) {
         message('differential_module_activity: skipped, fewer than 2 contrast levels or 3 complete pseudo-bulk units')
         return(NULL)
@@ -146,7 +146,7 @@ differential_module_activity_tool <- function(ctx){
 
     provenance <- make_provenance(
         tool_version = '0.1',
-        params = list(contrast_col = contrast_col, covariates = covariates, method = method, n_units = sum(keep)),
+        params = list(condition_col = condition_col, covariates = covariates, method = method, n_units = sum(keep)),
         pkg_versions = pkg_versions(ctx$ms),
         module_method = ctx$module_method %||% NA_character_
     )
@@ -164,7 +164,7 @@ differential_module_activity_tool <- function(ctx){
             type = 'cross_condition_delta',
             result = result,
             compact_summary = paste0(
-                contrast_col, ' (', method, '): ', levels_use[2], ' vs ', levels_use[1],
+                condition_col, ' (', method, '): ', levels_use[2], ' vs ', levels_use[1],
                 ' (effect=', round(row$effect, 2), ', FDR=', signif(row$fdr, 2), ')'
             ),
             top_findings = list(list(
@@ -187,7 +187,7 @@ differential_module_activity_tool <- function(ctx){
             type = 'categorical_association',
             result = per_group,
             compact_summary = paste0(
-                contrast_col, ' (', method, '): strongest level ', top$group,
+                condition_col, ' (', method, '): strongest level ', top$group,
                 ' (effect=', round(top$effect, 2), '); omnibus p=', signif(omnibus_p, 2)
             ),
             top_findings = top_findings,

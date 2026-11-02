@@ -16,7 +16,9 @@ hdWGCNA_ModuleSet(
   seurat_obj,
   wgcna_name = NULL,
   data_level = "cell",
-  aggregated = FALSE
+  aggregated = FALSE,
+  group_col = NULL,
+  sample_col = NULL
 )
 
 \method{modules}{hdWGCNA_ModuleSet}(ms, ...)
@@ -48,6 +50,13 @@ Default \code{'cell'}.}
 \item{aggregated}{Whether \code{expression()}/\code{module_scores()} are already
 aggregated across cells (e.g. pseudobulk) rather than per-cell. Default \code{FALSE}.}
 
+\item{group_col, sample_col}{Optional metadata columns naming the cell
+state / cluster grouping and the biological sample (e.g. patient).
+Declared once here, they are the default for every tool's \code{group_col} /
+\code{sample_col} parameter and for \code{\link[=export_agent_workspace]{export_agent_workspace()}}'s artifact
+screen. The \code{grouping} / \code{sample_ids} capabilities hold only when the
+matching column is declared.}
+
 \item{ms}{A \code{ModuleSet} object; the dispatch target for the generic
 methods below (\code{\link[=modules]{modules()}}, \code{\link[=gene_membership]{gene_membership()}}, \code{\link[=module_scores]{module_scores()}},
 \code{\link[=expression]{expression()}}, \code{\link[=counts]{counts()}}, \code{\link[=metadata]{metadata()}}, \code{\link[=pkg_versions]{pkg_versions()}}, \code{\link[=capabilities]{capabilities()}}).}
@@ -69,7 +78,7 @@ core evidence tool depends only on the generic \code{ModuleSet} contract
 \dontrun{
 library(Seurat)
 seurat_obj <- readRDS('my_hdwgcna_object.rds')
-ms <- hdWGCNA_ModuleSet(seurat_obj)
+ms <- hdWGCNA_ModuleSet(seurat_obj, group_col = 'cell_type', sample_col = 'patient')
 modules(ms)
 }
 }

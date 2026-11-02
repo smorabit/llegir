@@ -147,7 +147,7 @@ if (go_data_available) {
     go_tool_config <- function(db_files = go_test_db_files){
         list(
             list(fn = top_genes_tool, params = list(n_hubs = 6)),
-            list(fn = cluster_dme_tool, params = list(group_by = 'cell_type')),
+            list(fn = cluster_dme_tool, params = list(group_col = 'cell_type')),
             list(fn = geneset_enrichment_tool, params = list(n_hubs = 6, db_files = db_files))
         )
     }

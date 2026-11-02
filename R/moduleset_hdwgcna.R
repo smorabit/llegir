@@ -21,6 +21,12 @@
 #'   Default `'cell'`.
 #' @param aggregated Whether `expression()`/`module_scores()` are already
 #'   aggregated across cells (e.g. pseudobulk) rather than per-cell. Default `FALSE`.
+#' @param group_col,sample_col Optional metadata columns naming the cell
+#'   state / cluster grouping and the biological sample (e.g. patient).
+#'   Declared once here, they are the default for every tool's `group_col` /
+#'   `sample_col` parameter and for [export_agent_workspace()]'s artifact
+#'   screen. The `grouping` / `sample_ids` capabilities hold only when the
+#'   matching column is declared.
 #' @param ms A `ModuleSet` object; the dispatch target for the generic
 #'   methods below ([modules()], [gene_membership()], [module_scores()],
 #'   [expression()], [counts()], [metadata()], [pkg_versions()], [capabilities()]).
@@ -31,16 +37,21 @@
 #' \dontrun{
 #' library(Seurat)
 #' seurat_obj <- readRDS('my_hdwgcna_object.rds')
-#' ms <- hdWGCNA_ModuleSet(seurat_obj)
+#' ms <- hdWGCNA_ModuleSet(seurat_obj, group_col = 'cell_type', sample_col = 'patient')
 #' modules(ms)
 #' }
 #' @export
-hdWGCNA_ModuleSet <- function(seurat_obj, wgcna_name = NULL, data_level = 'cell', aggregated = FALSE){
+hdWGCNA_ModuleSet <- function(seurat_obj, wgcna_name = NULL, data_level = 'cell', aggregated = FALSE,
+                              group_col = NULL, sample_col = NULL){
     if (is.null(wgcna_name)) wgcna_name <- seurat_obj@misc$active_wgcna
+    for (col in c(group_col, sample_col)) {
+        if (!(col %in% colnames(seurat_obj@meta.data))) stop('metadata column not found: ', col)
+    }
     structure(
         list(
             seurat_obj = seurat_obj, wgcna_name = wgcna_name,
-            data_level = data_level, aggregated = aggregated
+            data_level = data_level, aggregated = aggregated,
+            group_col = group_col, sample_col = sample_col
         ),
         class = 'hdWGCNA_ModuleSet'
     )
@@ -81,7 +92,8 @@ modules.hdWGCNA_ModuleSet <- function(ms, ...){
         gene_table = .hdwgcna_gene_table(ms$seurat_obj, ms$wgcna_name),
         expression = Seurat::GetAssayData(ms$seurat_obj, assay = Seurat::DefaultAssay(ms$seurat_obj), layer = 'data'),
         metadata = ms$seurat_obj@meta.data,
-        scores = hdWGCNA::GetMEs(ms$seurat_obj, wgcna_name = ms$wgcna_name)
+        scores = hdWGCNA::GetMEs(ms$seurat_obj, wgcna_name = ms$wgcna_name),
+        group_col = ms$group_col, sample_col = ms$sample_col
     )
 }
 
@@ -126,13 +138,13 @@ pkg_versions.hdWGCNA_ModuleSet <- function(ms, ...){
 }
 
 # a Seurat object with an hdWGCNA experiment always carries full metadata,
-# computed MEs, kME weights, and the assay matrix -- unlike the generic
-# components/gene-list adapters, none of these are ever optional here
+# computed MEs, kME weights, and the assay matrix; grouping and sample ids
+# depend on which columns the caller declared
 #' @rdname hdWGCNA_ModuleSet
 #' @export
 capabilities.hdWGCNA_ModuleSet <- function(ms, ...){
     c(
         gene_weights = TRUE, module_scores = TRUE, expression = TRUE, counts = TRUE,
-        grouping = TRUE, sample_ids = TRUE, pseudobulk = FALSE
+        grouping = !is.null(ms$group_col), sample_ids = !is.null(ms$sample_col), pseudobulk = FALSE
     )
 }

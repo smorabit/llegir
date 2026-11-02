@@ -188,7 +188,7 @@ hallmark_gmt <- c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt')
 # is all it takes for the registry/orchestrator to treat it as a first-class tool
 tool_config <- list(
     list(fn = top_genes_tool, params = list(n_hubs = 30)),
-    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+    list(fn = cluster_dme_tool, params = list(group_col = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(
         n_hubs = 25,
         db_files = c(GO_BP = 'data/GO_Biological_Process_2026.txt', hallmark_gmt)
@@ -461,8 +461,8 @@ validate_moduleset(pb_ms)
 # a pseudo-bulk ModuleSet is just another ModuleSet -- hand it straight to
 # run_orchestrator() with the two new pseudo-bulk tools; no attachment needed
 tool_config_pb <- list(
-    list(fn = differential_module_activity_tool, params = list(contrast_col = 'condition')),
-    list(fn = pseudobulk_de_limma_tool, params = list(contrast_col = 'condition'))
+    list(fn = differential_module_activity_tool, params = list(condition_col = 'condition')),
+    list(fn = pseudobulk_de_limma_tool, params = list(condition_col = 'condition'))
 )
 
 packets_pb_standalone <- run_orchestrator(
@@ -497,9 +497,9 @@ identical(pseudobulk_view(ms_with_pb), pb_ms)
 # needs to know the difference
 tool_config_mixed <- list(
     list(fn = top_genes_tool, params = list(n_hubs = 25)),
-    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
-    list(fn = differential_module_activity_tool, params = list(contrast_col = 'condition')),
-    list(fn = pseudobulk_de_limma_tool, params = list(contrast_col = 'condition'))
+    list(fn = cluster_dme_tool, params = list(group_col = 'lv2_annot')),
+    list(fn = differential_module_activity_tool, params = list(condition_col = 'condition')),
+    list(fn = pseudobulk_de_limma_tool, params = list(condition_col = 'condition'))
 )
 
 packets_mixed <- run_orchestrator(

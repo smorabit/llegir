@@ -259,7 +259,7 @@ test_that('.build_tool_cheatsheet() picks up a custom register_tool() call with 
     expect_false(row$runnable)
     expect_equal(
         row$invocation,
-        "run_module(ms, module_ids[1], tool_config = list(list(id = 'synthetic_cheatsheet_probe')))"
+        "run_module(ms, module_ids[1], list(tool('synthetic_cheatsheet_probe')))"
     )
 })
 
@@ -291,22 +291,13 @@ test_that('.build_tool_cheatsheet() tags an expression-dependent row "(full obje
 test_that('.example_invocation() emits the dataset-tool form for scope == "dataset"', {
     ms <- llegir_example_moduleset()
     spec <- get_tool('dataset_composition')
-    expect_equal(.example_invocation(spec, ms), "run_dataset_context(ms, list(list(id = 'dataset_composition')))")
+    expect_equal(.example_invocation(spec, ms), "run_dataset_context(ms, list(tool('dataset_composition')))")
 })
 
-test_that('.example_invocation() fills cluster_dme params$group_by with the real declared column', {
+test_that('.example_invocation() relies on the ModuleSet-declared columns instead of filling params', {
     ms <- llegir_example_moduleset()
     spec <- get_tool('cluster_dme')
-    invocation <- .example_invocation(spec, ms)
-    expect_true(grepl("group_by = 'cell_type'", invocation, fixed = TRUE))
-    expect_false(grepl('cell_state', invocation, fixed = TRUE))
-})
-
-test_that('.example_invocation() omits cluster_dme params when no grouping column is declared', {
-    ms <- make_no_group_col_test_ms()
-    spec <- get_tool('cluster_dme')
-    invocation <- .example_invocation(spec, ms)
-    expect_equal(invocation, "run_module(ms, module_ids[1], tool_config = list(list(id = 'cluster_dme')))")
+    expect_equal(.example_invocation(spec, ms), "run_module(ms, module_ids[1], list(tool('cluster_dme')))")
 })
 
 test_that('.build_api_cheatsheet() gates the expression row on capabilities()$expression', {

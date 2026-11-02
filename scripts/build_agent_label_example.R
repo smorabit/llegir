@@ -41,7 +41,7 @@ dataset_ctx <- run_dataset_context(ms, dataset_tool_config)
 
 tool_config <- list(
     list(fn = top_genes_tool, params = list(n_hubs = 25)),
-    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+    list(fn = cluster_dme_tool, params = list(group_col = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(
         n_hubs = 25,
         db_files = c(

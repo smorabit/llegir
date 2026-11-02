@@ -53,7 +53,7 @@ desc <- dataset_description(
 
 #---------------------------------------------------------
 # gather evidence for all three modules -- top 25 hub genes, cluster_dme
-# (group_by = 'lv2_annot', the cell-state annotation column on this dataset,
+# (group_col = 'lv2_annot', the cell-state annotation column on this dataset,
 # same one scripts/interactive_test.Rmd uses), and GO enrichment. run_orchestrator()
 # rather than a manual run_module() loop: it validates ms up front, isolates
 # one module's tool failure (warn + NULL, not an uncaught error killing the
@@ -65,7 +65,7 @@ packets <- run_orchestrator(
     ms,
     tool_config = list(
         list(id = 'top_genes', params = list(n_hubs = 25)),
-        list(id = 'cluster_dme', params = list(group_by = 'lv2_annot')),
+        list(id = 'cluster_dme', params = list(group_col = 'lv2_annot')),
         list(id = 'geneset_enrichment', params = list(
             n_hubs = 25,
             db_files = c(GO_BP = 'data/GO_Biological_Process_2026.txt')

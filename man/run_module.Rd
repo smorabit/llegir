@@ -17,7 +17,7 @@ run_module(
 
 \item{module_id}{A single module id (as returned by \code{\link[=modules]{modules()}}).}
 
-\item{tool_config}{A list of tool specs, each one of \code{\link[ellmer:tool]{ellmer::tool()}} (preferred),
+\item{tool_config}{A list of tool specs, each one of \code{\link[=tool]{tool()}} (preferred),
 \code{list(id = , params = )} (a registry id) or \code{list(fn = , params = )} (any
 \verb{function(ctx)}). Registered tools have their declared required
 \code{\link[=capabilities]{capabilities()}} checked before they run, whichever form names them; an

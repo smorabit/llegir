@@ -12,7 +12,7 @@
 
 test_that('positive control: cluster_dme picks the pDC cluster', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
-    ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(group_by = 'lv2_annot'))
+    ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(group_col = 'lv2_annot'))
     frag <- cluster_dme_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
 
@@ -43,8 +43,8 @@ test_that('positive control: enrichment recovers a plasmacytoid/dendritic-relate
 
 test_that('negative control: cluster_dme shows weak, non-specific association', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
-    pos_ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(group_by = 'lv2_annot'))
-    neg_ctx <- list(ms = negative_ms, module_id = 'random_module', params = list(group_by = 'lv2_annot'))
+    pos_ctx <- list(ms = positive_ms, module_id = 'pdc_module', params = list(group_col = 'lv2_annot'))
+    neg_ctx <- list(ms = negative_ms, module_id = 'random_module', params = list(group_col = 'lv2_annot'))
     pos_frag <- cluster_dme_tool(pos_ctx)
     neg_frag <- cluster_dme_tool(neg_ctx)
     expect_true(validate_evidence_fragment(neg_frag))

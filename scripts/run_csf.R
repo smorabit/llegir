@@ -34,7 +34,7 @@ hallmark_gmt <- c(Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt')
 # over the module's own activity.
 tool_config <- list(
     list(fn = top_genes_tool, params = list(n_hubs = 25)),
-    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+    list(fn = cluster_dme_tool, params = list(group_col = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(
         n_hubs = 25,
         db_files = c(GO_BP = 'data/GO_Biological_Process_2026.txt', hallmark_gmt)

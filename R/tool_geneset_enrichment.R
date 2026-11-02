@@ -108,7 +108,8 @@
 geneset_enrichment_tool <- function(ctx){
     n_hubs <- ctx$params$n_hubs %||% 25
     alpha <- ctx$params$alpha %||% 0.05
-    db_files <- ctx$params$db_files %||% c(GO_BP = 'data/GO_Biological_Process_2026.txt')
+    db_files <- ctx$params$db_files
+    if (is.null(db_files)) stop('geneset_enrichment requires params$db_files: a named vector of GMT / Enrichr gene-set files')
 
     gm <- gene_membership(ctx$ms, ctx$module_id)
     hub_genes <- utils::head(gm$gene_name, n_hubs)

@@ -13,7 +13,7 @@ test_that('top_genes_tool() returns a valid ranked_genes fragment', {
 
 test_that('cluster_dme_tool() returns a valid state_expression fragment', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
-    ctx <- list(ms = ms_test, module_id = mod_test, params = list(group_by = 'lv2_annot'))
+    ctx <- list(ms = ms_test, module_id = mod_test, params = list(group_col = 'lv2_annot'))
     frag <- cluster_dme_tool(ctx)
     expect_true(validate_evidence_fragment(frag))
     expect_equal(frag$type, 'state_expression')
@@ -21,10 +21,21 @@ test_that('cluster_dme_tool() returns a valid state_expression fragment', {
     expect_true(frag$direction %in% c('up', 'down'))
 })
 
-test_that('cluster_dme_tool() errors without group_by', {
+test_that('cluster_dme_tool() errors without a group_col from params or the ModuleSet', {
     skip_if_not(csf_data_available, 'CSF dev object not available')
-    ctx <- list(ms = ms_test, module_id = mod_test, params = list())
-    expect_error(cluster_dme_tool(ctx), 'group_by')
+    bare_ms <- ms_test
+    bare_ms$group_col <- NULL
+    ctx <- list(ms = bare_ms, module_id = mod_test, params = list())
+    expect_error(cluster_dme_tool(ctx), 'group_col')
+})
+
+test_that('hdWGCNA_ModuleSet() reports grouping/sample_ids only for declared columns', {
+    skip_if_not(csf_data_available, 'CSF dev object not available')
+    expect_true(has_capability(ms_test, 'grouping'))
+    bare_ms <- hdWGCNA_ModuleSet(so_test)
+    expect_false(has_capability(bare_ms, 'grouping'))
+    expect_false(has_capability(bare_ms, 'sample_ids'))
+    expect_error(hdWGCNA_ModuleSet(so_test, group_col = 'no_such_column'), 'not found')
 })
 
 test_that('geneset_enrichment_tool() returns a valid geneset_enrichment fragment', {

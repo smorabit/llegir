@@ -8,7 +8,7 @@ cluster_dme_tool(ctx)
 }
 \arguments{
 \item{ctx}{A tool context list: \code{list(ms, module_id, params)}, as built by
-\code{\link[=run_module]{run_module()}}. \code{ctx$params$group_by} (required) is the metadata column
+\code{\link[=run_module]{run_module()}}. \code{ctx$params$group_col} (or the ModuleSet's declared \code{group_col}) is the metadata column
 naming the cell-state grouping (e.g. \code{'lv2_annot'}).}
 }
 \value{
@@ -23,5 +23,5 @@ A core evidence tool. Touches only the \code{ModuleSet} adapter contract
 }
 \examples{
 ms <- llegir_example_moduleset()
-cluster_dme_tool(list(ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type')))
+cluster_dme_tool(list(ms = ms, module_id = modules(ms)[1], params = list(group_col = 'cell_type')))
 }

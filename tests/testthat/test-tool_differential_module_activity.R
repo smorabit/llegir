@@ -7,25 +7,25 @@
 
 test_that('differential_module_activity_tool() skips gracefully without a resolvable pseudo-bulk view', {
     expect_null(pseudobulk_view(pb_cell_ms))
-    ctx <- list(ms = pb_cell_ms, module_id = modules(pb_cell_ms)[1], params = list(contrast_col = 'diagnosis'))
+    ctx <- list(ms = pb_cell_ms, module_id = modules(pb_cell_ms)[1], params = list(condition_col = 'diagnosis'))
     expect_message(result <- differential_module_activity_tool(ctx), 'skipped')
     expect_null(result)
 })
 
-test_that('differential_module_activity_tool() skips gracefully when contrast_col is missing from pseudo-bulk metadata', {
-    ctx <- list(ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'not_a_real_column'))
+test_that('differential_module_activity_tool() skips gracefully when condition_col is missing from pseudo-bulk metadata', {
+    ctx <- list(ms = pb_ms, module_id = 'module_a', params = list(condition_col = 'not_a_real_column'))
     expect_message(result <- differential_module_activity_tool(ctx), 'skipped')
     expect_null(result)
 })
 
-test_that('differential_module_activity_tool() requires params$contrast_col', {
+test_that('differential_module_activity_tool() requires params$condition_col', {
     ctx <- list(ms = pb_ms, module_id = 'module_a', params = list())
-    expect_error(differential_module_activity_tool(ctx), 'contrast_col')
+    expect_error(differential_module_activity_tool(ctx), 'condition_col')
 })
 
 test_that('differential_module_activity_tool() (limma) finds module_a differential across condition', {
     frag <- differential_module_activity_tool(list(
-        ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'condition', method = 'limma')
+        ms = pb_ms, module_id = 'module_a', params = list(condition_col = 'condition', method = 'limma')
     ))
     expect_true(validate_evidence_fragment(frag))
     expect_equal(frag$type, 'cross_condition_delta')
@@ -41,7 +41,7 @@ test_that('differential_module_activity_tool() (limma) finds module_a differenti
 
 test_that('differential_module_activity_tool() (nonparametric) finds module_a differential across condition', {
     frag <- differential_module_activity_tool(list(
-        ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'condition', method = 'nonparametric')
+        ms = pb_ms, module_id = 'module_a', params = list(condition_col = 'condition', method = 'nonparametric')
     ))
     expect_true(validate_evidence_fragment(frag))
     expect_equal(frag$type, 'cross_condition_delta')
@@ -50,19 +50,19 @@ test_that('differential_module_activity_tool() (nonparametric) finds module_a di
 
 test_that('differential_module_activity_tool() shows a weaker effect for module_b (no simulated signal)', {
     frag_a <- differential_module_activity_tool(list(
-        ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'condition')
+        ms = pb_ms, module_id = 'module_a', params = list(condition_col = 'condition')
     ))
     frag_b <- differential_module_activity_tool(list(
-        ms = pb_ms, module_id = 'module_b', params = list(contrast_col = 'condition')
+        ms = pb_ms, module_id = 'module_b', params = list(condition_col = 'condition')
     ))
     expect_true(frag_b$effect_strength < frag_a$effect_strength)
 })
 
 test_that('differential_module_activity_tool() (limma) caches the fit across the per-module loop', {
-    differential_module_activity_tool(list(ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'condition')))
+    differential_module_activity_tool(list(ms = pb_ms, module_id = 'module_a', params = list(condition_col = 'condition')))
     n_after_first <- length(ls(.dma_fit_cache))
 
-    differential_module_activity_tool(list(ms = pb_ms, module_id = 'module_b', params = list(contrast_col = 'condition')))
+    differential_module_activity_tool(list(ms = pb_ms, module_id = 'module_b', params = list(condition_col = 'condition')))
     n_after_second <- length(ls(.dma_fit_cache))
     # same scores matrix + design as the module_a call above -> same cache key, no new entry
     expect_equal(n_after_second, n_after_first)
@@ -71,7 +71,7 @@ test_that('differential_module_activity_tool() (limma) caches the fit across the
 test_that('differential_module_activity_tool() accepts an optional covariate without erroring', {
     frag <- differential_module_activity_tool(list(
         ms = pb_ms, module_id = 'module_a',
-        params = list(contrast_col = 'condition', covariates = 'n_cells')
+        params = list(condition_col = 'condition', covariates = 'n_cells')
     ))
     expect_true(validate_evidence_fragment(frag))
 })
@@ -80,7 +80,7 @@ test_that('differential_module_activity_tool() is registered and runs end to end
     expect_true('differential_module_activity' %in% list_tools())
     packet <- run_module(
         pb_ms, 'module_a',
-        list(list(id = 'differential_module_activity', params = list(contrast_col = 'condition'))),
+        list(list(id = 'differential_module_activity', params = list(condition_col = 'condition'))),
         input_hash = 'dma_test'
     )
     expect_equal(length(packet$fragments), 1)
@@ -123,7 +123,7 @@ dma_pb_ms_three_level <- pseudobulk_ModuleSet(
 
 test_that('differential_module_activity_tool() (limma) handles a multi-level contrast as categorical_association', {
     frag <- differential_module_activity_tool(list(
-        ms = dma_pb_ms_three_level, module_id = 'module_a', params = list(contrast_col = 'condition', method = 'limma')
+        ms = dma_pb_ms_three_level, module_id = 'module_a', params = list(condition_col = 'condition', method = 'limma')
     ))
     expect_true(validate_evidence_fragment(frag))
     expect_equal(frag$type, 'categorical_association')
@@ -135,7 +135,7 @@ test_that('differential_module_activity_tool() (limma) handles a multi-level con
 test_that('differential_module_activity_tool() (nonparametric) handles a multi-level contrast as categorical_association', {
     frag <- differential_module_activity_tool(list(
         ms = dma_pb_ms_three_level, module_id = 'module_a',
-        params = list(contrast_col = 'condition', method = 'nonparametric')
+        params = list(condition_col = 'condition', method = 'nonparametric')
     ))
     expect_true(validate_evidence_fragment(frag))
     expect_equal(frag$type, 'categorical_association')

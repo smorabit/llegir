@@ -136,7 +136,7 @@ desc <- dataset_description(
 
 tool_config <- list(
     list(fn = top_genes_tool, params = list(n_hubs = 10)),
-    list(fn = cluster_dme_tool, params = list(group_by = 'cell_state'))
+    list(fn = cluster_dme_tool, params = list(group_col = 'cell_state'))
 )
 
 packets <- run_orchestrator(

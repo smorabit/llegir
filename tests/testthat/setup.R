@@ -22,7 +22,7 @@ if (csf_data_available) {
     # loaded once and shared read-only across test files; readRDS + adapter
     # construction is the slow part of this suite, no need to repeat it per file
     so_test <- readRDS('../../data/CSF_Myeloid_hdWGCNA.rds')
-    ms_test <- hdWGCNA_ModuleSet(so_test)
+    ms_test <- hdWGCNA_ModuleSet(so_test, group_col = 'lv2_annot', sample_col = 'patient')
     mod_test <- modules(ms_test)[1]
 }
 
@@ -57,7 +57,7 @@ test_schema_path <- system.file('schemas', 'interpretation.schema.json', package
 # without depending on the gitignored output/evidence_packets/ directory
 csf_tool_config <- list(
     list(fn = top_genes_tool, params = list(n_hubs = 25)),
-    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+    list(fn = cluster_dme_tool, params = list(group_col = 'lv2_annot')),
     list(fn = geneset_enrichment_tool, params = list(n_hubs = 25, db_files = test_db_files))
 )
 
@@ -76,7 +76,7 @@ if (csf_data_available) {
 build_spike_in_packet <- function(ms, module_id, n_hubs){
     tool_config <- list(
         list(fn = top_genes_tool, params = list(n_hubs = n_hubs)),
-        list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
+        list(fn = cluster_dme_tool, params = list(group_col = 'lv2_annot')),
         list(fn = geneset_enrichment_tool, params = list(n_hubs = n_hubs, db_files = test_db_files))
     )
     run_module(ms, module_id, tool_config, input_hash = 'spike_in')

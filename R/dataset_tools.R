@@ -66,13 +66,13 @@
 #' module as biology rather than cell-type imbalance.
 #'
 #' @param ctx A dataset tool context list: `list(ms, params, module_method)`,
-#'   as built by [run_dataset_context()]. `ctx$params$group_col` (required) is
+#'   as built by [run_dataset_context()]. `ctx$params$group_col` (or the ModuleSet's declared `group_col`) is
 #'   the metadata column naming the cell-state/cluster grouping.
 #'   `ctx$params$condition_col` (optional) is the metadata column to check the
 #'   grouping for skew against; when omitted, only a group census is
-#'   computed. `ctx$params$sample_col` (default `'sample'`) names the
-#'   metadata sample-id column, consulted when the `sample_ids` capability
-#'   holds. `ctx$params$residual_threshold` (default `2`) is the absolute
+#'   computed. `ctx$params$sample_col` (default: the ModuleSet's declared
+#'   `sample_col`) names the metadata sample-id column; without one the
+#'   samples-per-condition check is skipped. `ctx$params$residual_threshold` (default `2`) is the absolute
 #'   chi-square standardized residual above which a group x condition cell is
 #'   flagged. `ctx$params$min_samples` (default `3`) and
 #'   `ctx$params$min_cells` (default `20`) are the per-condition minimums
@@ -86,10 +86,10 @@
 #' dataset_composition_tool(list(ms = ms, params = params))
 #' @export
 dataset_composition_tool <- function(ctx){
-    group_col <- ctx$params$group_col
-    if (is.null(group_col)) stop('dataset_composition requires params$group_col')
-    condition_col <- ctx$params$condition_col
-    sample_col <- ctx$params$sample_col %||% 'sample'
+    group_col <- .param_col(ctx, 'group_col')
+    if (is.null(group_col)) stop('dataset_composition requires a group_col (pass it as a parameter, or declare it on the ModuleSet)')
+    condition_col <- .param_col(ctx, 'condition_col')
+    sample_col <- .param_col(ctx, 'sample_col')
     residual_threshold <- ctx$params$residual_threshold %||% 2
     min_samples <- ctx$params$min_samples %||% 3
     min_cells <- ctx$params$min_cells %||% 20
@@ -169,7 +169,7 @@ dataset_composition_tool <- function(ctx){
         }
 
         underpowered <- any(cond_totals < min_cells)
-        if (has_capability(ctx$ms, 'sample_ids') && !is.null(meta[[sample_col]])) {
+        if (!is.null(sample_col) && !is.null(meta[[sample_col]])) {
             samples_per_condition <- tapply(meta[[sample_col]], conditions, function(x) length(unique(x)))
             for (cnd in names(samples_per_condition)) {
                 top_findings[[length(top_findings) + 1]] <- list(
@@ -245,7 +245,7 @@ dataset_composition_tool <- function(ctx){
 dataset_variance_structure_tool <- function(ctx){
     covariates <- ctx$params$covariates
     if (is.null(covariates)) stop('dataset_variance_structure requires params$covariates')
-    condition_col <- ctx$params$condition_col
+    condition_col <- .param_col(ctx, 'condition_col')
     if (is.null(condition_col)) stop('dataset_variance_structure requires params$condition_col')
     technical_covariates <- ctx$params$technical_covariates %||% setdiff(covariates, condition_col)
     n_components <- ctx$params$n_components %||% 10

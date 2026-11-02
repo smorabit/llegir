@@ -1,10 +1,10 @@
 ## cluster_expression_profile_tool: non-differential companion to
 ## cluster_dme_tool, against llegir_example_moduleset() (grouping +
-## module_scores capabilities, group_by = 'cell_type').
+## module_scores capabilities, group_col = 'cell_type').
 
 test_that('cluster_expression_profile_tool() returns a valid state_expression fragment', {
     ms <- llegir_example_moduleset()
-    ctx <- list(ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type'))
+    ctx <- list(ms = ms, module_id = modules(ms)[1], params = list(group_col = 'cell_type'))
     frag <- cluster_expression_profile_tool(ctx)
 
     expect_true(validate_evidence_fragment(frag))
@@ -26,10 +26,11 @@ test_that('cluster_expression_profile_tool() returns a valid state_expression fr
     expect_equal(frag$top_findings[[1]]$mean_activity, frag$result$mean_activity[1])
 })
 
-test_that('cluster_expression_profile_tool() requires params$group_by', {
+test_that('cluster_expression_profile_tool() needs a group_col from params or the ModuleSet', {
     ms <- llegir_example_moduleset()
+    ms$group_col <- NULL
     ctx <- list(ms = ms, module_id = modules(ms)[1], params = list())
-    expect_error(cluster_expression_profile_tool(ctx), 'group_by')
+    expect_error(cluster_expression_profile_tool(ctx), 'group_col')
 })
 
 test_that('cluster_expression_profile_tool() skips gracefully without grouping/module_scores', {
@@ -41,7 +42,7 @@ test_that('cluster_expression_profile_tool() skips gracefully without grouping/m
     expect_false(has_capability(bare_ms, 'grouping'))
     expect_false(has_capability(bare_ms, 'module_scores'))
 
-    ctx <- list(ms = bare_ms, module_id = 'module_a', params = list(group_by = 'cell_type'))
+    ctx <- list(ms = bare_ms, module_id = 'module_a', params = list(group_col = 'cell_type'))
     expect_message(result <- cluster_expression_profile_tool(ctx), 'skipped')
     expect_null(result)
 })

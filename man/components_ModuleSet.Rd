@@ -65,14 +65,13 @@ matrix, same dimensions as \code{expression}. If omitted, \code{\link[=counts]{c
 \code{NULL} and \code{\link[=capabilities]{capabilities()}}\verb{$counts} is \code{FALSE}.}
 
 \item{group_col}{Optional name of a \code{metadata} column declared as the
-cell/sample-state grouping. This only drives
-\code{\link[=capabilities]{capabilities()}}\verb{$grouping} -- core tools still take the grouping column
-name as a parameter (e.g. \code{cluster_dme_tool}'s \code{group_by}); declaring
-\code{group_col} is how this ModuleSet advertises that it supports the
-concept at all.}
+cell/sample-state grouping. Drives \code{\link[=capabilities]{capabilities()}}\verb{$grouping} and is the
+default for every tool's \code{group_col} parameter (a tool's own parameter
+still wins).}
 
 \item{sample_col}{Optional name of a \code{metadata} column declared as the
-sample id, analogous to \code{group_col} for \code{\link[=capabilities]{capabilities()}}\verb{$sample_ids}.}
+sample id, analogous to \code{group_col} for \code{\link[=capabilities]{capabilities()}}\verb{$sample_ids}
+and every tool's \code{sample_col} parameter.}
 
 \item{pkg_versions}{Optional named list overriding what \code{\link[=pkg_versions]{pkg_versions()}}
 reports (default \code{list(llegir = ...)}). Used by callers rebuilding a

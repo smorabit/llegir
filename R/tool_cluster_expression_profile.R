@@ -24,7 +24,7 @@
 #' backend.
 #'
 #' @param ctx A tool context list: `list(ms, module_id, params)`, as built by
-#'   [run_module()]. `ctx$params$group_by` (required) is the metadata column
+#'   [run_module()]. `ctx$params$group_col` (or the ModuleSet's declared `group_col`) is the metadata column
 #'   naming the cell-state grouping (e.g. `'cell_type'`). `ctx$params$n_deciles`
 #'   (default `10`) is the number of global bins requested; a module score
 #'   distribution with heavy ties can realize fewer unique bins than
@@ -38,17 +38,17 @@
 #' @examples
 #' ms <- llegir_example_moduleset()
 #' cluster_expression_profile_tool(list(
-#'     ms = ms, module_id = modules(ms)[1], params = list(group_by = 'cell_type')
+#'     ms = ms, module_id = modules(ms)[1], params = list(group_col = 'cell_type')
 #' ))
 #' @export
 cluster_expression_profile_tool <- function(ctx){
-    group_by <- ctx$params$group_by
-    if (is.null(group_by)) stop('cluster_expression_profile requires params$group_by')
+    group_col <- .param_col(ctx, 'group_col')
+    if (is.null(group_col)) stop('cluster_expression_profile requires a group_col (pass it as a parameter, or declare it on the ModuleSet)')
     n_deciles <- ctx$params$n_deciles %||% 10
 
     scores <- module_scores(ctx$ms, module = ctx$module_id)
-    groups <- metadata(ctx$ms)[[group_by]]
-    if (is.null(groups)) stop('metadata column not found: ', group_by)
+    groups <- metadata(ctx$ms)[[group_col]]
+    if (is.null(groups)) stop('metadata column not found: ', group_col)
 
     keep <- !is.na(groups) & !is.na(scores)
     scores <- scores[keep]
@@ -115,7 +115,7 @@ cluster_expression_profile_tool <- function(ctx){
         direction = 'na',
         provenance = make_provenance(
             tool_version = '0.1',
-            params = list(group_by = group_by, n_deciles = n_deciles, method = 'global_decile'),
+            params = list(group_col = group_col, n_deciles = n_deciles, method = 'global_decile'),
             pkg_versions = pkg_versions(ctx$ms),
             module_method = ctx$module_method %||% NA_character_
         )

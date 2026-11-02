@@ -60,8 +60,11 @@ test_that('run_dataset_context() skips dataset_composition without the grouping 
     expect_match(dc$provenance$skipped[[1]]$reason, 'grouping')
 })
 
-test_that('dataset_composition_tool() errors without group_col', {
+test_that('dataset_composition_tool() falls back to the declared group_col and errors without one', {
     ms <- llegir_example_moduleset()
+    frag <- dataset_composition_tool(list(ms = ms, params = list()))
+    expect_true(validate_dataset_fragment(frag))
+    ms$group_col <- NULL
     expect_error(dataset_composition_tool(list(ms = ms, params = list())), 'group_col')
 })
 

@@ -95,7 +95,7 @@ test_that('run_module() skips a capability-mismatched tool (referenced by id) an
         go_gene_list_ms_nocap, 'module_a',
         list(
             list(id = 'top_genes', params = list(n_hubs = 5)),
-            list(id = 'cluster_dme', params = list(group_by = 'cell_type'))
+            list(id = 'cluster_dme', params = list(group_col = 'cell_type'))
         )
     ))
     ids <- vapply(packet$fragments, function(f) f$fragment_id, character(1))

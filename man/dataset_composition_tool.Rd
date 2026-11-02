@@ -8,13 +8,13 @@ dataset_composition_tool(ctx)
 }
 \arguments{
 \item{ctx}{A dataset tool context list: \code{list(ms, params, module_method)},
-as built by \code{\link[=run_dataset_context]{run_dataset_context()}}. \code{ctx$params$group_col} (required) is
+as built by \code{\link[=run_dataset_context]{run_dataset_context()}}. \code{ctx$params$group_col} (or the ModuleSet's declared \code{group_col}) is
 the metadata column naming the cell-state/cluster grouping.
 \code{ctx$params$condition_col} (optional) is the metadata column to check the
 grouping for skew against; when omitted, only a group census is
-computed. \code{ctx$params$sample_col} (default \code{'sample'}) names the
-metadata sample-id column, consulted when the \code{sample_ids} capability
-holds. \code{ctx$params$residual_threshold} (default \code{2}) is the absolute
+computed. \code{ctx$params$sample_col} (default: the ModuleSet's declared
+\code{sample_col}) names the metadata sample-id column; without one the
+samples-per-condition check is skipped. \code{ctx$params$residual_threshold} (default \code{2}) is the absolute
 chi-square standardized residual above which a group x condition cell is
 flagged. \code{ctx$params$min_samples} (default \code{3}) and
 \code{ctx$params$min_cells} (default \code{20}) are the per-condition minimums

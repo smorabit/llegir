@@ -8,19 +8,19 @@ pseudobulk_de_limma_tool(ctx)
 }
 \arguments{
 \item{ctx}{A tool context list: \code{list(ms, module_id, params)}, as built by
-\code{\link[=run_module]{run_module()}}. \code{ctx$params$contrast_col} (required) is the pseudo-bulk
+\code{\link[=run_module]{run_module()}}. \code{ctx$params$condition_col} (required) is the pseudo-bulk
 metadata column naming the two-level condition to test.
 \code{ctx$params$covariates} is an optional character vector of additional
 metadata columns to adjust for. \code{ctx$params$min_count} (default \code{10})
-and \code{ctx$params$min_samples} (default \code{3}) set the low-count gene
+and \code{ctx$params$min_count_samples} (default \code{3}) set the low-count gene
 filter: a gene needs at least \code{min_count} reads in at least
-\code{min_samples} of the tested pseudo-bulk units to be kept.}
+\code{min_count_samples} of the tested pseudo-bulk units to be kept.}
 }
 \value{
 An \code{evidence_fragment} of type \code{'cross_condition_delta'} (one row
 per gene), or \code{NULL} if \code{\link[=pseudobulk_view]{pseudobulk_view()}} can't resolve a pseudo-bulk
 view for \code{ctx$ms}, that view lacks the \code{counts} capability,
-\code{contrast_col} isn't found or doesn't have exactly 2 levels, none of the
+\code{condition_col} isn't found or doesn't have exactly 2 levels, none of the
 module's genes are present in \code{counts()}, or no gene survives the
 low-count filter -- a graceful skip, not an error.
 }
@@ -29,7 +29,7 @@ The gene-level complement to \code{\link[=differential_module_activity_tool]{dif
 limma-voom (\code{\link[limma:voom]{limma::voom()}} / \code{\link[limma:lmFit]{limma::lmFit()}} / \code{\link[limma:ebayes]{limma::eBayes()}}) on the
 pseudo-bulk \strong{raw counts} (\code{\link[=counts]{counts()}}) restricted to the current module's
 own genes (\code{\link[=gene_membership]{gene_membership()}}), for the declared two-level
-\code{ctx$params$contrast_col}. Reports which genes drive the shift, rather
+\code{ctx$params$condition_col}. Reports which genes drive the shift, rather
 than the module-level activity \code{\link[=differential_module_activity_tool]{differential_module_activity_tool()}}
 already covers.
 }
@@ -37,7 +37,7 @@ already covers.
 \dontrun{
 pb_ms <- pseudobulk_ModuleSet(pb_counts, list(module_a = c('GENE1', 'GENE2')), pb_meta)
 pseudobulk_de_limma_tool(list(
-    ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'condition')
+    ms = pb_ms, module_id = 'module_a', params = list(condition_col = 'condition')
 ))
 }
 }

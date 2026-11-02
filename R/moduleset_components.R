@@ -31,13 +31,12 @@
 #'   matrix, same dimensions as `expression`. If omitted, [counts()] returns
 #'   `NULL` and [capabilities()]`$counts` is `FALSE`.
 #' @param group_col Optional name of a `metadata` column declared as the
-#'   cell/sample-state grouping. This only drives
-#'   [capabilities()]`$grouping` -- core tools still take the grouping column
-#'   name as a parameter (e.g. `cluster_dme_tool`'s `group_by`); declaring
-#'   `group_col` is how this ModuleSet advertises that it supports the
-#'   concept at all.
+#'   cell/sample-state grouping. Drives [capabilities()]`$grouping` and is the
+#'   default for every tool's `group_col` parameter (a tool's own parameter
+#'   still wins).
 #' @param sample_col Optional name of a `metadata` column declared as the
-#'   sample id, analogous to `group_col` for [capabilities()]`$sample_ids`.
+#'   sample id, analogous to `group_col` for [capabilities()]`$sample_ids`
+#'   and every tool's `sample_col` parameter.
 #' @param pkg_versions Optional named list overriding what [pkg_versions()]
 #'   reports (default `list(llegir = ...)`). Used by callers rebuilding a
 #'   `components_ModuleSet` from another adapter (e.g. the agent workspace

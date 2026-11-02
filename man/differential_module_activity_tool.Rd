@@ -8,7 +8,7 @@ differential_module_activity_tool(ctx)
 }
 \arguments{
 \item{ctx}{A tool context list: \code{list(ms, module_id, params)}, as built by
-\code{\link[=run_module]{run_module()}}. \code{ctx$params$contrast_col} (required) is the pseudo-bulk
+\code{\link[=run_module]{run_module()}}. \code{ctx$params$condition_col} (required) is the pseudo-bulk
 metadata column naming the condition to test. \code{ctx$params$covariates} is
 an optional character vector of additional metadata columns to adjust
 for (\code{'limma'} method only). \code{ctx$params$method} is \code{'limma'} (default)
@@ -17,13 +17,13 @@ or \code{'nonparametric'}.}
 \value{
 An \code{evidence_fragment} of type \code{'cross_condition_delta'} or
 \code{'categorical_association'}, or \code{NULL} if \code{\link[=pseudobulk_view]{pseudobulk_view()}} can't
-resolve a pseudo-bulk view for \code{ctx$ms}, \code{contrast_col} isn't found in
+resolve a pseudo-bulk view for \code{ctx$ms}, \code{condition_col} isn't found in
 its metadata, or fewer than 2 contrast levels / 3 complete pseudo-bulk
 units remain -- a graceful skip, not an error.
 }
 \description{
 The module-level differential-activity test -- the DME successor: does
-this module's re-scored \emph{activity} differ across \code{ctx$params$contrast_col},
+this module's re-scored \emph{activity} differ across \code{ctx$params$condition_col},
 tested on independent pseudo-bulk samples via \code{\link[=pseudobulk_view]{pseudobulk_view()}} rather
 than correlated per-cell scores. Emits a \code{'cross_condition_delta'}
 fragment for a two-level contrast, or a \code{'categorical_association'}
@@ -45,7 +45,7 @@ module's own pseudo-bulk scores, per module, with no cross-module step.
 \dontrun{
 pb_ms <- pseudobulk_ModuleSet(pb_counts, list(module_a = c('GENE1', 'GENE2')), pb_meta)
 differential_module_activity_tool(list(
-    ms = pb_ms, module_id = 'module_a', params = list(contrast_col = 'condition')
+    ms = pb_ms, module_id = 'module_a', params = list(condition_col = 'condition')
 ))
 }
 }
