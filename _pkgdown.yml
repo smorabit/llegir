@@ -58,6 +58,7 @@ reference:
   contents:
   - top_genes_tool
   - cluster_dme_tool
+  - cluster_expression_profile_tool
   - geneset_enrichment_tool
   - signature_correlation_tool
   - differential_module_activity_tool
@@ -121,6 +122,7 @@ reference:
   - import_dataset_fragment
   - import_dataset_fragment_tool
   - import_milo_da
+  - write_dataset_figures
 
 - title: Orchestration
   desc: Run tools/synthesis over a module set and write results to disk.
@@ -164,6 +166,7 @@ reference:
   - calculate_fusion_score
   - fuse_confidence
   - needs_review
+  - housekeeping_composition_note
 
 - title: Interpretation objects
   contents:
