@@ -376,3 +376,23 @@ test_that('import_fragment() records source_file path and content hash in proven
     expect_equal(frag$provenance$params$source_file, tmp)
     expect_false(is.null(frag$provenance$input_hashes$source_file))
 })
+
+test_that('import_fragment() turns an empty table into a valid no-finding fragment for every type', {
+    for (type in c('geneset_enrichment', 'categorical_association', 'state_expression',
+                   'signature_correlation', 'continuous_correlation', 'cross_condition_delta')) {
+        frag <- import_fragment(module_id = 'MM1', type = type, result = data.frame())
+        expect_true(validate_evidence_fragment(frag), info = type)
+        expect_equal(frag$direction, 'na', info = type)
+        expect_length(frag$top_findings, 0)
+        expect_true(is.na(frag$effect_strength), info = type)
+    }
+})
+
+test_that('build_evidence_packet() rejects fragments that share a fragment_id', {
+    tbl <- data.frame(term = 'A', odds_ratio = 2, fdr = 0.01)
+    frag_1 <- import_fragment('MM1', 'geneset_enrichment', tbl)
+    frag_2 <- import_fragment('MM1', 'geneset_enrichment', tbl)
+    expect_error(build_evidence_packet('MM1', list(frag_1, frag_2)), 'duplicate fragment_id')
+    frag_2$fragment_id <- 'imported::second'
+    expect_silent(build_evidence_packet('MM1', list(frag_1, frag_2)))
+})

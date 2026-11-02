@@ -177,6 +177,18 @@
     }
 )
 
+# the normalized shape for a 0-row import: no findings, no effect, no direction
+.empty_import <- function(type){
+    list(
+        result = data.frame(),
+        compact_summary = paste0('user-supplied ', type, ': no rows'),
+        top_findings = list(),
+        effect_strength = NA_real_,
+        significance = NA_real_,
+        direction = 'na'
+    )
+}
+
 # shared normalizer body for a one-row-per-group test result (categorical
 # metadata association, or which cell state/cluster expresses a module); the
 # only difference between formats is which column name a given tool defaults
@@ -255,7 +267,9 @@ import_fragment <- function(module_id, type, result, fragment_id = NULL,
             ' (supported: ', paste(names(.import_normalizers), collapse = ', '), ')'
         )
     }
-    norm <- normalizer(result, params)
+    # an empty table is a legitimate import (e.g. no significant rows for this
+    # module); the per-type normalizers all assume at least one row
+    norm <- if (nrow(result) == 0) .empty_import(type) else normalizer(result, params)
     if (is.null(fragment_id)) fragment_id <- paste0('imported::', type)
 
     input_hashes <- list()
@@ -489,7 +503,9 @@ import_dataset_fragment <- function(type, result, fragment_id = NULL,
             ' (supported: ', paste(names(.import_dataset_normalizers), collapse = ', '), ')'
         )
     }
-    norm <- normalizer(result, params)
+    # an empty table is a legitimate import (e.g. no significant rows for this
+    # module); the per-type normalizers all assume at least one row
+    norm <- if (nrow(result) == 0) .empty_import(type) else normalizer(result, params)
     if (is.null(fragment_id)) fragment_id <- paste0('imported::', type)
 
     input_hashes <- list()

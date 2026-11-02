@@ -190,6 +190,12 @@ fragment_from_json <- function(json_str){
 #' @export
 build_evidence_packet <- function(module_id, fragments, input_hash = NA_character_, schema_version = '0.1', skipped = list()){
     lapply(fragments, validate_evidence_fragment)
+    # claims cite fragments by id, so two fragments sharing one would make a
+    # citation ambiguous (e.g. two imports of the same type)
+    ids <- vapply(fragments, function(f) f$fragment_id, character(1))
+    if (anyDuplicated(ids)) {
+        stop('duplicate fragment_id in packet for ', module_id, ': ', paste(unique(ids[duplicated(ids)]), collapse = ', '))
+    }
     packet_hash <- digest::digest(lapply(fragments, .fragment_hashable), algo = 'sha256')
     list(
         module_id = module_id,
