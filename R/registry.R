@@ -202,6 +202,10 @@ print.llegir_tool_spec <- function(x, ...){
     label <- x$id %||% 'unregistered tool'
     params <- if (length(x$params)) paste(names(x$params), collapse = ', ') else 'none'
     cat('<llegir tool> ', label, ' [', x$scope %||% 'unknown scope', '] params: ', params, '\n', sep = '')
+    if (length(x$accepts)) cat('  accepts: ', paste(x$accepts, collapse = ', '), '\n', sep = '')
+    if (length(x$requires) && !is.function(x$requires)) {
+        cat('  requires: ', paste(x$requires, collapse = ', '), '\n', sep = '')
+    }
     invisible(x)
 }
 

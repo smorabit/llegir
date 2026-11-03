@@ -49,7 +49,9 @@ In this vignette we label three hdWGCNA co-expression modules from a scRNA-seq d
 
 ## Gather the evidence
 
-The first steps are the same as in every **llegir** run: build a `ModuleSet`, gather dataset-level context, run a chain of evidence tools to get one evidence packet per module, and describe the dataset. The [Getting Started](getting-started.html) vignette covers each of these in detail; here we run them in one go.
+The first steps are the same as in every **llegir** run: build a `ModuleSet`, run a list of evidence tools to get dataset-level context plus one evidence packet per module, and describe the dataset. The [Getting Started](getting-started.html) vignette covers each of these in detail; here we run them in one go.
+
+Declaring `group_col` (the cell-state annotation) and `sample_col` (the biological sample, here the patient) on the `ModuleSet` means no tool needs them repeated. `run_evidence()` runs the dataset tools once and the module tools once per module; `params` holds settings shared by every tool that accepts them.
 
 ```{r, message = FALSE, warning = FALSE}
 library(Seurat)
@@ -59,30 +61,27 @@ library(llegir)
 
 # load the CSF dataset, which has already been processed with hdWGCNA
 seurat_obj <- readRDS('data/CSF_Myeloid_hdWGCNA.rds')
-ms <- hdWGCNA_ModuleSet(seurat_obj)
+ms <- hdWGCNA_ModuleSet(seurat_obj, group_col = 'lv2_annot', sample_col = 'patient')
 modules_use <- c('MM1', 'MM2', 'MM3')
 
-# dataset-level context, gathered once for the whole experiment
-dataset_ctx <- run_dataset_context(ms, list(
-    list(fn = dataset_composition_tool, params = list(group_col = 'lv2_annot', condition_col = 'diagnosis'))
-))
-
-# per-module evidence: top hub genes, cell-state specificity, and enrichment
-tool_config <- list(
-    list(fn = top_genes_tool, params = list(n_hubs = 25)),
-    list(fn = cluster_dme_tool, params = list(group_by = 'lv2_annot')),
-    list(fn = geneset_enrichment_tool, params = list(
-        n_hubs = 25,
-        db_files = c(
-            GO_BP = 'data/GO_Biological_Process_2026.txt',
-            Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt'
-        )
-    ))
+gene_sets <- c(
+    GO_BP = 'data/GO_Biological_Process_2026.txt',
+    Hallmark = 'data/h.all.v2026.1.Hs.symbols.gmt'
 )
-packets <- run_orchestrator(
-    ms, tool_config,
-    output_dir = 'output/agent_label_example/evidence_packets',
-    modules_use = modules_use
+
+# dataset_composition runs once; top_genes, cluster_dme and
+# geneset_enrichment run once per module
+ev <- run_evidence(
+    ms,
+    tools = list(
+        tool('dataset_composition'),
+        tool('top_genes'),
+        tool('cluster_dme'),
+        tool('geneset_enrichment', db_files = gene_sets)
+    ),
+    params = list(n_hubs = 25, condition_col = 'diagnosis'),
+    modules_use = modules_use,
+    output_dir = 'output/agent_label_example/evidence'
 )
 
 desc <- dataset_description(
@@ -102,9 +101,9 @@ desc <- dataset_description(
 
 `export_agent_workspace()` with `mode = 'label'` writes everything the agent needs into one folder. It only writes files: it never calls a model.
 
-Three optional arguments sharpen the checks the agent has to pass:
+Three optional inputs sharpen the checks the agent has to pass:
 
-- `sample_col`: the metadata column naming the biological sample (here, the patient), used to flag modules whose activity comes mostly from one sample;
+- `sample_col`: the metadata column naming the biological sample, used to flag modules whose activity comes mostly from one sample. It is taken from the `ModuleSet` (declared above), so it isn't repeated here;
 - `depth_cols`: per-cell sequencing-depth columns, used to flag modules whose score tracks library size;
 - `feature_genes`: every gene that was eligible for module assignment (for hdWGCNA, `GetWGCNAGenes()`), so that a canonical marker missing from every module can be told apart as *unassigned* (it was tested and did not co-express) rather than *not tested* (it was never in the network).
 
@@ -112,10 +111,9 @@ Three optional arguments sharpen the checks the agent has to pass:
 ws_dir <- 'output/agent_label_example/label_ws'
 
 export_agent_workspace(
-    ms, dataset_ctx, packets, desc,
+    ms, ev$dataset_context, ev$packets, desc,
     out_dir = ws_dir,
     mode = 'label',
-    sample_col = 'patient',
     depth_cols = c('nCount_RNA', 'nFeature_RNA'),
     feature_genes = GetWGCNAGenes(seurat_obj)
 )
@@ -193,7 +191,7 @@ Each module comes back as `ok`, `missing`, `invalid` (does not fit the schema), 
 
 ## Collect the labels
 
-`collect_agent_labels()` runs each label through the same path as in-R synthesis: schema validation, faithfulness enforcement and confidence fusion. It writes the same per-module JSON, `review_queue.tsv` and `manifest.json` as `run_synthesis_orchestrator()`, with the provenance recording `model = 'agent:claude-code'`.
+`collect_agent_labels()` first re-runs `check_agent_labels()` and stops unless every module is `ok` (pass `strict = FALSE` to collect the passing modules with a warning). It then runs each label through the same path as in-R synthesis: schema validation, faithfulness enforcement and confidence fusion. It writes the same per-module JSON, `review_queue.tsv` and `manifest.json` as `run_synthesis_orchestrator()`, with the provenance recording `model = 'agent:claude-code'`.
 
 ```{r}
 interps <- collect_agent_labels(
@@ -233,8 +231,8 @@ interp$review$display_hubs
 build_review_queue(interps)
 
 write_interpretation_report(
-    interps, packets, desc,
-    dataset_context = dataset_ctx,
+    interps, ev$packets, desc,
+    dataset_context = ev$dataset_context,
     output_file = 'output/agent_label_example/report.html'
 )
 ```
@@ -245,11 +243,10 @@ If you already have interpretations for these modules, for example from an earli
 
 ```{r, eval = FALSE}
 export_agent_workspace(
-    ms, dataset_ctx, packets, desc,
+    ms, ev$dataset_context, ev$packets, desc,
     interps = interps,
     out_dir = 'output/agent_label_example/refine_ws',
     mode = 'label',
-    sample_col = 'patient',
     depth_cols = c('nCount_RNA', 'nFeature_RNA'),
     feature_genes = GetWGCNAGenes(seurat_obj)
 )
@@ -262,5 +259,5 @@ A label workspace always covers a single network. To label several networks, exp
 With the default `mode = 'explore'`, `export_agent_workspace()` writes the same data and API cheat-sheets but no labeling task. Use it to ask a coding agent open-ended, read-only questions about a finished run, for example which modules are most specific to one diagnosis, or how two modules' hub genes overlap. In explore mode the agent is told not to write labels.
 
 ```{r, eval = FALSE}
-export_agent_workspace(ms, dataset_ctx, packets, desc, interps = interps, out_dir = 'output/agent_workspace')
+export_agent_workspace(ms, ev$dataset_context, ev$packets, desc, interps = interps, out_dir = 'output/agent_workspace')
 ```
